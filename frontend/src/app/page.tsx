@@ -1,761 +1,725 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { useSportsStore } from '@/stores/sportsStore';
-import { useBetSlipStore } from '@/stores/betSlipStore';
-import { sportsApi, casinoApi } from '@/lib/api';
-import { formatOdds, cn } from '@/lib/utils';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, ChevronRight, Zap, Shield, Trophy, Headphones,
-  Clock, TrendingUp,
+  ChevronRight,
+  Trophy,
+  Flame,
+  Star,
+  Clock,
+  Gamepad2,
+  Swords,
+  CircleDot,
+  Dribbble,
+  Dumbbell,
+  Target,
+  Disc,
 } from 'lucide-react';
-import { SportIcon } from '@/components/sports/SportIcon';
 import { EventCard } from '@/components/sports/EventCard';
-import type { Event, Selection } from '@/types';
+import { cn } from '@/lib/utils';
+import type { Event } from '@/types';
 
-// ─── Quick-access sport categories ──────────────────────────────
-const CATEGORY_BUTTONS = [
-  { label: 'Soccer', slug: 'football' },
-  { label: 'Basketball', slug: 'basketball' },
-  { label: 'Tennis', slug: 'tennis' },
-  { label: 'Cricket', slug: 'cricket' },
-  { label: 'Ice Hockey', slug: 'ice-hockey' },
-  { label: 'Esports', slug: 'esports' },
-  { label: 'Baseball', slug: 'baseball' },
-  { label: 'MMA', slug: 'mma' },
-  { label: 'Boxing', slug: 'boxing' },
-  { label: 'Golf', slug: 'golf' },
+// ============================================================
+// MOCK DATA
+// ============================================================
+
+const HERO_BANNERS = [
+  {
+    id: 1,
+    title: 'Welcome Bonus',
+    subtitle: 'Get up to 5 BTC on your first deposit',
+    cta: 'Claim Now',
+    href: '/promotions/welcome',
+    gradient: 'from-purple-700 via-brand-600 to-indigo-800',
+    accent: 'bg-purple-500/20',
+  },
+  {
+    id: 2,
+    title: 'Live Casino',
+    subtitle: 'Real dealers. Real cards. Real-time crypto payouts.',
+    cta: 'Play Now',
+    href: '/casino/live',
+    gradient: 'from-emerald-700 via-teal-600 to-cyan-800',
+    accent: 'bg-emerald-500/20',
+  },
+  {
+    id: 3,
+    title: 'Sports Promo',
+    subtitle: 'Boosted odds on Champions League matches this week',
+    cta: 'Bet Now',
+    href: '/sports/football',
+    gradient: 'from-orange-700 via-red-600 to-rose-800',
+    accent: 'bg-orange-500/20',
+  },
 ];
 
-// ─── Why CryptoBet features ────────────────────────────────────
-const WHY_FEATURES = [
-  { title: 'Instant Payouts', description: 'Withdrawals via blockchain in minutes.', icon: Zap },
-  { title: 'Provably Fair', description: 'Verify every result cryptographically.', icon: Shield },
-  { title: 'Best Odds', description: 'Industry-leading margins on all markets.', icon: Trophy },
-  { title: '24/7 Support', description: 'Expert help around the clock.', icon: Headphones },
+const SPORT_CATEGORIES = [
+  { label: 'Soccer', slug: 'football', icon: CircleDot },
+  { label: 'Basketball', slug: 'basketball', icon: Dribbble },
+  { label: 'Tennis', slug: 'tennis', icon: Disc },
+  { label: 'American Football', slug: 'american-football', icon: Swords },
+  { label: 'Baseball', slug: 'baseball', icon: Target },
+  { label: 'Ice Hockey', slug: 'ice-hockey', icon: Gamepad2 },
+  { label: 'Cricket', slug: 'cricket', icon: Trophy },
+  { label: 'MMA', slug: 'mma', icon: Dumbbell },
+  { label: 'Esports', slug: 'esports', icon: Gamepad2 },
 ];
 
-// ─── Static popular sports (fallback when store is empty) ──────
-const POPULAR_SPORTS_FALLBACK = [
-  { name: 'Football', slug: 'football', events: 2400, liveCount: 12 },
-  { name: 'Basketball', slug: 'basketball', events: 1200, liveCount: 8 },
-  { name: 'Tennis', slug: 'tennis', events: 800, liveCount: 5 },
-  { name: 'Cricket', slug: 'cricket', events: 350, liveCount: 2 },
-  { name: 'Esports', slug: 'esports', events: 600, liveCount: 4 },
-  { name: 'Ice Hockey', slug: 'ice-hockey', events: 450, liveCount: 3 },
-  { name: 'MMA', slug: 'mma', events: 280, liveCount: 0 },
-  { name: 'Boxing', slug: 'boxing', events: 150, liveCount: 0 },
-];
-
-// ─── Casino game fallbacks ─────────────────────────────────────
-const CASINO_FALLBACK: { slug: string; name: string; provider: string; gradient: string; thumbnail?: string }[] = [
-  { slug: 'crash', name: 'Crash', provider: 'CryptoBet', gradient: 'from-orange-600 to-red-600' },
-  { slug: 'plinko', name: 'Plinko', provider: 'CryptoBet', gradient: 'from-purple-600 to-pink-600' },
-  { slug: 'dice', name: 'Dice', provider: 'CryptoBet', gradient: 'from-blue-600 to-cyan-600' },
-  { slug: 'blackjack', name: 'Blackjack', provider: 'Evolution', gradient: 'from-emerald-600 to-teal-600' },
-  { slug: 'roulette', name: 'Roulette', provider: 'Evolution', gradient: 'from-red-600 to-rose-600' },
-  { slug: 'mines', name: 'Mines', provider: 'CryptoBet', gradient: 'from-yellow-600 to-amber-600' },
-];
-
-// ─── Types for API data ────────────────────────────────────────
-interface CasinoGame {
-  slug: string;
-  name: string;
-  provider?: string | { name: string };
-  thumbnail?: string;
+// Helper to create mock events
+function mockEvent(overrides: Partial<Event> & { id: string; name: string }): Event {
+  return {
+    slug: overrides.id,
+    homeTeam: null,
+    awayTeam: null,
+    homeTeamLogo: null,
+    awayTeamLogo: null,
+    startTime: new Date(Date.now() + 3600000).toISOString(),
+    status: 'UPCOMING',
+    sportId: '1',
+    competitionId: '1',
+    isLive: false,
+    isFeatured: false,
+    metadata: null,
+    ...overrides,
+  };
 }
 
-// ─── Sport slug to display label for Quick Odds Table ──────────
-const SPORT_LABELS: Record<string, string> = {
-  football: 'Soccer',
-  basketball: 'Basketball',
-  tennis: 'Tennis',
-  cricket: 'Cricket',
-  'ice-hockey': 'Ice Hockey',
-  esports: 'Esports',
-  baseball: 'Baseball',
-  mma: 'MMA',
-  boxing: 'Boxing',
-  golf: 'Golf',
-};
+const MOCK_LIVE_EVENTS: Event[] = [
+  mockEvent({
+    id: 'live-1',
+    name: 'Manchester City vs Arsenal',
+    homeTeam: 'Manchester City',
+    awayTeam: 'Arsenal',
+    homeScore: 2,
+    awayScore: 1,
+    isLive: true,
+    status: 'LIVE',
+    metadata: { matchTime: "67'", period: '2nd Half' },
+    competition: { id: 'c1', name: 'Premier League', slug: 'premier-league', country: 'England', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    markets: [
+      {
+        id: 'm1', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sel-1', name: 'Manchester City', outcome: 'home', odds: '1.65', status: 'ACTIVE', marketId: 'm1' },
+          { id: 'sel-2', name: 'Draw', outcome: 'draw', odds: '4.20', status: 'ACTIVE', marketId: 'm1' },
+          { id: 'sel-3', name: 'Arsenal', outcome: 'away', odds: '5.50', status: 'ACTIVE', marketId: 'm1' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'live-2',
+    name: 'Real Madrid vs Barcelona',
+    homeTeam: 'Real Madrid',
+    awayTeam: 'Barcelona',
+    homeScore: 1,
+    awayScore: 1,
+    isLive: true,
+    status: 'LIVE',
+    metadata: { matchTime: "34'", period: '1st Half' },
+    competition: { id: 'c2', name: 'La Liga', slug: 'la-liga', country: 'Spain', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    markets: [
+      {
+        id: 'm2', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sel-4', name: 'Real Madrid', outcome: 'home', odds: '2.10', status: 'ACTIVE', marketId: 'm2' },
+          { id: 'sel-5', name: 'Draw', outcome: 'draw', odds: '3.40', status: 'ACTIVE', marketId: 'm2' },
+          { id: 'sel-6', name: 'Barcelona', outcome: 'away', odds: '3.25', status: 'ACTIVE', marketId: 'm2' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'live-3',
+    name: 'Lakers vs Celtics',
+    homeTeam: 'LA Lakers',
+    awayTeam: 'Boston Celtics',
+    homeScore: 87,
+    awayScore: 92,
+    isLive: true,
+    status: 'LIVE',
+    metadata: { matchTime: 'Q3 4:22', period: 'Q3' },
+    competition: { id: 'c3', name: 'NBA', slug: 'nba', country: 'USA', sportId: 's2', sport: { id: 's2', name: 'Basketball', slug: 'basketball', icon: null, isActive: true, sortOrder: 2 } },
+    markets: [
+      {
+        id: 'm3', name: 'Moneyline', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sel-7', name: 'LA Lakers', outcome: 'home', odds: '2.40', status: 'ACTIVE', marketId: 'm3' },
+          { id: 'sel-8', name: 'Boston Celtics', outcome: 'away', odds: '1.55', status: 'ACTIVE', marketId: 'm3' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'live-4',
+    name: 'Djokovic vs Alcaraz',
+    homeTeam: 'N. Djokovic',
+    awayTeam: 'C. Alcaraz',
+    homeScore: 6,
+    awayScore: 4,
+    isLive: true,
+    status: 'LIVE',
+    metadata: { matchTime: '2nd Set', period: 'Set 2' },
+    competition: { id: 'c4', name: 'Australian Open', slug: 'australian-open', country: 'Australia', sportId: 's3', sport: { id: 's3', name: 'Tennis', slug: 'tennis', icon: null, isActive: true, sortOrder: 3 } },
+    markets: [
+      {
+        id: 'm4', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sel-9', name: 'N. Djokovic', outcome: 'home', odds: '1.80', status: 'ACTIVE', marketId: 'm4' },
+          { id: 'sel-10', name: 'C. Alcaraz', outcome: 'away', odds: '2.00', status: 'ACTIVE', marketId: 'm4' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'live-5',
+    name: 'Bayern Munich vs Dortmund',
+    homeTeam: 'Bayern Munich',
+    awayTeam: 'Borussia Dortmund',
+    homeScore: 3,
+    awayScore: 0,
+    isLive: true,
+    status: 'LIVE',
+    metadata: { matchTime: "72'", period: '2nd Half' },
+    competition: { id: 'c5', name: 'Bundesliga', slug: 'bundesliga', country: 'Germany', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    markets: [
+      {
+        id: 'm5', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sel-11', name: 'Bayern Munich', outcome: 'home', odds: '1.05', status: 'ACTIVE', marketId: 'm5' },
+          { id: 'sel-12', name: 'Draw', outcome: 'draw', odds: '12.00', status: 'ACTIVE', marketId: 'm5' },
+          { id: 'sel-13', name: 'Borussia Dortmund', outcome: 'away', odds: '25.00', status: 'ACTIVE', marketId: 'm5' },
+        ],
+      },
+    ],
+  }),
+];
 
-// Sports that typically have 3-way markets (1/X/2)
-const THREE_WAY_SPORTS = new Set(['football', 'ice-hockey', 'handball']);
+const MOCK_FEATURED_EVENTS: Event[] = [
+  mockEvent({
+    id: 'feat-1',
+    name: 'Liverpool vs Chelsea',
+    homeTeam: 'Liverpool',
+    awayTeam: 'Chelsea',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 7200000).toISOString(),
+    competition: { id: 'c1', name: 'Premier League', slug: 'premier-league', country: 'England', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    markets: [
+      {
+        id: 'mf1', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sf-1', name: 'Liverpool', outcome: 'home', odds: '1.90', status: 'ACTIVE', marketId: 'mf1' },
+          { id: 'sf-2', name: 'Draw', outcome: 'draw', odds: '3.50', status: 'ACTIVE', marketId: 'mf1' },
+          { id: 'sf-3', name: 'Chelsea', outcome: 'away', odds: '3.80', status: 'ACTIVE', marketId: 'mf1' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'feat-2',
+    name: 'PSG vs Juventus',
+    homeTeam: 'Paris Saint-Germain',
+    awayTeam: 'Juventus',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 10800000).toISOString(),
+    competition: { id: 'c6', name: 'Champions League', slug: 'champions-league', country: null, sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    markets: [
+      {
+        id: 'mf2', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sf-4', name: 'PSG', outcome: 'home', odds: '1.75', status: 'ACTIVE', marketId: 'mf2' },
+          { id: 'sf-5', name: 'Draw', outcome: 'draw', odds: '3.80', status: 'ACTIVE', marketId: 'mf2' },
+          { id: 'sf-6', name: 'Juventus', outcome: 'away', odds: '4.50', status: 'ACTIVE', marketId: 'mf2' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'feat-3',
+    name: 'Warriors vs Bucks',
+    homeTeam: 'Golden State Warriors',
+    awayTeam: 'Milwaukee Bucks',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 14400000).toISOString(),
+    competition: { id: 'c3', name: 'NBA', slug: 'nba', country: 'USA', sportId: 's2', sport: { id: 's2', name: 'Basketball', slug: 'basketball', icon: null, isActive: true, sortOrder: 2 } },
+    markets: [
+      {
+        id: 'mf3', name: 'Moneyline', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sf-7', name: 'Warriors', outcome: 'home', odds: '2.15', status: 'ACTIVE', marketId: 'mf3' },
+          { id: 'sf-8', name: 'Bucks', outcome: 'away', odds: '1.70', status: 'ACTIVE', marketId: 'mf3' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'feat-4',
+    name: 'Nadal vs Sinner',
+    homeTeam: 'R. Nadal',
+    awayTeam: 'J. Sinner',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 18000000).toISOString(),
+    competition: { id: 'c4', name: 'Australian Open', slug: 'australian-open', country: 'Australia', sportId: 's3', sport: { id: 's3', name: 'Tennis', slug: 'tennis', icon: null, isActive: true, sortOrder: 3 } },
+    markets: [
+      {
+        id: 'mf4', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sf-9', name: 'R. Nadal', outcome: 'home', odds: '3.20', status: 'ACTIVE', marketId: 'mf4' },
+          { id: 'sf-10', name: 'J. Sinner', outcome: 'away', odds: '1.35', status: 'ACTIVE', marketId: 'mf4' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'feat-5',
+    name: 'Inter Milan vs Napoli',
+    homeTeam: 'Inter Milan',
+    awayTeam: 'Napoli',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 21600000).toISOString(),
+    competition: { id: 'c7', name: 'Serie A', slug: 'serie-a', country: 'Italy', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    markets: [
+      {
+        id: 'mf5', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sf-11', name: 'Inter Milan', outcome: 'home', odds: '2.00', status: 'ACTIVE', marketId: 'mf5' },
+          { id: 'sf-12', name: 'Draw', outcome: 'draw', odds: '3.30', status: 'ACTIVE', marketId: 'mf5' },
+          { id: 'sf-13', name: 'Napoli', outcome: 'away', odds: '3.60', status: 'ACTIVE', marketId: 'mf5' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'feat-6',
+    name: 'Chiefs vs 49ers',
+    homeTeam: 'Kansas City Chiefs',
+    awayTeam: 'San Francisco 49ers',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 25200000).toISOString(),
+    competition: { id: 'c8', name: 'NFL', slug: 'nfl', country: 'USA', sportId: 's4', sport: { id: 's4', name: 'American Football', slug: 'american-football', icon: null, isActive: true, sortOrder: 4 } },
+    markets: [
+      {
+        id: 'mf6', name: 'Moneyline', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sf-14', name: 'Chiefs', outcome: 'home', odds: '1.85', status: 'ACTIVE', marketId: 'mf6' },
+          { id: 'sf-15', name: '49ers', outcome: 'away', odds: '1.95', status: 'ACTIVE', marketId: 'mf6' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'feat-7',
+    name: 'Atletico Madrid vs Sevilla',
+    homeTeam: 'Atletico Madrid',
+    awayTeam: 'Sevilla',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 28800000).toISOString(),
+    competition: { id: 'c9', name: 'La Liga', slug: 'la-liga', country: 'Spain', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    markets: [
+      {
+        id: 'mf7', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sf-16', name: 'Atletico Madrid', outcome: 'home', odds: '1.60', status: 'ACTIVE', marketId: 'mf7' },
+          { id: 'sf-17', name: 'Draw', outcome: 'draw', odds: '3.70', status: 'ACTIVE', marketId: 'mf7' },
+          { id: 'sf-18', name: 'Sevilla', outcome: 'away', odds: '5.00', status: 'ACTIVE', marketId: 'mf7' },
+        ],
+      },
+    ],
+  }),
+  mockEvent({
+    id: 'feat-8',
+    name: 'Maple Leafs vs Rangers',
+    homeTeam: 'Toronto Maple Leafs',
+    awayTeam: 'New York Rangers',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 32400000).toISOString(),
+    competition: { id: 'c10', name: 'NHL', slug: 'nhl', country: 'USA', sportId: 's5', sport: { id: 's5', name: 'Ice Hockey', slug: 'ice-hockey', icon: null, isActive: true, sortOrder: 5 } },
+    markets: [
+      {
+        id: 'mf8', name: 'Moneyline', type: 'MONEYLINE', status: 'OPEN',
+        selections: [
+          { id: 'sf-19', name: 'Maple Leafs', outcome: 'home', odds: '2.25', status: 'ACTIVE', marketId: 'mf8' },
+          { id: 'sf-20', name: 'Rangers', outcome: 'away', odds: '1.65', status: 'ACTIVE', marketId: 'mf8' },
+        ],
+      },
+    ],
+  }),
+];
 
-// ─── Horizontal scroll helper ──────────────────────────────────
-function HorizontalScroll({ children, className }: { children: React.ReactNode; className?: string }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+const MOCK_CASINO_GAMES = [
+  { slug: 'crash', name: 'Crash', provider: 'CryptoBet Originals', gradient: 'from-orange-600 to-red-600' },
+  { slug: 'plinko', name: 'Plinko', provider: 'CryptoBet Originals', gradient: 'from-purple-600 to-pink-600' },
+  { slug: 'dice', name: 'Dice', provider: 'CryptoBet Originals', gradient: 'from-blue-600 to-cyan-600' },
+  { slug: 'blackjack', name: 'Blackjack', provider: 'Evolution Gaming', gradient: 'from-emerald-700 to-teal-600' },
+  { slug: 'roulette', name: 'Roulette', provider: 'Evolution Gaming', gradient: 'from-red-700 to-rose-600' },
+  { slug: 'mines', name: 'Mines', provider: 'CryptoBet Originals', gradient: 'from-yellow-600 to-amber-600' },
+  { slug: 'baccarat', name: 'Baccarat', provider: 'Pragmatic Play', gradient: 'from-indigo-700 to-violet-600' },
+  { slug: 'hilo', name: 'HiLo', provider: 'CryptoBet Originals', gradient: 'from-sky-600 to-blue-700' },
+  { slug: 'keno', name: 'Keno', provider: 'CryptoBet Originals', gradient: 'from-fuchsia-600 to-purple-700' },
+  { slug: 'video-poker', name: 'Video Poker', provider: 'NetEnt', gradient: 'from-lime-600 to-green-700' },
+];
 
+const MOCK_RECENT_GAMES = [
+  { slug: 'crash', name: 'Crash', provider: 'CryptoBet Originals', gradient: 'from-orange-600 to-red-600' },
+  { slug: 'blackjack', name: 'Blackjack', provider: 'Evolution Gaming', gradient: 'from-emerald-700 to-teal-600' },
+  { slug: 'dice', name: 'Dice', provider: 'CryptoBet Originals', gradient: 'from-blue-600 to-cyan-600' },
+  { slug: 'roulette', name: 'Roulette', provider: 'Evolution Gaming', gradient: 'from-red-700 to-rose-600' },
+  { slug: 'mines', name: 'Mines', provider: 'CryptoBet Originals', gradient: 'from-yellow-600 to-amber-600' },
+];
+
+const TOP_LEAGUES = [
+  { name: 'Premier League', slug: 'football', competition: 'premier-league', flag: 'EN' },
+  { name: 'La Liga', slug: 'football', competition: 'la-liga', flag: 'ES' },
+  { name: 'Champions League', slug: 'football', competition: 'champions-league', flag: 'EU' },
+  { name: 'Bundesliga', slug: 'football', competition: 'bundesliga', flag: 'DE' },
+  { name: 'Serie A', slug: 'football', competition: 'serie-a', flag: 'IT' },
+  { name: 'Ligue 1', slug: 'football', competition: 'ligue-1', flag: 'FR' },
+  { name: 'NBA', slug: 'basketball', competition: 'nba', flag: 'US' },
+  { name: 'NFL', slug: 'american-football', competition: 'nfl', flag: 'US' },
+  { name: 'NHL', slug: 'ice-hockey', competition: 'nhl', flag: 'US' },
+  { name: 'MLB', slug: 'baseball', competition: 'mlb', flag: 'US' },
+  { name: 'ATP Tour', slug: 'tennis', competition: 'atp', flag: 'GL' },
+  { name: 'IPL', slug: 'cricket', competition: 'ipl', flag: 'IN' },
+];
+
+// ============================================================
+// SUB-COMPONENTS
+// ============================================================
+
+/** Section header with title and "View all" link */
+function SectionHeader({
+  title,
+  icon,
+  href,
+  linkText = 'View all',
+  liveCount,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  href?: string;
+  linkText?: string;
+  liveCount?: number;
+}) {
   return (
-    <div className="relative group">
-      <div
-        ref={scrollRef}
-        className={cn('flex gap-3 overflow-x-auto scrollbar-hide pb-1', className)}
-      >
-        {children}
-      </div>
+    <div className="flex items-center justify-between mb-4">
+      <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+        {icon}
+        {title}
+        {liveCount !== undefined && liveCount > 0 && (
+          <span className="text-xs font-bold bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full">
+            {liveCount}
+          </span>
+        )}
+      </h2>
+      {href && (
+        <Link
+          href={href}
+          className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors font-medium"
+        >
+          {linkText}
+          <ChevronRight className="w-4 h-4" />
+        </Link>
+      )}
     </div>
   );
 }
 
-// ─── Quick Odds Row ────────────────────────────────────────────
-function QuickOddsRow({ event }: { event: Event }) {
-  const { toggleSelection, hasSelection } = useBetSlipStore();
-  const mainMarket = event.markets?.find((m) => m.type === 'MONEYLINE');
-  const selections = mainMarket?.selections || [];
-
-  const isThreeWay = selections.length === 3;
-  const homeSel = selections.find((s) => s.outcome === 'home') || selections[0] || null;
-  const drawSel = selections.find((s) => s.outcome === 'draw') || (isThreeWay ? selections[1] : null);
-  const awaySel = selections.find((s) => s.outcome === 'away') || (isThreeWay ? selections[2] : selections[1]) || null;
-
-  const handleSelect = (sel: Selection) => {
-    toggleSelection({
-      selectionId: sel.id,
-      selectionName: sel.name,
-      marketName: mainMarket?.name || '',
-      eventName: event.name,
-      eventId: event.id,
-      odds: sel.odds,
-      homeTeam: event.homeTeam,
-      awayTeam: event.awayTeam,
-    });
-  };
-
-  const startDate = new Date(event.startTime);
-  const timeStr = event.isLive
-    ? event.metadata?.matchTime || 'LIVE'
-    : startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-
+/** Horizontal scroll container with smooth touch scrolling */
+function HScrollContainer({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <Link
-      href={`/sports/event/${event.id}`}
-      className="grid items-center gap-2 px-3 py-2 hover:bg-surface-hover/50 transition-colors border-b border-[rgba(255,255,255,0.03)] last:border-b-0"
-      style={{ gridTemplateColumns: 'minmax(56px, 64px) 1fr repeat(var(--odds-cols), 64px)' }}
+    <div
+      className={cn(
+        'flex gap-3 overflow-x-auto pb-2 scrollbar-hide',
+        className,
+      )}
+      style={{ WebkitOverflowScrolling: 'touch' }}
     >
-      {/* Time */}
-      <div className="flex items-center gap-1.5">
-        {event.isLive ? (
-          <>
-            <span className="w-1.5 h-1.5 bg-accent-red rounded-full animate-pulse shrink-0" />
-            <span className="text-[11px] font-bold text-accent-red">{timeStr}</span>
-          </>
-        ) : (
-          <span className="text-[11px] text-gray-500 font-medium">{timeStr}</span>
-        )}
-      </div>
-
-      {/* Teams */}
-      <div className="min-w-0">
-        <div className="flex items-center gap-1">
-          <span className="text-[13px] font-medium text-white truncate">
-            {event.homeTeam || event.name}
-          </span>
-          {event.isLive && event.homeScore !== null && event.homeScore !== undefined && (
-            <span className="text-xs font-bold font-mono text-white ml-auto shrink-0">
-              {event.homeScore}
-            </span>
-          )}
-        </div>
-        {event.awayTeam && (
-          <div className="flex items-center gap-1">
-            <span className="text-[13px] text-gray-400 truncate">
-              {event.awayTeam}
-            </span>
-            {event.isLive && event.awayScore !== null && event.awayScore !== undefined && (
-              <span className="text-xs font-bold font-mono text-gray-400 ml-auto shrink-0">
-                {event.awayScore}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Odds: Home (1) */}
-      {homeSel ? (
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSelect(homeSel); }}
-          disabled={homeSel.status !== 'ACTIVE'}
-          className={cn(
-            'py-1.5 rounded text-center text-xs font-mono font-bold transition-all border',
-            hasSelection(homeSel.id)
-              ? 'bg-brand-500/20 border-brand-500 text-brand-400'
-              : 'bg-surface-tertiary border-transparent hover:border-brand-500/50 text-white',
-            homeSel.status === 'SUSPENDED' && 'opacity-40 cursor-not-allowed'
-          )}
-        >
-          {formatOdds(homeSel.odds)}
-        </button>
-      ) : (
-        <span className="py-1.5 text-center text-xs text-gray-600">-</span>
-      )}
-
-      {/* Odds: Draw (X) -- only for 3-way */}
-      {drawSel ? (
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSelect(drawSel); }}
-          disabled={drawSel.status !== 'ACTIVE'}
-          className={cn(
-            'py-1.5 rounded text-center text-xs font-mono font-bold transition-all border',
-            hasSelection(drawSel.id)
-              ? 'bg-brand-500/20 border-brand-500 text-brand-400'
-              : 'bg-surface-tertiary border-transparent hover:border-brand-500/50 text-white',
-            drawSel.status === 'SUSPENDED' && 'opacity-40 cursor-not-allowed'
-          )}
-        >
-          {formatOdds(drawSel.odds)}
-        </button>
-      ) : isThreeWay ? (
-        <span className="py-1.5 text-center text-xs text-gray-600">-</span>
-      ) : null}
-
-      {/* Odds: Away (2) */}
-      {awaySel ? (
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSelect(awaySel); }}
-          disabled={awaySel.status !== 'ACTIVE'}
-          className={cn(
-            'py-1.5 rounded text-center text-xs font-mono font-bold transition-all border',
-            hasSelection(awaySel.id)
-              ? 'bg-brand-500/20 border-brand-500 text-brand-400'
-              : 'bg-surface-tertiary border-transparent hover:border-brand-500/50 text-white',
-            awaySel.status === 'SUSPENDED' && 'opacity-40 cursor-not-allowed'
-          )}
-        >
-          {formatOdds(awaySel.odds)}
-        </button>
-      ) : (
-        <span className="py-1.5 text-center text-xs text-gray-600">-</span>
-      )}
-    </Link>
+      {children}
+    </div>
   );
 }
 
-// ─── Quick Odds Sport Section ──────────────────────────────────
-function QuickOddsSportSection({
-  sportSlug,
-  events,
-  isThreeWay,
-}: {
-  sportSlug: string;
-  events: Event[];
-  isThreeWay: boolean;
-}) {
-  const label = SPORT_LABELS[sportSlug] || sportSlug;
-  const cols = isThreeWay ? 3 : 2;
+/** Hero Banner Carousel */
+function HeroBannerCarousel() {
+  const [active, setActive] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setActive((prev) => (prev + 1) % HERO_BANNERS.length);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    startTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [startTimer]);
+
+  const goTo = (index: number) => {
+    setActive(index);
+    startTimer();
+  };
 
   return (
-    <div className="bg-[#1A1B1F] rounded-lg border border-[rgba(255,255,255,0.04)] overflow-hidden">
-      {/* Sport header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[rgba(255,255,255,0.06)]">
-        <div className="flex items-center gap-2">
-          <SportIcon slug={sportSlug} size={16} />
-          <span className="text-sm font-semibold text-white">{label}</span>
-          <span className="text-[11px] text-gray-500">({events.length})</span>
-        </div>
-        <Link
-          href={`/sports/${sportSlug}`}
-          className="text-[11px] text-brand-400 hover:text-brand-300 flex items-center gap-0.5"
-        >
-          All
-          <ChevronRight className="w-3 h-3" />
-        </Link>
-      </div>
+    <div className="relative w-full overflow-hidden rounded-2xl" style={{ aspectRatio: '16/6' }}>
+      <AnimatePresence mode="wait">
+        {HERO_BANNERS.map(
+          (banner, idx) =>
+            idx === active && (
+              <motion.div
+                key={banner.id}
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0"
+              >
+                <Link href={banner.href} className="block h-full">
+                  <div
+                    className={cn(
+                      'h-full w-full bg-gradient-to-r rounded-2xl relative overflow-hidden',
+                      banner.gradient,
+                    )}
+                  >
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-1/2 h-full opacity-20">
+                      <div className="absolute top-1/4 right-10 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
+                      <div className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full bg-white/5 blur-3xl" />
+                    </div>
 
-      {/* Column headers */}
-      <div
-        className="grid items-center gap-2 px-3 py-1.5 border-b border-[rgba(255,255,255,0.04)]"
-        style={{ gridTemplateColumns: `minmax(56px, 64px) 1fr repeat(${cols}, 64px)` }}
-      >
-        <span className="text-[10px] text-gray-600 uppercase tracking-wider font-medium">Time</span>
-        <span className="text-[10px] text-gray-600 uppercase tracking-wider font-medium">Match</span>
-        <span className="text-[10px] text-gray-600 uppercase tracking-wider font-medium text-center">1</span>
-        {isThreeWay && (
-          <span className="text-[10px] text-gray-600 uppercase tracking-wider font-medium text-center">X</span>
+                    {/* Content */}
+                    <div className="relative z-10 h-full flex flex-col justify-center px-6 sm:px-10 md:px-14">
+                      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
+                        {banner.title}
+                      </h2>
+                      <p className="text-sm sm:text-base text-white/70 mb-4 max-w-md">
+                        {banner.subtitle}
+                      </p>
+                      <div>
+                        <span className="inline-block px-5 py-2 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white text-sm font-semibold transition-colors border border-white/10">
+                          {banner.cta}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom gradient overlay */}
+                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/30 to-transparent" />
+                  </div>
+                </Link>
+              </motion.div>
+            ),
         )}
-        <span className="text-[10px] text-gray-600 uppercase tracking-wider font-medium text-center">2</span>
-      </div>
+      </AnimatePresence>
 
-      {/* Rows */}
-      <div style={{ ['--odds-cols' as string]: cols }}>
-        {events.map((event) => (
-          <QuickOddsRow key={event.id} event={event} />
+      {/* Dots */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+        {HERO_BANNERS.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => goTo(idx)}
+            className={cn(
+              'rounded-full transition-all duration-300',
+              idx === active
+                ? 'w-6 h-2 bg-white'
+                : 'w-2 h-2 bg-white/40 hover:bg-white/60',
+            )}
+            aria-label={`Go to slide ${idx + 1}`}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-// ─── Featured Match Hero Card ──────────────────────────────────
-function FeaturedHeroCard({ event }: { event: Event }) {
-  const { toggleSelection, hasSelection } = useBetSlipStore();
-  const mainMarket = event.markets?.find((m) => m.type === 'MONEYLINE' || m.type === 'SPREAD');
-  const selections = mainMarket?.selections || [];
-
-  const handleSelect = (sel: Selection) => {
-    toggleSelection({
-      selectionId: sel.id,
-      selectionName: sel.name,
-      marketName: mainMarket?.name || '',
-      eventName: event.name,
-      eventId: event.id,
-      odds: sel.odds,
-      homeTeam: event.homeTeam,
-      awayTeam: event.awayTeam,
-    });
-  };
-
-  const homeInitials = (event.homeTeam || 'TBD')
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase();
-
-  const awayInitials = (event.awayTeam || 'TBD')
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase();
-
+/** Casino game thumbnail card */
+function CasinoGameCard({
+  game,
+  aspect = '3/4',
+}: {
+  game: { slug: string; name: string; provider: string; gradient: string };
+  aspect?: string;
+}) {
   return (
-    <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-brand-900 via-brand-800 to-surface-secondary border border-border min-h-[180px]">
-      <div className="absolute inset-0">
-        <div className="absolute -top-16 -right-16 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-accent-purple/10 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative z-10 p-5 md:p-6">
-        <div className="flex items-center gap-2 mb-3">
-          {event.isLive ? (
-            <span className="flex items-center gap-1.5 text-xs bg-accent-red/20 border border-accent-red/30 text-accent-red px-2.5 py-0.5 rounded-full font-bold">
-              <span className="w-1.5 h-1.5 bg-accent-red rounded-full animate-pulse" />
-              LIVE
-            </span>
-          ) : (
-            <span className="text-xs bg-brand-500/20 border border-brand-500/30 text-brand-400 px-2.5 py-0.5 rounded-full font-medium">
-              Featured
-            </span>
-          )}
-          <span className="text-xs text-gray-400">{event.competition?.name || ''}</span>
+    <Link href={`/casino/${game.slug}`} className="shrink-0 w-[130px] sm:w-[140px] group">
+      <div
+        className={cn(
+          'relative rounded-xl overflow-hidden border border-white/5 group-hover:border-purple-500/40 transition-all duration-200 group-hover:scale-[1.03]',
+          `bg-gradient-to-br ${game.gradient}`,
+        )}
+        style={{ aspectRatio: aspect }}
+      >
+        {/* Placeholder visual */}
+        <div className="flex items-center justify-center h-full">
+          <span className="text-4xl font-black text-white/20">
+            {game.name.charAt(0)}
+          </span>
         </div>
 
-        <div className="flex items-center justify-between gap-4 mb-5">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {event.homeTeamLogo ? (
-              <img src={event.homeTeamLogo} alt={event.homeTeam || ''} className="w-10 h-10 rounded-full object-contain bg-white/5 shrink-0" loading="lazy" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 font-bold text-sm shrink-0">{homeInitials}</div>
-            )}
-            <span className="text-base font-bold truncate">{event.homeTeam || 'TBD'}</span>
-          </div>
-
-          <div className="shrink-0 text-center">
-            {event.isLive ? (
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold font-mono">{event.homeScore ?? 0}</span>
-                <span className="text-gray-500 text-sm">-</span>
-                <span className="text-2xl font-bold font-mono text-gray-400">{event.awayScore ?? 0}</span>
-              </div>
-            ) : (
-              <span className="text-sm text-gray-500 font-medium">VS</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
-            <span className="text-base font-bold text-gray-300 truncate text-right">{event.awayTeam || 'TBD'}</span>
-            {event.awayTeamLogo ? (
-              <img src={event.awayTeamLogo} alt={event.awayTeam || ''} className="w-10 h-10 rounded-full object-contain bg-white/5 shrink-0" loading="lazy" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-accent-purple/20 flex items-center justify-center text-accent-purple font-bold text-sm shrink-0">{awayInitials}</div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {selections.slice(0, 3).map((sel, idx) => {
-            const label = selections.length === 3
-              ? ['1', 'X', '2'][idx]
-              : selections.length === 2
-                ? ['1', '2'][idx]
-                : sel.name;
-            return (
-              <button
-                key={sel.id}
-                onClick={() => handleSelect(sel)}
-                disabled={sel.status !== 'ACTIVE'}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                  hasSelection(sel.id)
-                    ? 'bg-brand-500 text-white'
-                    : 'bg-surface-tertiary/80 hover:bg-surface-hover text-white',
-                  sel.status === 'SUSPENDED' && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                <span className="text-xs text-gray-400">{label}</span>
-                <span className="font-mono font-bold text-brand-400">{formatOdds(sel.odds)}</span>
-              </button>
-            );
-          })}
-          <Link
-            href={`/sports/event/${event.id}`}
-            className="ml-auto btn-primary text-sm px-5 py-2 rounded-lg font-semibold"
-          >
-            Bet now
-          </Link>
+        {/* Bottom overlay */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2.5 pt-8">
+          <p className="text-xs font-semibold text-white truncate">{game.name}</p>
+          <p className="text-[10px] text-gray-400 truncate">{game.provider}</p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
-// ════════════════════════════════════════════════════════════════
-// MAIN PAGE
-// ════════════════════════════════════════════════════════════════
+// ============================================================
+// MAIN HOME PAGE
+// ============================================================
+
 export default function HomePage() {
-  const {
-    sports,
-    featuredEvents,
-    liveEvents,
-    loadSports,
-    loadFeaturedEvents,
-    loadLiveEvents,
-  } = useSportsStore();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
-  const [casinoGames, setCasinoGames] = useState<CasinoGame[]>([]);
-
-  // Load data on mount
-  useEffect(() => {
-    loadSports();
-    loadFeaturedEvents();
-    loadLiveEvents();
-
-    // Load upcoming events for the Quick Odds Table
-    sportsApi
-      .getEvents({ status: 'UPCOMING', limit: 40, sortBy: 'startTime', order: 'asc' })
-      .then((res) => {
-        const events = res.data?.data;
-        if (Array.isArray(events)) setUpcomingEvents(events);
-      })
-      .catch(() => {});
-
-    // Load casino games
-    casinoApi
-      .getGames({ limit: 6, category: 'popular' })
-      .then((res) => {
-        const games = res.data?.data;
-        if (Array.isArray(games)) setCasinoGames(games);
-      })
-      .catch(() => {});
-  }, [loadSports, loadFeaturedEvents, loadLiveEvents]);
-
-  // Build popular sports from store or fallback
-  const popularSports = sports.length > 0
-    ? sports
-        .filter((s) => s.isActive)
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .slice(0, 8)
-        .map((s) => ({
-          name: s.name,
-          slug: s.slug,
-          events: s.eventCount || 0,
-          liveCount: s.liveCount || 0,
-        }))
-    : POPULAR_SPORTS_FALLBACK;
-
-  // Casino games to display
-  const displayCasino = casinoGames.length > 0
-    ? casinoGames.map((g) => ({
-        slug: g.slug,
-        name: g.name,
-        provider:
-          typeof g.provider === 'string'
-            ? g.provider
-            : g.provider?.name || 'CryptoBet',
-        thumbnail: g.thumbnail,
-        gradient: '',
-      }))
-    : CASINO_FALLBACK;
-
-  // Featured event hero
-  const heroEvent = featuredEvents[0] || liveEvents[0] || null;
-
-  // Upcoming events that are NOT the hero event, for the "Popular Matches" grid
-  const popularMatches = useMemo(() => {
-    const combined = [...featuredEvents, ...upcomingEvents];
-    const seen = new Set<string>();
-    if (heroEvent) seen.add(heroEvent.id);
-    const unique: Event[] = [];
-    for (const ev of combined) {
-      if (!seen.has(ev.id) && ev.markets && ev.markets.length > 0) {
-        seen.add(ev.id);
-        unique.push(ev);
-      }
-      if (unique.length >= 6) break;
-    }
-    return unique;
-  }, [featuredEvents, upcomingEvents, heroEvent]);
-
-  // Group upcoming events by sport for Quick Odds Table
-  const oddsBySport = useMemo(() => {
-    const allEvents = [...liveEvents, ...upcomingEvents];
-    const groups: Record<string, Event[]> = {};
-    for (const ev of allEvents) {
-      const sportSlug = ev.sport?.slug || ev.competition?.sport?.slug || '';
-      if (!sportSlug) continue;
-      if (!ev.markets || ev.markets.length === 0) continue;
-      if (!groups[sportSlug]) groups[sportSlug] = [];
-      if (groups[sportSlug].length < 8) {
-        groups[sportSlug].push(ev);
-      }
-    }
-    // Sort sport sections: prioritize those with more events
-    const entries = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
-    return entries.slice(0, 4);
-  }, [liveEvents, upcomingEvents]);
-
-  // Search handler
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/sports?q=${encodeURIComponent(searchQuery.trim())}`;
-    }
-  };
+  const [activeCategory, setActiveCategory] = useState('football');
 
   return (
-    <div className="max-w-5xl mx-auto pb-20 lg:pb-0 space-y-6">
-
-      {/* ── Search Bar ────────────────────────────────────────────── */}
-      <form onSubmit={handleSearch} className="relative">
-        <div className="flex items-center bg-surface-secondary rounded-lg border border-border focus-within:border-brand-500/50 transition-colors">
-          <Search className="w-5 h-5 text-gray-500 ml-4 shrink-0" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search sports, events, teams..."
-            className="w-full bg-transparent px-3 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
-          />
-        </div>
-      </form>
-
-      {/* ── Category Quick Buttons ────────────────────────────────── */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-        {CATEGORY_BUTTONS.map((cat) => {
-          const liveSport = popularSports.find((s) => s.slug === cat.slug);
-          const liveCount = liveSport?.liveCount || 0;
-          return (
-            <Link
-              key={cat.slug}
-              href={`/sports/${cat.slug}`}
-              className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-medium border transition-colors bg-transparent border-border hover:border-border-hover hover:bg-surface-secondary text-gray-300"
-            >
-              <SportIcon slug={cat.slug} size={14} />
-              {cat.label}
-              {liveCount > 0 && (
-                <span className="ml-0.5 text-[10px] bg-accent-red/20 text-accent-red px-1.5 py-0 rounded-full font-bold">
-                  {liveCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* ── Featured Match Hero ───────────────────────────────────── */}
-      {heroEvent && (
-        <section>
-          <FeaturedHeroCard event={heroEvent} />
-        </section>
-      )}
-
-      {/* ── Live Now ──────────────────────────────────────────────── */}
-      {liveEvents.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-red opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent-red" />
-              </span>
-              LIVE NOW
-              <span className="text-xs font-bold bg-accent-red/15 text-accent-red px-2 py-0.5 rounded-full">
-                {liveEvents.length}
-              </span>
-            </h2>
-            <Link
-              href="/sports/live"
-              className="text-sm text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors font-medium"
-            >
-              View All Live
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <HorizontalScroll className="gap-3">
-            {liveEvents.slice(0, 12).map((event) => (
-              <div key={event.id} className="shrink-0 w-[280px]">
-                <EventCard event={event} />
-              </div>
-            ))}
-          </HorizontalScroll>
-        </section>
-      )}
-
-      {/* ── Popular Matches ───────────────────────────────────────── */}
-      {popularMatches.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-brand-400" />
-              Popular Matches
-            </h2>
-            <Link
-              href="/sports"
-              className="text-sm text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors font-medium"
-            >
-              All Events
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {popularMatches.slice(0, 6).map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Quick Odds Table ──────────────────────────────────────── */}
-      {oddsBySport.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <Clock className="w-4 h-4 text-brand-400" />
-              Upcoming Odds
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {oddsBySport.map(([sportSlug, events]) => (
-              <QuickOddsSportSection
-                key={sportSlug}
-                sportSlug={sportSlug}
-                events={events}
-                isThreeWay={THREE_WAY_SPORTS.has(sportSlug)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Popular Sports ────────────────────────────────────────── */}
+    <div className="max-w-6xl mx-auto pb-24 lg:pb-8 space-y-6">
+      {/* ────────────────────────────────────────────────────────
+          1. HERO BANNER CAROUSEL
+      ──────────────────────────────────────────────────────── */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold">Sports</h2>
-          <Link
-            href="/sports"
-            className="text-sm text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors font-medium"
-          >
-            All Sports
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-          {popularSports.map((sport) => (
-            <Link
-              key={sport.slug}
-              href={`/sports/${sport.slug}`}
-              className="bg-[#1A1B1F] border border-[rgba(255,255,255,0.04)] rounded-lg p-3.5 flex items-center gap-3 hover:border-[rgba(255,255,255,0.12)] transition-colors group"
-            >
-              <div className="w-9 h-9 rounded-lg bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors shrink-0">
-                <SportIcon slug={sport.slug} size={20} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold group-hover:text-brand-400 transition-colors truncate">
-                  {sport.name}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-gray-500">
-                    {sport.events > 0 ? `${sport.events.toLocaleString()}` : 'Browse'}
-                  </span>
-                  {sport.liveCount > 0 && (
-                    <span className="flex items-center gap-1 text-[10px] text-accent-red font-bold">
-                      <span className="w-1 h-1 bg-accent-red rounded-full animate-pulse" />
-                      {sport.liveCount} live
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <HeroBannerCarousel />
       </section>
 
-      {/* ── Casino Quick Access ────────────────────────────────────── */}
+      {/* ────────────────────────────────────────────────────────
+          2. QUICK SPORT CATEGORY BUTTONS
+      ──────────────────────────────────────────────────────── */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold">Casino</h2>
-          <Link
-            href="/casino"
-            className="text-sm text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors font-medium"
-          >
-            All Games
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-        <HorizontalScroll>
-          {displayCasino.map((game) => (
-            <Link
-              key={game.slug}
-              href={`/casino/${game.slug}`}
-              className="shrink-0 w-[120px] group"
-            >
-              <div
-                className={cn(
-                  'relative aspect-[3/4] rounded-lg overflow-hidden border border-[rgba(255,255,255,0.04)] group-hover:border-brand-500/40 transition-colors',
-                  game.thumbnail ? '' : `bg-gradient-to-br ${game.gradient || 'from-gray-700 to-gray-900'}`
-                )}
-              >
-                {game.thumbnail ? (
-                  <img src={game.thumbnail} alt={game.name} className="w-full h-full object-cover" loading="lazy" />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <span className="text-2xl font-bold opacity-60">{game.name.charAt(0)}</span>
-                  </div>
-                )}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-5">
-                  <p className="text-[11px] font-semibold text-white truncate">{game.name}</p>
-                  <p className="text-[9px] text-gray-400 truncate">{game.provider}</p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </HorizontalScroll>
-      </section>
-
-      {/* ── Why CryptoBet (compact) ────────────────────────────────── */}
-      <section className="border-t border-[rgba(255,255,255,0.04)] pt-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {WHY_FEATURES.map((feature) => {
-            const Icon = feature.icon;
+        <HScrollContainer className="gap-2">
+          {SPORT_CATEGORIES.map((cat) => {
+            const isActive = activeCategory === cat.slug;
+            const Icon = cat.icon;
             return (
-              <div
-                key={feature.title}
-                className="flex items-start gap-2.5 p-3 rounded-lg bg-[#1A1B1F] border border-[rgba(255,255,255,0.04)]"
+              <button
+                key={cat.slug}
+                onClick={() => setActiveCategory(cat.slug)}
+                className={cn(
+                  'shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap border',
+                  isActive
+                    ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_16px_rgba(147,51,234,0.3)]'
+                    : 'bg-[#1A1B1F] border-white/5 text-gray-400 hover:bg-[#22232A] hover:text-white hover:border-white/10',
+                )}
               >
-                <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-brand-400" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-white">{feature.title}</p>
-                  <p className="text-[11px] text-gray-500 leading-relaxed">{feature.description}</p>
-                </div>
-              </div>
+                <Icon className="w-4 h-4" />
+                {cat.label}
+              </button>
             );
           })}
+        </HScrollContainer>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────
+          3. LIVE NOW SECTION
+      ──────────────────────────────────────────────────────── */}
+      <section>
+        <SectionHeader
+          title="Live Now"
+          icon={
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+            </span>
+          }
+          href="/sports/live"
+          linkText="View all"
+          liveCount={MOCK_LIVE_EVENTS.length}
+        />
+        <HScrollContainer>
+          {MOCK_LIVE_EVENTS.map((event) => (
+            <div key={event.id} className="shrink-0 w-[300px] sm:w-[320px]">
+              <EventCard event={event} compact />
+            </div>
+          ))}
+        </HScrollContainer>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────
+          4. FEATURED EVENTS
+      ──────────────────────────────────────────────────────── */}
+      <section>
+        <SectionHeader
+          title="Featured"
+          icon={<Star className="w-5 h-5 text-yellow-400" />}
+          href="/sports"
+          linkText="View all"
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {MOCK_FEATURED_EVENTS.map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────
+          5. POPULAR CASINO GAMES
+      ──────────────────────────────────────────────────────── */}
+      <section>
+        <SectionHeader
+          title="Popular Games"
+          icon={<Flame className="w-5 h-5 text-orange-400" />}
+          href="/casino"
+          linkText="View all"
+        />
+        <HScrollContainer>
+          {MOCK_CASINO_GAMES.map((game) => (
+            <CasinoGameCard key={game.slug} game={game} aspect="3/4" />
+          ))}
+        </HScrollContainer>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────
+          6. JUMP BACK IN (Recently Played)
+      ──────────────────────────────────────────────────────── */}
+      <section>
+        <SectionHeader
+          title="Jump back in"
+          icon={<Clock className="w-5 h-5 text-purple-400" />}
+          href="/casino"
+          linkText="View all"
+        />
+        <HScrollContainer>
+          {MOCK_RECENT_GAMES.map((game) => (
+            <CasinoGameCard key={`recent-${game.slug}`} game={game} aspect="1/1" />
+          ))}
+        </HScrollContainer>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────
+          7. TOP LEAGUES
+      ──────────────────────────────────────────────────────── */}
+      <section>
+        <SectionHeader
+          title="Top Leagues"
+          icon={<Trophy className="w-5 h-5 text-amber-400" />}
+          href="/sports"
+          linkText="All sports"
+        />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+          {TOP_LEAGUES.map((league) => (
+            <Link
+              key={league.competition}
+              href={`/sports/${league.slug}/${league.competition}`}
+              className="flex items-center gap-2.5 px-3.5 py-3 rounded-lg bg-[#1A1B1F] border border-white/5 hover:border-purple-500/30 hover:bg-[#1F2028] transition-all group"
+            >
+              <span className="shrink-0 w-7 h-7 rounded-md bg-white/5 flex items-center justify-center text-[10px] font-bold text-gray-400 group-hover:text-white transition-colors">
+                {league.flag}
+              </span>
+              <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors truncate">
+                {league.name}
+              </span>
+            </Link>
+          ))}
         </div>
       </section>
     </div>

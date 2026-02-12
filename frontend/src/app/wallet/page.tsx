@@ -1,495 +1,421 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { api, walletApi } from '@/lib/api';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Wallet, ArrowDownToLine, ArrowUpFromLine, History,
-  Copy, Check, ChevronRight, AlertTriangle, Clock,
-  ExternalLink, Clipboard, QrCode,
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  QrCode,
+  Check,
+  AlertTriangle,
+  ChevronDown,
+  Clipboard,
+  ArrowLeftRight,
+  Clock,
 } from 'lucide-react';
 
-type Tab = 'balances' | 'deposit' | 'withdraw' | 'transactions';
-
-type TxFilter = 'all' | 'deposits' | 'withdrawals' | 'bets' | 'wins';
+// ─── Types ──────────────────────────────────────────────────────────
+type ActiveSection = 'deposit' | 'withdraw' | 'swap' | 'history';
+type TxFilter = 'all' | 'deposits' | 'withdrawals';
+type TxStatus = 'Completed' | 'Pending' | 'Failed';
 
 interface CurrencyInfo {
   symbol: string;
   name: string;
   color: string;
-  networks?: { id: string; name: string; confirmations: number; estimatedTime: string }[];
+  balance: number;
+  usdPrice: number;
+  networks: { id: string; name: string; confirmations: number; minDeposit: string }[];
+  address: string;
 }
 
+interface Transaction {
+  id: string;
+  type: 'deposit' | 'withdrawal';
+  currency: string;
+  amount: string;
+  status: TxStatus;
+  date: string;
+  txHash: string;
+}
+
+// ─── Mock Data ──────────────────────────────────────────────────────
 const CURRENCIES: CurrencyInfo[] = [
-  { symbol: 'BTC', name: 'Bitcoin', color: 'bg-orange-500',
-    networks: [{ id: 'bitcoin', name: 'Bitcoin', confirmations: 3, estimatedTime: '~30 minutes' }] },
-  { symbol: 'ETH', name: 'Ethereum', color: 'bg-blue-500',
-    networks: [{ id: 'erc20', name: 'ERC-20', confirmations: 12, estimatedTime: '~5 minutes' }] },
-  { symbol: 'USDT', name: 'Tether', color: 'bg-green-500',
+  {
+    symbol: 'BTC',
+    name: 'Bitcoin',
+    color: '#F7931A',
+    balance: 0.05,
+    usdPrice: 43250.0,
+    networks: [{ id: 'bitcoin', name: 'Bitcoin', confirmations: 3, minDeposit: '0.0001' }],
+    address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+  },
+  {
+    symbol: 'ETH',
+    name: 'Ethereum',
+    color: '#627EEA',
+    balance: 1.2,
+    usdPrice: 2280.0,
+    networks: [{ id: 'erc20', name: 'Ethereum (ERC-20)', confirmations: 12, minDeposit: '0.005' }],
+    address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+  },
+  {
+    symbol: 'USDT',
+    name: 'Tether',
+    color: '#26A17B',
+    balance: 500,
+    usdPrice: 1.0,
     networks: [
-      { id: 'erc20', name: 'ERC-20', confirmations: 12, estimatedTime: '~5 minutes' },
-      { id: 'trc20', name: 'TRC-20', confirmations: 20, estimatedTime: '~3 minutes' },
-      { id: 'bsc', name: 'BSC (BEP-20)', confirmations: 15, estimatedTime: '~3 minutes' },
-      { id: 'solana', name: 'Solana', confirmations: 1, estimatedTime: '~1 minute' },
-    ] },
-  { symbol: 'LTC', name: 'Litecoin', color: 'bg-gray-400',
-    networks: [{ id: 'litecoin', name: 'Litecoin', confirmations: 6, estimatedTime: '~15 minutes' }] },
-  { symbol: 'SOL', name: 'Solana', color: 'bg-purple-500',
-    networks: [{ id: 'solana', name: 'Solana', confirmations: 1, estimatedTime: '~1 minute' }] },
-  { symbol: 'TRX', name: 'TRON', color: 'bg-red-500',
-    networks: [{ id: 'trc20', name: 'TRC-20', confirmations: 20, estimatedTime: '~3 minutes' }] },
-  { symbol: 'DOGE', name: 'Dogecoin', color: 'bg-yellow-500',
-    networks: [{ id: 'dogecoin', name: 'Dogecoin', confirmations: 40, estimatedTime: '~40 minutes' }] },
-  { symbol: 'XRP', name: 'Ripple', color: 'bg-slate-400',
-    networks: [{ id: 'xrp', name: 'XRP Ledger', confirmations: 1, estimatedTime: '~4 seconds' }] },
-  { symbol: 'BNB', name: 'BNB', color: 'bg-yellow-400',
-    networks: [{ id: 'bsc', name: 'BSC (BEP-20)', confirmations: 15, estimatedTime: '~3 minutes' }] },
-  { symbol: 'ADA', name: 'Cardano', color: 'bg-blue-400',
-    networks: [{ id: 'cardano', name: 'Cardano', confirmations: 15, estimatedTime: '~10 minutes' }] },
-  { symbol: 'MATIC', name: 'Polygon', color: 'bg-purple-400',
-    networks: [{ id: 'polygon', name: 'Polygon', confirmations: 30, estimatedTime: '~5 minutes' }] },
-  { symbol: 'USDC', name: 'USD Coin', color: 'bg-blue-600',
-    networks: [
-      { id: 'erc20', name: 'ERC-20', confirmations: 12, estimatedTime: '~5 minutes' },
-      { id: 'solana', name: 'Solana', confirmations: 1, estimatedTime: '~1 minute' },
-    ] },
+      { id: 'erc20', name: 'Ethereum (ERC-20)', confirmations: 12, minDeposit: '10' },
+      { id: 'trc20', name: 'TRON (TRC-20)', confirmations: 20, minDeposit: '1' },
+      { id: 'bep20', name: 'BSC (BEP-20)', confirmations: 15, minDeposit: '5' },
+      { id: 'solana', name: 'Solana (SPL)', confirmations: 1, minDeposit: '1' },
+    ],
+    address: 'TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9',
+  },
+  {
+    symbol: 'SOL',
+    name: 'Solana',
+    color: '#9945FF',
+    balance: 10,
+    usdPrice: 98.5,
+    networks: [{ id: 'solana', name: 'Solana', confirmations: 1, minDeposit: '0.1' }],
+    address: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
+  },
+  {
+    symbol: 'LTC',
+    name: 'Litecoin',
+    color: '#BFBBBB',
+    balance: 5,
+    usdPrice: 68.4,
+    networks: [{ id: 'litecoin', name: 'Litecoin', confirmations: 6, minDeposit: '0.01' }],
+    address: 'ltc1qhw80dfq2kvtaruhfgestjdf539kc3eznaa8q8l',
+  },
+  {
+    symbol: 'DOGE',
+    name: 'Dogecoin',
+    color: '#C2A633',
+    balance: 1000,
+    usdPrice: 0.082,
+    networks: [{ id: 'dogecoin', name: 'Dogecoin', confirmations: 40, minDeposit: '10' }],
+    address: 'DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L',
+  },
 ];
 
-const TAB_CONFIG = [
-  { key: 'balances' as Tab, label: 'Balances', icon: Wallet },
-  { key: 'deposit' as Tab, label: 'Deposit', icon: ArrowDownToLine },
-  { key: 'withdraw' as Tab, label: 'Withdraw', icon: ArrowUpFromLine },
-  { key: 'transactions' as Tab, label: 'Transactions', icon: History },
+const MOCK_TRANSACTIONS: Transaction[] = [
+  {
+    id: '1',
+    type: 'deposit',
+    currency: 'BTC',
+    amount: '0.025',
+    status: 'Completed',
+    date: '2026-02-11T14:30:00Z',
+    txHash: '3a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b',
+  },
+  {
+    id: '2',
+    type: 'withdrawal',
+    currency: 'ETH',
+    amount: '0.5',
+    status: 'Completed',
+    date: '2026-02-10T09:15:00Z',
+    txHash: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+  },
+  {
+    id: '3',
+    type: 'deposit',
+    currency: 'USDT',
+    amount: '250.00',
+    status: 'Pending',
+    date: '2026-02-12T08:45:00Z',
+    txHash: '0x9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba',
+  },
+  {
+    id: '4',
+    type: 'withdrawal',
+    currency: 'SOL',
+    amount: '5.0',
+    status: 'Completed',
+    date: '2026-02-09T18:22:00Z',
+    txHash: '4rL4RCxwsYz7RdYFdExBv2kDSpqjCUqFvKhN6gFtV7jxzHb1ndBAPe6o2BoHck3h',
+  },
+  {
+    id: '5',
+    type: 'deposit',
+    currency: 'DOGE',
+    amount: '500',
+    status: 'Failed',
+    date: '2026-02-08T11:00:00Z',
+    txHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+  },
+  {
+    id: '6',
+    type: 'withdrawal',
+    currency: 'BTC',
+    amount: '0.01',
+    status: 'Pending',
+    date: '2026-02-12T06:10:00Z',
+    txHash: 'c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
+  },
 ];
 
-function CurrencyIcon({ symbol, size = 'md' }: { symbol: string; size?: 'sm' | 'md' | 'lg' }) {
-  const currency = CURRENCIES.find((c) => c.symbol === symbol);
-  const colorClass = currency?.color || 'bg-gray-500';
-  const sizeClass = size === 'sm' ? 'w-6 h-6 text-[10px]' : size === 'lg' ? 'w-12 h-12 text-sm' : 'w-8 h-8 text-xs';
+// ─── Helpers ────────────────────────────────────────────────────────
+function getTotalUSD(): number {
+  return CURRENCIES.reduce((acc, c) => acc + c.balance * c.usdPrice, 0);
+}
 
+function truncateHash(hash: string): string {
+  if (hash.length <= 16) return hash;
+  return `${hash.slice(0, 8)}...${hash.slice(-8)}`;
+}
+
+// ─── Sub-components ─────────────────────────────────────────────────
+
+function CurrencyIcon({ symbol, color, size = 32 }: { symbol: string; color: string; size?: number }) {
   return (
-    <div className={cn('rounded-full flex items-center justify-center font-bold text-white shrink-0', colorClass, sizeClass)}>
-      {symbol.slice(0, symbol.length > 3 ? 2 : 3)}
+    <div
+      className="rounded-full flex items-center justify-center font-bold text-white shrink-0"
+      style={{ width: size, height: size, backgroundColor: color, fontSize: size * 0.35 }}
+    >
+      {symbol.length > 3 ? symbol.slice(0, 2) : symbol}
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const s = status.toLowerCase();
-  if (s === 'pending' || s === 'processing') return <span className="badge-pending"><Clock className="w-3 h-3" />{status}</span>;
-  if (s === 'completed' || s === 'confirmed' || s === 'won') return <span className="badge-completed"><Check className="w-3 h-3" />{status}</span>;
-  if (s === 'failed' || s === 'rejected' || s === 'lost') return <span className="badge-failed"><AlertTriangle className="w-3 h-3" />{status}</span>;
-  return <span className="badge-pending">{status}</span>;
+function StatusBadge({ status }: { status: TxStatus }) {
+  if (status === 'Completed') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent-green/15 text-accent-green">
+        <Check className="w-3 h-3" />
+        {status}
+      </span>
+    );
+  }
+  if (status === 'Pending') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent-yellow/15 text-accent-yellow">
+        <Clock className="w-3 h-3" />
+        {status}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent-red/15 text-accent-red">
+      <AlertTriangle className="w-3 h-3" />
+      {status}
+    </span>
+  );
 }
 
+function MiniSparkline({ color }: { color: string }) {
+  // Generate a simple mock sparkline path
+  const points = [40, 35, 45, 30, 50, 38, 55, 42, 48, 52, 46, 58];
+  const width = 80;
+  const height = 32;
+  const maxVal = Math.max(...points);
+  const minVal = Math.min(...points);
+  const range = maxVal - minVal || 1;
+  const step = width / (points.length - 1);
+
+  const d = points
+    .map((p, i) => {
+      const x = i * step;
+      const y = height - ((p - minVal) / range) * height;
+      return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="opacity-50">
+      <path d={d} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────────────────
 export default function WalletPage() {
-  const [tab, setTab] = useState<Tab>('balances');
-  const [wallets, setWallets] = useState<any[]>([]);
-  const [totalUSD, setTotalUSD] = useState('0');
-  const [isLoading, setIsLoading] = useState(true);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [activeSection, setActiveSection] = useState<ActiveSection>('deposit');
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('BTC');
+  const [balanceHidden, setBalanceHidden] = useState(false);
   const [txFilter, setTxFilter] = useState<TxFilter>('all');
 
-  // Deposit state
-  const [depositStep, setDepositStep] = useState(1);
-  const [depositCurrency, setDepositCurrency] = useState('');
-  const [depositNetwork, setDepositNetwork] = useState('');
-  const [depositAddress, setDepositAddress] = useState<any>(null);
+  // Deposit
+  const [depositNetwork, setDepositNetwork] = useState<string>('');
   const [addressCopied, setAddressCopied] = useState(false);
-  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
 
-  // Withdraw state
-  const [withdrawCurrency, setWithdrawCurrency] = useState('BTC');
-  const [withdrawNetwork, setWithdrawNetwork] = useState('');
+  // Withdraw
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [withdrawFee, _setWithdrawFee] = useState('0.0005');
+  const [withdrawNetwork, setWithdrawNetwork] = useState('');
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/wallets'),
-      api.get('/wallets/balance/total'),
-    ]).then(([walletsRes, totalRes]) => {
-      setWallets(walletsRes.data.data);
-      setTotalUSD(totalRes.data.data.totalUSD);
-      setIsLoading(false);
-    }).catch(() => setIsLoading(false));
-  }, []);
+  // Swap
+  const [swapFrom, setSwapFrom] = useState('BTC');
+  const [swapTo, setSwapTo] = useState('USDT');
+  const [swapAmount, setSwapAmount] = useState('');
 
-  const loadTransactions = useCallback(async () => {
-    try {
-      const params: Record<string, any> = {};
-      if (txFilter !== 'all') params.type = txFilter;
-      const { data } = await walletApi.getTransactions(params);
-      setTransactions(Array.isArray(data.data) ? data.data : []);
-    } catch {
-      setTransactions([]);
-    }
-  }, [txFilter]);
+  const currency = CURRENCIES.find((c) => c.symbol === selectedCurrency)!;
+  const totalUSD = getTotalUSD();
+  const totalBTC = totalUSD / (CURRENCIES.find((c) => c.symbol === 'BTC')?.usdPrice || 43250);
 
-  useEffect(() => {
-    if (tab === 'transactions') loadTransactions();
-  }, [tab, txFilter, loadTransactions]);
-
-  const handleSelectDepositCurrency = (symbol: string) => {
-    setDepositCurrency(symbol);
-    const curr = CURRENCIES.find((c) => c.symbol === symbol);
-    if (curr?.networks && curr.networks.length === 1) {
-      setDepositNetwork(curr.networks[0].id);
-      setDepositStep(3);
-      fetchDepositAddress(symbol, curr.networks[0].id);
-    } else {
-      setDepositStep(2);
-    }
-  };
-
-  const handleSelectDepositNetwork = (networkId: string) => {
-    setDepositNetwork(networkId);
-    setDepositStep(3);
-    fetchDepositAddress(depositCurrency, networkId);
-  };
-
-  const fetchDepositAddress = async (currency: string, network: string) => {
-    setIsLoadingAddress(true);
-    try {
-      const { data } = await api.get(`/wallets/deposit/${currency}/address`, { params: { network } });
-      setDepositAddress(data.data);
-    } catch {
-      setDepositAddress({ address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', minDeposit: '0.0001' });
-    }
-    setIsLoadingAddress(false);
-  };
+  const currentNetwork =
+    depositNetwork
+      ? currency.networks.find((n) => n.id === depositNetwork)
+      : currency.networks[0];
 
   const handleCopyAddress = () => {
-    if (depositAddress?.address) {
-      navigator.clipboard.writeText(depositAddress.address);
-      setAddressCopied(true);
-      setTimeout(() => setAddressCopied(false), 2000);
-    }
+    navigator.clipboard.writeText(currency.address);
+    setAddressCopied(true);
+    setTimeout(() => setAddressCopied(false), 2000);
   };
 
-  const handleWithdraw = async () => {
-    try {
-      await api.post('/wallets/withdraw', {
-        currency: withdrawCurrency,
-        amount: withdrawAmount,
-        address: withdrawAddress,
-        network: withdrawNetwork,
-      });
-      setWithdrawAmount('');
-      setWithdrawAddress('');
-    } catch (err) {
-      console.error('Withdraw failed:', err);
-    }
-  };
-
-  const resetDeposit = () => {
-    setDepositStep(1);
-    setDepositCurrency('');
+  const handleSelectCurrency = (symbol: string) => {
+    setSelectedCurrency(symbol);
     setDepositNetwork('');
-    setDepositAddress(null);
     setAddressCopied(false);
+    const curr = CURRENCIES.find((c) => c.symbol === symbol);
+    if (curr && curr.networks.length > 0) {
+      setDepositNetwork(curr.networks[0].id);
+      setWithdrawNetwork(curr.networks[0].id);
+    }
   };
 
-  const selectedDepositCurrency = CURRENCIES.find((c) => c.symbol === depositCurrency);
-  const selectedDepositNetwork = selectedDepositCurrency?.networks?.find((n) => n.id === depositNetwork);
+  const filteredTransactions = MOCK_TRANSACTIONS.filter((tx) => {
+    if (txFilter === 'all') return true;
+    if (txFilter === 'deposits') return tx.type === 'deposit';
+    return tx.type === 'withdrawal';
+  });
 
-  const getNetAmount = () => {
+  const _withdrawCurrencyData = CURRENCIES.find((c) => c.symbol === selectedCurrency);
+  const withdrawFee = selectedCurrency === 'BTC' ? '0.0005' : selectedCurrency === 'ETH' ? '0.005' : '1.00';
+  const withdrawNetAmount = () => {
     const amt = parseFloat(withdrawAmount) || 0;
     const fee = parseFloat(withdrawFee) || 0;
-    return Math.max(0, amt - fee).toFixed(8);
+    return Math.max(0, amt - fee).toFixed(selectedCurrency === 'BTC' ? 8 : 4);
   };
 
   return (
-    <div className="max-w-4xl mx-auto pb-20 lg:pb-0">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1">Wallet</h1>
-        <div className="flex items-baseline gap-2">
-          <span className="text-gray-400 text-sm">Total Balance</span>
-          <span className="text-2xl font-bold font-mono text-white">
-            ${isLoading ? '---' : parseFloat(totalUSD).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </span>
+    <div className="max-w-5xl mx-auto pb-24 lg:pb-8 px-4">
+      {/* ── Total Balance Header ─────────────────────────────────── */}
+      <div className="text-center py-8">
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <span className="text-sm text-gray-400 uppercase tracking-wide">Total Balance</span>
+          <button
+            onClick={() => setBalanceHidden(!balanceHidden)}
+            className="text-gray-500 hover:text-gray-300 transition-colors p-1"
+          >
+            {balanceHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+        <div className="text-4xl font-bold font-mono text-white mb-1">
+          {balanceHidden ? '******' : `$${totalUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+        </div>
+        <div className="text-sm text-gray-500 font-mono">
+          {balanceHidden ? '****' : `${totalBTC.toFixed(6)} BTC`}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 overflow-x-auto scrollbar-hide pb-1">
-        {TAB_CONFIG.map((t) => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.key}
-              onClick={() => { setTab(t.key); if (t.key === 'deposit') resetDeposit(); }}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap min-h-[44px]',
-                tab === t.key
-                  ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/20'
-                  : 'bg-surface-tertiary text-gray-300 hover:bg-surface-hover'
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {t.label}
-            </button>
-          );
-        })}
+      {/* ── Action Buttons Row ───────────────────────────────────── */}
+      <div className="grid grid-cols-4 gap-3 mb-8">
+        <button
+          onClick={() => setActiveSection('deposit')}
+          className={cn(
+            'flex flex-col items-center gap-2 py-3.5 rounded-xl text-sm font-semibold transition-all',
+            activeSection === 'deposit'
+              ? 'bg-accent-green text-black shadow-lg'
+              : 'bg-accent-green/15 text-accent-green hover:bg-accent-green/25'
+          )}
+        >
+          <ArrowDown className="w-5 h-5" />
+          Deposit
+        </button>
+        <button
+          onClick={() => setActiveSection('withdraw')}
+          className={cn(
+            'flex flex-col items-center gap-2 py-3.5 rounded-xl text-sm font-semibold transition-all',
+            activeSection === 'withdraw'
+              ? 'bg-accent-orange text-black shadow-lg'
+              : 'bg-accent-orange/15 text-accent-orange hover:bg-accent-orange/25'
+          )}
+        >
+          <ArrowUp className="w-5 h-5" />
+          Withdraw
+        </button>
+        <button
+          onClick={() => setActiveSection('swap')}
+          className={cn(
+            'flex flex-col items-center gap-2 py-3.5 rounded-xl text-sm font-semibold transition-all',
+            activeSection === 'swap'
+              ? 'bg-brand-500 text-white shadow-lg'
+              : 'bg-brand-500/15 text-brand-400 hover:bg-brand-500/25'
+          )}
+        >
+          <ArrowLeftRight className="w-5 h-5" />
+          Swap
+        </button>
+        <button
+          onClick={() => setActiveSection('history')}
+          className={cn(
+            'flex flex-col items-center gap-2 py-3.5 rounded-xl text-sm font-semibold transition-all border',
+            activeSection === 'history'
+              ? 'border-white/20 bg-white/10 text-white'
+              : 'border-white/10 bg-transparent text-gray-400 hover:border-white/20 hover:text-gray-200'
+          )}
+        >
+          <Clock className="w-5 h-5" />
+          History
+        </button>
       </div>
 
-      <AnimatePresence mode="wait">
-        {/* Balances Tab */}
-        {tab === 'balances' && (
-          <motion.div
-            key="balances"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-2"
+      {/* ── Currency Tabs ────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-hide pb-1">
+        {CURRENCIES.map((c) => (
+          <button
+            key={c.symbol}
+            onClick={() => handleSelectCurrency(c.symbol)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all shrink-0 min-h-[40px]',
+              selectedCurrency === c.symbol
+                ? 'bg-surface-hover border border-white/15 text-white'
+                : 'bg-surface-tertiary border border-transparent text-gray-400 hover:bg-surface-hover hover:text-gray-200'
+            )}
           >
-            {isLoading ? (
-              <>
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="card flex items-center gap-3">
-                    <div className="skeleton w-8 h-8 rounded-full" />
-                    <div className="flex-1 space-y-1">
-                      <div className="skeleton h-4 w-20" />
-                      <div className="skeleton h-3 w-32" />
-                    </div>
-                    <div className="skeleton h-4 w-24" />
-                  </div>
-                ))}
-              </>
-            ) : (
-              wallets.map((w: any) => {
-                const currInfo = CURRENCIES.find((c) => c.symbol === w.currency);
-                return (
-                  <div key={w.id} className="card flex items-center justify-between hover:border-border-hover transition-colors">
-                    <div className="flex items-center gap-3">
-                      <CurrencyIcon symbol={w.currency} />
-                      <div>
-                        <p className="font-medium text-sm">{w.currency}</p>
-                        <p className="text-xs text-gray-500">{currInfo?.name || w.name}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono text-sm font-medium">{parseFloat(w.balance).toFixed(w.currency === 'BTC' ? 8 : 4)}</p>
-                      {w.usdValue && (
-                        <p className="text-xs text-gray-500 font-mono">${parseFloat(w.usdValue).toFixed(2)}</p>
-                      )}
-                      {w.bonusBalance && w.bonusBalance !== '0' && parseFloat(w.bonusBalance) > 0 && (
-                        <p className="text-xs text-accent-yellow font-mono">+{w.bonusBalance} bonus</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </motion.div>
-        )}
+            <CurrencyIcon symbol={c.symbol} color={c.color} size={22} />
+            {c.symbol}
+          </button>
+        ))}
+      </div>
 
-        {/* Deposit Tab */}
-        {tab === 'deposit' && (
-          <motion.div
-            key="deposit"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            {/* Progress Steps */}
-            <div className="flex items-center gap-2 mb-6">
-              {[1, 2, 3].map((step) => (
-                <div key={step} className="flex items-center gap-2">
-                  <button
-                    onClick={() => { if (step < depositStep) { setDepositStep(step); if (step === 1) resetDeposit(); } }}
-                    className={cn(
-                      'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
-                      step <= depositStep ? 'bg-brand-500 text-white' : 'bg-surface-tertiary text-gray-500'
-                    )}
-                  >
-                    {step}
-                  </button>
-                  <span className={cn('text-xs hidden sm:inline', step <= depositStep ? 'text-white' : 'text-gray-500')}>
-                    {step === 1 ? 'Currency' : step === 2 ? 'Network' : 'Address'}
-                  </span>
-                  {step < 3 && (
-                    <ChevronRight className={cn('w-3 h-3', step < depositStep ? 'text-brand-400' : 'text-gray-600')} />
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Step 1: Select Currency */}
-            {depositStep === 1 && (
+      {/* ── Deposit Section ──────────────────────────────────────── */}
+      {activeSection === 'deposit' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="bg-surface-secondary border border-border rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <CurrencyIcon symbol={currency.symbol} color={currency.color} size={40} />
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 mb-3">Select Currency</h3>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {CURRENCIES.map((c) => (
-                    <button
-                      key={c.symbol}
-                      onClick={() => handleSelectDepositCurrency(c.symbol)}
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-tertiary hover:bg-surface-hover border border-transparent hover:border-brand-500/30 transition-all min-h-[44px]"
-                    >
-                      <CurrencyIcon symbol={c.symbol} />
-                      <span className="text-xs font-medium">{c.symbol}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Select Network */}
-            {depositStep === 2 && selectedDepositCurrency && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <CurrencyIcon symbol={depositCurrency} />
-                  <div>
-                    <h3 className="text-sm font-semibold">Select Network for {depositCurrency}</h3>
-                    <p className="text-xs text-gray-500">Choose the network to deposit on</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {selectedDepositCurrency.networks?.map((net) => (
-                    <button
-                      key={net.id}
-                      onClick={() => handleSelectDepositNetwork(net.id)}
-                      className="w-full flex items-center justify-between p-4 rounded-xl bg-surface-tertiary hover:bg-surface-hover border border-transparent hover:border-brand-500/30 transition-all text-left"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{net.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {net.confirmations} confirmations - {net.estimatedTime}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-500" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Deposit Address */}
-            {depositStep === 3 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <CurrencyIcon symbol={depositCurrency} />
-                  <div>
-                    <h3 className="text-sm font-semibold">Deposit {depositCurrency}</h3>
-                    {selectedDepositNetwork && (
-                      <p className="text-xs text-gray-500">via {selectedDepositNetwork.name}</p>
-                    )}
-                  </div>
-                </div>
-
-                {isLoadingAddress ? (
-                  <div className="card space-y-4">
-                    <div className="skeleton w-48 h-48 mx-auto rounded-xl" />
-                    <div className="skeleton h-10 w-full rounded-lg" />
-                  </div>
-                ) : depositAddress ? (
-                  <div className="card space-y-4">
-                    {/* QR Code Placeholder */}
-                    <div className="flex justify-center">
-                      <div className="w-48 h-48 bg-white rounded-xl flex items-center justify-center p-3">
-                        <div className="w-full h-full bg-surface rounded-lg flex items-center justify-center">
-                          <QrCode className="w-16 h-16 text-gray-400" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Address */}
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1.5 block">Deposit Address</label>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-surface-tertiary rounded-lg px-3 py-2.5 font-mono text-sm text-white break-all select-all border border-border">
-                          {depositAddress.address}
-                        </div>
-                        <button
-                          onClick={handleCopyAddress}
-                          className={cn(
-                            'p-2.5 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center',
-                            addressCopied ? 'bg-accent-green/20 text-accent-green' : 'bg-surface-tertiary hover:bg-surface-hover text-gray-400'
-                          )}
-                        >
-                          {addressCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Warning & Info */}
-                    <div className="bg-accent-yellow/10 border border-accent-yellow/20 rounded-xl p-3">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-accent-yellow shrink-0 mt-0.5" />
-                        <div className="text-xs text-gray-300 space-y-1">
-                          <p className="font-semibold text-accent-yellow">Important</p>
-                          <p>Only send <span className="font-bold text-white">{depositCurrency}</span> to this address{selectedDepositNetwork ? ` on the ${selectedDepositNetwork.name} network` : ''}.</p>
-                          {selectedDepositNetwork && (
-                            <p>Requires {selectedDepositNetwork.confirmations} confirmations, {selectedDepositNetwork.estimatedTime}</p>
-                          )}
-                          {depositAddress.minDeposit && (
-                            <p>Minimum deposit: <span className="font-mono font-medium text-white">{depositAddress.minDeposit} {depositCurrency}</span></p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={resetDeposit}
-                      className="btn-secondary w-full text-sm"
-                    >
-                      Deposit Another Currency
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* Withdraw Tab */}
-        {tab === 'withdraw' && (
-          <motion.div
-            key="withdraw"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="card space-y-4"
-          >
-            {/* Currency Selector */}
-            <div>
-              <label className="text-xs text-gray-400 mb-1.5 block">Currency</label>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-                {['BTC', 'ETH', 'USDT', 'LTC', 'SOL', 'DOGE'].map((sym) => (
-                  <button
-                    key={sym}
-                    onClick={() => setWithdrawCurrency(sym)}
-                    className={cn(
-                      'flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-xs font-medium min-h-[44px]',
-                      withdrawCurrency === sym
-                        ? 'bg-brand-500/20 border border-brand-500 text-brand-400'
-                        : 'bg-surface-tertiary border border-transparent hover:bg-surface-hover text-gray-300'
-                    )}
-                  >
-                    <CurrencyIcon symbol={sym} size="sm" />
-                    {sym}
-                  </button>
-                ))}
+                <h2 className="text-lg font-semibold">Deposit {currency.name}</h2>
+                <p className="text-sm text-gray-500">{currency.symbol} - Send funds to the address below</p>
               </div>
             </div>
 
             {/* Network Selector */}
-            {CURRENCIES.find((c) => c.symbol === withdrawCurrency)?.networks && (
-              <div>
-                <label className="text-xs text-gray-400 mb-1.5 block">Network</label>
-                <div className="flex gap-2 flex-wrap">
-                  {CURRENCIES.find((c) => c.symbol === withdrawCurrency)?.networks?.map((net) => (
+            {currency.networks.length > 1 && (
+              <div className="mb-6">
+                <label className="text-xs text-gray-400 mb-2 block uppercase tracking-wide">Select Network</label>
+                <div className="flex flex-wrap gap-2">
+                  {currency.networks.map((net) => (
                     <button
                       key={net.id}
-                      onClick={() => setWithdrawNetwork(net.id)}
+                      onClick={() => setDepositNetwork(net.id)}
                       className={cn(
-                        'px-3 py-2 rounded-lg text-xs font-medium transition-all min-h-[44px]',
-                        withdrawNetwork === net.id
+                        'px-4 py-2.5 rounded-lg text-sm font-medium transition-all',
+                        (depositNetwork || currency.networks[0].id) === net.id
                           ? 'bg-brand-500/20 border border-brand-500 text-brand-400'
-                          : 'bg-surface-tertiary border border-transparent hover:bg-surface-hover text-gray-300'
+                          : 'bg-surface-tertiary border border-transparent text-gray-300 hover:bg-surface-hover'
                       )}
                     >
                       {net.name}
@@ -499,39 +425,116 @@ export default function WalletPage() {
               </div>
             )}
 
-            {/* Amount */}
-            <div>
-              <label className="text-xs text-gray-400 mb-1.5 block">Amount</label>
+            {/* QR Code Placeholder */}
+            <div className="flex justify-center mb-6">
+              <div className="w-48 h-48 rounded-xl flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #1A1B1F 0%, #2A2B30 50%, #1A1B1F 100%)' }}>
+                <div className="w-40 h-40 rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2">
+                  <QrCode className="w-12 h-12 text-gray-500" />
+                  <span className="text-xs text-gray-600">QR Code</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Wallet Address */}
+            <div className="mb-5">
+              <label className="text-xs text-gray-400 mb-2 block uppercase tracking-wide">Wallet Address</label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-surface-deepest rounded-lg px-4 py-3 font-mono text-sm text-white break-all select-all border border-border">
+                  {currency.address}
+                </div>
+                <button
+                  onClick={handleCopyAddress}
+                  className={cn(
+                    'p-3 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0',
+                    addressCopied
+                      ? 'bg-accent-green/20 text-accent-green'
+                      : 'bg-surface-tertiary hover:bg-surface-hover text-gray-400 hover:text-white'
+                  )}
+                >
+                  {addressCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Deposit Info */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="bg-surface-tertiary rounded-lg p-3">
+                <p className="text-xs text-gray-500 mb-0.5">Min Deposit</p>
+                <p className="text-sm font-mono font-semibold text-white">
+                  {currentNetwork?.minDeposit} {currency.symbol}
+                </p>
+              </div>
+              <div className="bg-surface-tertiary rounded-lg p-3">
+                <p className="text-xs text-gray-500 mb-0.5">Confirmations</p>
+                <p className="text-sm font-mono font-semibold text-white">
+                  {currentNetwork?.confirmations} blocks
+                </p>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div className="bg-accent-yellow/8 border border-accent-yellow/20 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-accent-yellow shrink-0 mt-0.5" />
+                <div className="text-sm text-gray-300 leading-relaxed">
+                  Only send <span className="font-bold text-white">{currency.symbol}</span> on the{' '}
+                  <span className="font-bold text-white">{currentNetwork?.name}</span> network to this address.
+                  Sending any other asset or using a different network may result in permanent loss of funds.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Withdraw Section ─────────────────────────────────────── */}
+      {activeSection === 'withdraw' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="bg-surface-secondary border border-border rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <CurrencyIcon symbol={currency.symbol} color={currency.color} size={40} />
+              <div>
+                <h2 className="text-lg font-semibold">Withdraw {currency.name}</h2>
+                <p className="text-sm text-gray-500">
+                  Available: <span className="font-mono text-white">{currency.balance} {currency.symbol}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Amount Input */}
+            <div className="mb-5">
+              <label className="text-xs text-gray-400 mb-2 block uppercase tracking-wide">Amount</label>
               <div className="relative">
                 <input
                   type="text"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   placeholder="0.00"
-                  className="input font-mono pr-16"
+                  className="w-full bg-surface-deepest border border-border rounded-lg px-4 py-3 font-mono text-white pr-20 text-base focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25 transition-all outline-none"
                 />
                 <button
-                  onClick={() => {
-                    const w = wallets.find((wl: any) => wl.currency === withdrawCurrency);
-                    if (w) setWithdrawAmount(w.balance);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-bold text-brand-400 hover:bg-brand-500/10 rounded transition-colors"
+                  onClick={() => setWithdrawAmount(String(currency.balance))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 text-xs font-bold text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 rounded transition-colors"
                 >
                   MAX
                 </button>
               </div>
+              <p className="text-xs text-gray-500 mt-1.5 font-mono">
+                ~ ${((parseFloat(withdrawAmount) || 0) * currency.usdPrice).toFixed(2)} USD
+              </p>
             </div>
 
-            {/* Address */}
-            <div>
-              <label className="text-xs text-gray-400 mb-1.5 block">Withdrawal Address</label>
+            {/* Address Input */}
+            <div className="mb-5">
+              <label className="text-xs text-gray-400 mb-2 block uppercase tracking-wide">Recipient Address</label>
               <div className="relative">
                 <input
                   type="text"
                   value={withdrawAddress}
                   onChange={(e) => setWithdrawAddress(e.target.value)}
-                  placeholder="Enter wallet address"
-                  className="input font-mono pr-10"
+                  placeholder={`Enter ${currency.symbol} address`}
+                  className="w-full bg-surface-deepest border border-border rounded-lg px-4 py-3 font-mono text-white pr-12 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25 transition-all outline-none"
                 />
                 <button
                   onClick={async () => {
@@ -540,116 +543,310 @@ export default function WalletPage() {
                       setWithdrawAddress(text);
                     } catch {}
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-white transition-colors"
                 >
                   <Clipboard className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Fee & Net Amount Preview */}
-            {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-              <div className="bg-surface-tertiary rounded-xl p-3 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Network Fee</span>
-                  <span className="font-mono text-gray-300">{withdrawFee} {withdrawCurrency}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">You will receive</span>
-                  <span className="font-mono font-semibold text-white">{getNetAmount()} {withdrawCurrency}</span>
+            {/* Network Selector */}
+            {currency.networks.length > 1 && (
+              <div className="mb-5">
+                <label className="text-xs text-gray-400 mb-2 block uppercase tracking-wide">Network</label>
+                <div className="flex flex-wrap gap-2">
+                  {currency.networks.map((net) => (
+                    <button
+                      key={net.id}
+                      onClick={() => setWithdrawNetwork(net.id)}
+                      className={cn(
+                        'px-4 py-2.5 rounded-lg text-sm font-medium transition-all',
+                        (withdrawNetwork || currency.networks[0].id) === net.id
+                          ? 'bg-brand-500/20 border border-brand-500 text-brand-400'
+                          : 'bg-surface-tertiary border border-transparent text-gray-300 hover:bg-surface-hover'
+                      )}
+                    >
+                      {net.name}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* Confirm Button */}
-            <button
-              onClick={handleWithdraw}
-              disabled={!withdrawAmount || !withdrawAddress || parseFloat(withdrawAmount) <= 0}
-              className="btn-primary w-full py-3 text-sm font-semibold rounded-xl"
-            >
-              Confirm Withdrawal
-            </button>
-          </motion.div>
-        )}
+            {/* Fee Info */}
+            {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+              <div className="bg-surface-tertiary rounded-xl p-4 space-y-3 mb-5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Network Fee</span>
+                  <span className="font-mono text-gray-300">{withdrawFee} {selectedCurrency}</span>
+                </div>
+                <div className="border-t border-border" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">You will receive</span>
+                  <span className="font-mono font-semibold text-white">{withdrawNetAmount()} {selectedCurrency}</span>
+                </div>
+              </div>
+            )}
 
-        {/* Transactions Tab */}
-        {tab === 'transactions' && (
-          <motion.div
-            key="transactions"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            {/* Filters */}
-            <div className="flex gap-1.5 mb-4 overflow-x-auto scrollbar-hide pb-1">
-              {(['all', 'deposits', 'withdrawals', 'bets', 'wins'] as TxFilter[]).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setTxFilter(f)}
-                  className={cn(
-                    'px-3 py-2 rounded-lg text-xs font-medium capitalize whitespace-nowrap transition-all min-h-[44px]',
-                    txFilter === f
-                      ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30'
-                      : 'bg-surface-tertiary text-gray-400 border border-transparent hover:bg-surface-hover'
-                  )}
-                >
-                  {f}
-                </button>
-              ))}
+            {/* Review Button */}
+            <button
+              disabled={!withdrawAmount || !withdrawAddress || parseFloat(withdrawAmount) <= 0}
+              className={cn(
+                'w-full py-3.5 rounded-xl text-sm font-bold transition-all',
+                !withdrawAmount || !withdrawAddress || parseFloat(withdrawAmount) <= 0
+                  ? 'bg-surface-tertiary text-gray-600 cursor-not-allowed'
+                  : 'bg-accent-orange hover:brightness-110 text-black shadow-lg'
+              )}
+            >
+              Review Withdrawal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Swap Section ─────────────────────────────────────────── */}
+      {activeSection === 'swap' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="bg-surface-secondary border border-border rounded-xl p-6">
+            <h2 className="text-lg font-semibold mb-6">Swap Currencies</h2>
+
+            {/* From */}
+            <div className="mb-3">
+              <label className="text-xs text-gray-400 mb-2 block uppercase tracking-wide">From</label>
+              <div className="bg-surface-deepest border border-border rounded-lg p-4 flex items-center gap-3">
+                <div className="relative">
+                  <select
+                    value={swapFrom}
+                    onChange={(e) => setSwapFrom(e.target.value)}
+                    className="appearance-none bg-surface-tertiary border border-border rounded-lg pl-3 pr-8 py-2 text-sm font-medium text-white cursor-pointer focus:outline-none focus:border-brand-500"
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c.symbol} value={c.symbol}>{c.symbol}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+                <input
+                  type="text"
+                  value={swapAmount}
+                  onChange={(e) => setSwapAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="flex-1 bg-transparent text-right font-mono text-lg text-white outline-none placeholder:text-gray-600"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1 text-right font-mono">
+                Balance: {CURRENCIES.find((c) => c.symbol === swapFrom)?.balance ?? 0} {swapFrom}
+              </p>
             </div>
 
-            {/* Transaction List */}
-            <div className="space-y-2">
-              {transactions.length === 0 ? (
-                <div className="card text-center py-12">
-                  <History className="w-8 h-8 mx-auto mb-3 text-gray-600" />
-                  <p className="text-sm text-gray-500">No transactions found</p>
+            {/* Swap Direction Button */}
+            <div className="flex justify-center -my-1 relative z-10">
+              <button
+                onClick={() => {
+                  const tmp = swapFrom;
+                  setSwapFrom(swapTo);
+                  setSwapTo(tmp);
+                }}
+                className="w-10 h-10 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center transition-all shadow-lg"
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* To */}
+            <div className="mb-6 mt-3">
+              <label className="text-xs text-gray-400 mb-2 block uppercase tracking-wide">To</label>
+              <div className="bg-surface-deepest border border-border rounded-lg p-4 flex items-center gap-3">
+                <div className="relative">
+                  <select
+                    value={swapTo}
+                    onChange={(e) => setSwapTo(e.target.value)}
+                    className="appearance-none bg-surface-tertiary border border-border rounded-lg pl-3 pr-8 py-2 text-sm font-medium text-white cursor-pointer focus:outline-none focus:border-brand-500"
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c.symbol} value={c.symbol}>{c.symbol}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
-              ) : (
-                transactions.map((tx: any) => (
-                  <div key={tx.id} className="card flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'w-8 h-8 rounded-full flex items-center justify-center',
+                <div className="flex-1 text-right font-mono text-lg text-gray-400">
+                  {swapAmount && parseFloat(swapAmount) > 0
+                    ? (
+                        (parseFloat(swapAmount) *
+                          (CURRENCIES.find((c) => c.symbol === swapFrom)?.usdPrice || 0)) /
+                        (CURRENCIES.find((c) => c.symbol === swapTo)?.usdPrice || 1)
+                      ).toFixed(6)
+                    : '0.00'}
+                </div>
+              </div>
+            </div>
+
+            {/* Swap Info */}
+            {swapAmount && parseFloat(swapAmount) > 0 && (
+              <div className="bg-surface-tertiary rounded-xl p-4 space-y-2 mb-5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Rate</span>
+                  <span className="font-mono text-gray-300">
+                    1 {swapFrom} = {((CURRENCIES.find((c) => c.symbol === swapFrom)?.usdPrice || 0) / (CURRENCIES.find((c) => c.symbol === swapTo)?.usdPrice || 1)).toFixed(4)} {swapTo}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Fee</span>
+                  <span className="font-mono text-gray-300">0.5%</span>
+                </div>
+              </div>
+            )}
+
+            <button
+              disabled={!swapAmount || parseFloat(swapAmount) <= 0 || swapFrom === swapTo}
+              className={cn(
+                'w-full py-3.5 rounded-xl text-sm font-bold transition-all',
+                !swapAmount || parseFloat(swapAmount) <= 0 || swapFrom === swapTo
+                  ? 'bg-surface-tertiary text-gray-600 cursor-not-allowed'
+                  : 'bg-brand-500 hover:bg-brand-600 text-white shadow-lg'
+              )}
+            >
+              Swap {swapFrom} to {swapTo}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── History Section ──────────────────────────────────────── */}
+      {activeSection === 'history' && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Filters */}
+          <div className="flex gap-2">
+            {(['all', 'deposits', 'withdrawals'] as TxFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setTxFilter(f)}
+                className={cn(
+                  'px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all',
+                  txFilter === f
+                    ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30'
+                    : 'bg-surface-tertiary text-gray-400 border border-transparent hover:bg-surface-hover'
+                )}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {/* Transaction List */}
+          <div className="space-y-2">
+            {filteredTransactions.length === 0 ? (
+              <div className="bg-surface-secondary border border-border rounded-xl p-12 text-center">
+                <Clock className="w-10 h-10 mx-auto mb-3 text-gray-600" />
+                <p className="text-gray-500">No transactions found</p>
+              </div>
+            ) : (
+              filteredTransactions.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="bg-surface-secondary border border-border rounded-xl p-4 flex items-center justify-between hover:border-white/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'w-10 h-10 rounded-full flex items-center justify-center',
                         tx.type === 'deposit' ? 'bg-accent-green/15' : 'bg-accent-red/15'
-                      )}>
-                        {tx.type === 'deposit' ? (
-                          <ArrowDownToLine className="w-4 h-4 text-accent-green" />
-                        ) : (
-                          <ArrowUpFromLine className="w-4 h-4 text-accent-red" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium capitalize">{tx.type}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(tx.createdAt).toLocaleDateString('en-US', {
-                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-3">
-                      <div>
-                        <p className={cn('font-mono text-sm font-medium',
-                          tx.type === 'deposit' || tx.type === 'win' ? 'text-accent-green' : 'text-white'
-                        )}>
-                          {tx.type === 'deposit' || tx.type === 'win' ? '+' : '-'}{tx.amount} {tx.currency}
-                        </p>
-                        <StatusBadge status={tx.status} />
-                      </div>
-                      {tx.txHash && (
-                        <a href="#" className="text-gray-500 hover:text-brand-400 transition-colors">
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
+                      )}
+                    >
+                      {tx.type === 'deposit' ? (
+                        <ArrowDown className="w-5 h-5 text-accent-green" />
+                      ) : (
+                        <ArrowUp className="w-5 h-5 text-accent-red" />
                       )}
                     </div>
+                    <div>
+                      <p className="text-sm font-semibold">
+                        <span className={tx.type === 'deposit' ? 'text-accent-green' : 'text-accent-red'}>
+                          {tx.type === 'deposit' ? '+' : '-'}
+                        </span>
+                        <span className="font-mono ml-1">{tx.amount} {tx.currency}</span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(tx.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
                   </div>
-                ))
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <StatusBadge status={tx.status} />
+                      <div className="flex items-center gap-1 mt-1 justify-end">
+                        <span className="text-xs text-gray-600 font-mono">{truncateHash(tx.txHash)}</span>
+                        <a
+                          href="#"
+                          className="text-gray-600 hover:text-brand-400 transition-colors"
+                          title="View on explorer"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Wallet Grid ──────────────────────────────────────────── */}
+      <div className="mt-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">All Wallets</h2>
+          <button className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {CURRENCIES.map((c) => {
+            const usdValue = c.balance * c.usdPrice;
+            return (
+              <button
+                key={c.symbol}
+                onClick={() => handleSelectCurrency(c.symbol)}
+                className={cn(
+                  'text-left bg-surface-secondary border rounded-xl p-4 hover:border-white/10 transition-all group',
+                  selectedCurrency === c.symbol ? 'border-brand-500/40' : 'border-border'
+                )}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <CurrencyIcon symbol={c.symbol} color={c.color} size={36} />
+                    <div>
+                      <p className="text-sm font-semibold text-white">{c.name}</p>
+                      <p className="text-xs text-gray-500">{c.symbol}</p>
+                    </div>
+                  </div>
+                  <MiniSparkline color={c.color} />
+                </div>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-lg font-mono font-semibold text-white">
+                      {balanceHidden ? '****' : c.balance.toLocaleString('en-US', { maximumFractionDigits: 8 })}
+                    </p>
+                    <p className="text-xs text-gray-500 font-mono">
+                      {balanceHidden ? '****' : `$${usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

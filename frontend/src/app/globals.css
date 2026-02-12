@@ -4,59 +4,178 @@
 
 @layer base {
   :root {
-    /* Cloudbet Color Scheme */
+    /* ── Cloudbet Design System: Colors ── */
     --color-primary: #8D52DA;
+    --color-primary-hover: #7a42c4;
     --color-accent-foreground: #E0E0E0;
-    --color-error: #FF494A;
-    --color-success: #30E000;
-    --color-warning: #FFD641;
 
+    --color-success: #30E000;
+    --color-error: #FF494A;
+    --color-warning: #FFD641;
+    --color-live: #BFFF00;
+
+    /* Surfaces */
+    --color-bg-deepest: #0F0F12;
     --color-bg: #111214;
     --color-surface: #1A1B1F;
     --color-surface-secondary: #222328;
     --color-surface-hover: #2A2B30;
 
+    /* Borders */
     --color-border: rgba(255, 255, 255, 0.08);
     --color-border-dim: rgba(255, 255, 255, 0.04);
     --color-border-selected: rgba(224, 232, 255, 0.1);
 
+    /* Text */
     --color-text-primary: #FFFFFF;
     --color-text-secondary: rgba(255, 255, 255, 0.6);
     --color-text-dim: rgba(224, 232, 255, 0.3);
     --color-text-muted: rgba(255, 255, 255, 0.4);
 
+    /* Shadows */
+    --shadow-connect-btn: 0px 4px 12px rgba(0, 0, 0, 0.1);
     --shadow-card: 0px 4px 12px rgba(0, 0, 0, 0.1);
     --shadow-dialog: 0px 8px 32px rgba(0, 0, 0, 0.32);
+    --shadow-card-hover: 0px 2px 6px rgba(0, 0, 0, 0.24);
     --shadow-btn-hover: 0px 4px 12px rgba(0, 0, 0, 0.2);
 
+    /* Radii */
     --radius-btn: 4px;
     --radius-card: 8px;
     --radius-modal: 8px;
+    --radius-pill: 9999px;
+    --radius-game-card: 12px;
 
-    --gradient-download-card: linear-gradient(126deg, rgba(120,120,120,0.2) 9.49%, rgba(0,0,0,0) 71.04%), #1A1B1F;
-    --gradient-connect-btn: linear-gradient(0deg, rgba(255,255,255,0.075), rgba(255,255,255,0.15));
+    /* Gradients */
+    --gradient-download-card: linear-gradient(126deg, rgba(120, 120, 120, 0.2) 9.49%, rgba(0, 0, 0, 0) 71.04%), #1A1B1F;
+    --gradient-connect-btn: linear-gradient(0deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.15));
+
+    /* Safe area insets for iOS */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
   }
 
+  /* ── Smooth scrolling ── */
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Base dark theme body ── */
   body {
-    @apply bg-surface text-white antialiased;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
     color: var(--color-text-primary);
     background-color: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    padding-top: var(--safe-area-top);
+    padding-bottom: var(--safe-area-bottom);
+    overflow-x: hidden;
   }
 
-  /* Better scrollbar */
+  /* ── Selection color ── */
+  ::selection {
+    background-color: rgba(141, 82, 218, 0.4);
+    color: #FFFFFF;
+  }
+
+  ::-moz-selection {
+    background-color: rgba(141, 82, 218, 0.4);
+    color: #FFFFFF;
+  }
+
+  /* ── Scrollbar: thin, dark ── */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
+
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-surface-tertiary rounded-full hover:bg-surface-hover;
+    background: transparent;
   }
 
-  /* Hide scrollbar utility */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* ── Input focus styles ── */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(141, 82, 218, 0.25);
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* ── Touch highlight removal ── */
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Base element resets for dark theme ── */
+  a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--color-primary-hover);
+  }
+
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* ── Placeholder color ── */
+  ::placeholder {
+    color: var(--color-text-dim);
+  }
+
+  ::-webkit-input-placeholder {
+    color: var(--color-text-dim);
+  }
+
+  ::-moz-placeholder {
+    color: var(--color-text-dim);
+  }
+}
+
+/* ── Scrollbar utility classes ── */
+@layer utilities {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
@@ -65,19 +184,24 @@
     scrollbar-width: none;
   }
 
-  /* Custom thin scrollbar */
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-surface-tertiary/50 rounded-full;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
 }
 
+/* ── Component classes ── */
 @layer components {
+  /* Buttons */
   .btn-primary {
     @apply bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
     box-shadow: none;
@@ -85,79 +209,106 @@
   .btn-primary:hover {
     box-shadow: var(--shadow-btn-hover);
   }
+
   .btn-secondary {
     @apply bg-surface-tertiary hover:bg-surface-hover text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
   }
+
   .btn-accent {
-    @apply bg-accent-green hover:brightness-110 text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+    @apply hover:brightness-110 text-black font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+    background-color: var(--color-live);
   }
+
   .btn-connect {
     background: var(--gradient-connect-btn);
+    box-shadow: var(--shadow-connect-btn);
     @apply text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
   }
+
+  .btn-success {
+    @apply bg-accent-green hover:brightness-110 text-black font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+  }
+
+  .btn-danger {
+    @apply bg-accent-red hover:brightness-110 text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+  }
+
+  /* Cards */
   .card {
     @apply bg-surface-secondary border border-border rounded-card p-4;
     box-shadow: var(--shadow-card);
   }
-  .input {
-    @apply w-full bg-surface-tertiary border border-border rounded-btn px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors;
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
   }
+
+  .game-card {
+    @apply bg-surface-secondary border border-border p-0 overflow-hidden;
+    border-radius: var(--radius-game-card);
+  }
+
+  .glass-card {
+    background: rgba(26, 27, 31, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+  }
+
+  .download-card {
+    background: var(--gradient-download-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full bg-surface-tertiary border border-border rounded-btn px-3 py-2 text-white transition-colors;
+    font-size: 14px;
+  }
+  .input::placeholder {
+    color: var(--color-text-dim);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(141, 82, 218, 0.25);
+  }
+
+  .input-cloudbet {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-btn);
+    color: white;
+    padding: 10px 12px;
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  .input-cloudbet:focus {
+    border-color: var(--color-primary);
+  }
+  .input-cloudbet::placeholder {
+    color: var(--color-text-dim);
+  }
+
+  /* Odds buttons */
   .odds-btn {
     @apply flex flex-col items-center justify-center px-3 py-2 rounded-btn bg-surface-tertiary hover:bg-surface-hover border border-transparent transition-all cursor-pointer text-sm min-h-[44px];
   }
   .odds-btn.selected {
     @apply bg-brand-500/20 border-brand-500 text-brand-400;
   }
-  .live-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold bg-accent-red text-white rounded-full animate-pulse-slow;
-  }
 
-  /* Gradient text utility */
-  .text-gradient {
-    background: linear-gradient(135deg, #8D52DA, #b07aef);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Glass morphism card */
-  .glass-card {
-    background: rgba(26, 27, 31, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-card);
-  }
-
-  /* Download card with gradient */
-  .download-card {
-    background: var(--gradient-download-card);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-card);
-  }
-
-  /* Dialog/Modal */
+  /* Dialog / Modal */
   .dialog {
     @apply bg-surface-secondary rounded-modal;
     box-shadow: var(--shadow-dialog);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border);
   }
 
-  /* Odds change animations */
-  .odds-up {
-    animation: oddsUp 0.5s ease;
-  }
-  .odds-down {
-    animation: oddsDown 0.5s ease;
-  }
-
-  /* Skeleton loading */
-  .skeleton {
-    @apply bg-surface-tertiary rounded;
-    animation: skeleton-pulse 1.5s ease-in-out infinite;
-  }
-
-  /* Status badges */
+  /* Badges */
   .badge-pending {
     @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent-yellow/15 text-accent-yellow;
   }
@@ -170,13 +321,48 @@
   .badge-live {
     @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-accent-red/15 text-accent-red;
   }
+  .live-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold bg-accent-red text-white rounded-full animate-pulse-slow;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, #8D52DA, #b07aef);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply bg-surface-tertiary rounded;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
 
   /* Touch target minimum size */
   .touch-target {
     @apply min-w-[44px] min-h-[44px] flex items-center justify-center;
   }
+
+  /* Transition utilities */
+  .transition-fast {
+    transition: all 0.15s ease;
+  }
+  .transition-normal {
+    transition: all 0.3s ease;
+  }
+
+  /* Button hover effect */
+  .btn-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-card-hover);
+  }
+  .btn-hover:active {
+    transform: translateY(0);
+  }
 }
 
+/* ── Keyframes ── */
 @keyframes oddsUp {
   0% { background-color: transparent; }
   50% { background-color: rgba(48, 224, 0, 0.2); }
@@ -204,6 +390,22 @@
   50% { transform: translateY(-15px) rotate(5deg); }
 }
 
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modalSlideRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes modalBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Animation utility classes ── */
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
@@ -216,52 +418,22 @@
   animation: float 4s ease-in-out 1s infinite;
 }
 
-/* Cloudbet-style transitions */
-.transition-fast { transition: all 0.15s ease; }
-.transition-normal { transition: all 0.3s ease; }
+.animate-modal {
+  animation: modalFadeIn 0.3s ease-out;
+}
 
-/* Modal animation */
-@keyframes modalFadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+.animate-slide-right {
+  animation: modalSlideRight 0.3s ease-out;
 }
-@keyframes modalSlideRight {
-  from { opacity: 0; transform: translateX(100%); }
-  to { opacity: 1; transform: translateX(0); }
-}
-@keyframes modalBackdropIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.animate-modal { animation: modalFadeIn 0.3s ease-out; }
-.animate-slide-right { animation: modalSlideRight 0.3s ease-out; }
-.animate-modal-backdrop { animation: modalBackdropIn 0.2s ease-out; }
 
-/* Button hover like Cloudbet */
-.btn-hover:hover { transform: translateY(-1px); box-shadow: 0px 4px 12px rgba(0,0,0,0.2); }
-.btn-hover:active { transform: translateY(0); }
-
-/* Custom scrollbar - thin variant override */
-.scrollbar-thin::-webkit-scrollbar { width: 4px; }
-.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-.scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-
-/* Input styles matching Cloudbet */
-.input-cloudbet {
-  background: #111214;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 4px;
-  color: white;
-  padding: 10px 12px;
-  font-size: 14px;
-  width: 100%;
-  outline: none;
-  transition: border-color 0.15s ease;
+.animate-modal-backdrop {
+  animation: modalBackdropIn 0.2s ease-out;
 }
-.input-cloudbet:focus {
-  border-color: #8D52DA;
+
+.odds-up {
+  animation: oddsUp 0.5s ease;
 }
-.input-cloudbet::placeholder {
-  color: rgba(224,232,255,0.3);
+
+.odds-down {
+  animation: oddsDown 0.5s ease;
 }

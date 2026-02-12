@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useBetSlipStore } from '@/stores/betSlipStore';
-import { formatOdds, formatDate, cn } from '@/lib/utils';
-import { ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { formatOdds, cn } from '@/lib/utils';
+import { Star, Clock, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { format, isToday, isTomorrow } from 'date-fns';
 import { SportIcon } from '@/components/sports/SportIcon';
 import type { Event, Selection, Market } from '@/types';
 
@@ -12,7 +14,7 @@ import type { Event, Selection, Market } from '@/types';
 /*  Constants                                                          */
 /* ================================================================== */
 
-/** Sports that typically have no draw -- show ML / Spread / Total columns */
+/** Sports that typically have no draw outcome */
 const NO_DRAW_SPORTS = new Set([
   'basketball',
   'ice-hockey',
@@ -44,6 +46,21 @@ interface EventCardProps {
 }
 
 /* ================================================================== */
+/*  Helpers                                                            */
+/* ================================================================== */
+
+function formatEventDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isToday(date)) {
+    return `Today, ${format(date, 'HH:mm')}`;
+  }
+  if (isTomorrow(date)) {
+    return `Tomorrow, ${format(date, 'HH:mm')}`;
+  }
+  return format(date, 'MMM d, HH:mm');
+}
+
+/* ================================================================== */
 /*  TeamLogo                                                           */
 /* ================================================================== */
 
@@ -70,9 +87,9 @@ function TeamLogo({
       <img
         src={logo}
         alt={name}
-        width={24}
-        height={24}
-        className="w-6 h-6 rounded-full object-contain shrink-0 bg-white/5"
+        width={28}
+        height={28}
+        className="w-7 h-7 rounded-full object-contain shrink-0 bg-white/5"
         loading="lazy"
         onError={() => setImgError(true)}
       />
@@ -82,7 +99,7 @@ function TeamLogo({
   return (
     <div
       className={cn(
-        'w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0',
+        'w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
         isHome
           ? 'bg-brand-500/20 text-brand-400'
           : 'bg-accent-purple/20 text-accent-purple',
@@ -94,7 +111,7 @@ function TeamLogo({
 }
 
 /* ================================================================== */
-/*  OddsButton -- professional betting-site style                      */
+/*  OddsButton -- Cloudbet-style with framer-motion flash              */
 /* ================================================================== */
 
 type OddsFlash = 'up' | 'down' | null;
@@ -106,14 +123,14 @@ function OddsButton({
   onSelect,
 }: {
   selection: Selection | null;
-  label?: string;
+  label: string;
   isSelected: boolean;
   onSelect: () => void;
 }) {
   const [flash, setFlash] = useState<OddsFlash>(null);
   const prevOdds = useRef<string | null>(null);
 
-  // Detect odds movement
+  // Detect odds movement for flash animation
   useEffect(() => {
     if (!selection) return;
     if (prevOdds.current !== null && prevOdds.current !== selection.odds) {
@@ -122,7 +139,7 @@ function OddsButton({
           ? 'up'
           : 'down';
       setFlash(dir);
-      const timer = setTimeout(() => setFlash(null), 2000);
+      const timer = setTimeout(() => setFlash(null), 1500);
       return () => clearTimeout(timer);
     }
     prevOdds.current = selection.odds;
@@ -130,91 +147,85 @@ function OddsButton({
 
   if (!selection) {
     return (
-      <div className="flex-1 min-w-[64px] h-10 rounded bg-surface-tertiary/50 flex items-center justify-center">
-        <span className="text-xs text-text-dim">-</span>
+      <div
+        className={cn(
+          'flex-1 min-w-[72px] py-2 px-3 rounded-md flex flex-col items-center justify-center gap-0.5',
+          'bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]',
+        )}
+      >
+        <span className="text-[10px] font-medium text-text-dim leading-none uppercase">
+          {label}
+        </span>
+        <span className="text-xs text-text-dim font-mono">-</span>
       </div>
     );
   }
 
   const isSuspended = selection.status === 'SUSPENDED';
 
+  // Determine flash background color for framer-motion
+  const flashBg =
+    flash === 'up'
+      ? 'rgba(48, 224, 0, 0.20)'
+      : flash === 'down'
+        ? 'rgba(255, 73, 74, 0.20)'
+        : 'transparent';
+
   return (
-    <button
+    <motion.button
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         if (!isSuspended) onSelect();
       }}
       disabled={isSuspended}
+      animate={{
+        backgroundColor: flashBg,
+      }}
+      transition={{ duration: flash ? 0.15 : 1.2, ease: 'easeOut' }}
       className={cn(
-        'flex-1 min-w-[64px] h-10 rounded flex flex-col items-center justify-center gap-0',
-        'font-mono text-sm font-bold transition-all duration-200 relative overflow-hidden',
+        'flex-1 min-w-[72px] py-2 px-3 rounded-md flex flex-col items-center justify-center gap-0.5',
+        'font-mono transition-colors duration-200 relative overflow-hidden cursor-pointer',
         'border',
-        // Selected state
-        isSelected
-          ? 'bg-brand-500/25 border-brand-500 text-brand-300 shadow-[inset_0_0_12px_rgba(141,82,218,0.15)]'
-          : 'bg-surface-tertiary border-transparent hover:bg-surface-hover hover:border-border-hover text-white',
+        // Default state
+        !isSelected &&
+          !flash &&
+          'bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.12)]',
+        // Selected state -- purple
+        isSelected &&
+          'bg-[rgba(141,82,218,0.15)] border-[#8D52DA]',
+        // Flash override borders
+        flash === 'up' && !isSelected && 'border-accent-green/40',
+        flash === 'down' && !isSelected && 'border-accent-red/40',
         // Suspended
         isSuspended && 'opacity-30 cursor-not-allowed',
-        // Flash animations
-        flash === 'up' && !isSelected && 'animate-flash-green',
-        flash === 'down' && !isSelected && 'animate-flash-red',
       )}
     >
-      {/* Label (optional, for headers like spread value) */}
-      {label && (
-        <span className="text-[10px] font-normal text-text-dim leading-none">
-          {label}
-        </span>
-      )}
+      {/* Outcome label */}
+      <span
+        className={cn(
+          'text-[10px] font-medium leading-none uppercase tracking-wide',
+          isSelected ? 'text-brand-300' : 'text-text-dim',
+        )}
+      >
+        {label}
+      </span>
       {/* Odds value */}
-      <span className="flex items-center gap-0.5">
-        {flash === 'up' && (
-          <TrendingUp className="w-3 h-3 text-accent-green" />
+      <span
+        className={cn(
+          'text-sm font-bold leading-tight',
+          isSelected
+            ? 'text-brand-200'
+            : flash === 'up'
+              ? 'text-accent-green'
+              : flash === 'down'
+                ? 'text-accent-red'
+                : 'text-white',
         )}
-        {flash === 'down' && (
-          <TrendingDown className="w-3 h-3 text-accent-red" />
-        )}
+      >
         {formatOdds(selection.odds)}
       </span>
-    </button>
-  );
-}
-
-/* ================================================================== */
-/*  Period Scores (for basketball, hockey, etc.)                       */
-/* ================================================================== */
-
-function PeriodScores({ metadata }: { metadata: Event['metadata'] }) {
-  if (!metadata) return null;
-
-  // Attempt to parse period scores from metadata
-  const periodKeys = ['q1', 'q2', 'q3', 'q4', 'p1', 'p2', 'p3', 'ot'].filter(
-    (key) => metadata[key] !== null && metadata[key] !== undefined,
-  );
-
-  if (periodKeys.length === 0) return null;
-
-  const periodLabels: Record<string, string> = {
-    q1: 'Q1',
-    q2: 'Q2',
-    q3: 'Q3',
-    q4: 'Q4',
-    p1: 'P1',
-    p2: 'P2',
-    p3: 'P3',
-    ot: 'OT',
-  };
-
-  return (
-    <div className="flex items-center gap-3 px-1 pt-1">
-      {periodKeys.map((key) => (
-        <span key={key} className="text-[10px] text-text-dim font-mono">
-          <span className="text-text-muted">{periodLabels[key] || key}:</span>{' '}
-          {String(metadata[key])}
-        </span>
-      ))}
-    </div>
+    </motion.button>
   );
 }
 
@@ -240,7 +251,7 @@ function LiveBadge({
         LIVE
       </span>
       {(period || matchTime) && (
-        <span className="text-[11px] text-text-secondary font-medium">
+        <span className="text-[11px] text-text-secondary font-medium ml-0.5">
           {period && <span>{period}</span>}
           {matchTime && (
             <span>
@@ -255,34 +266,132 @@ function LiveBadge({
 }
 
 /* ================================================================== */
-/*  EventCard -- Main component                                        */
+/*  LiveScore -- score display with pulse animation on change          */
+/* ================================================================== */
+
+function LiveScore({ score, prevScoreRef }: { score: number; prevScoreRef: React.MutableRefObject<number | null> }) {
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    if (prevScoreRef.current !== null && prevScoreRef.current !== score) {
+      setPulse(true);
+      const timer = setTimeout(() => setPulse(false), 1200);
+      return () => clearTimeout(timer);
+    }
+    prevScoreRef.current = score;
+  }, [score, prevScoreRef]);
+
+  return (
+    <motion.span
+      animate={
+        pulse
+          ? {
+              scale: [1, 1.3, 1],
+              color: ['#FFFFFF', '#30E000', '#FFFFFF'],
+            }
+          : {}
+      }
+      transition={{ duration: 0.8, ease: 'easeOut' }}
+      className="text-lg font-bold font-mono text-white tabular-nums leading-none"
+    >
+      {score}
+    </motion.span>
+  );
+}
+
+/* ================================================================== */
+/*  FavoriteButton                                                     */
+/* ================================================================== */
+
+function FavoriteButton({ eventId }: { eventId: string }) {
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    try {
+      const favorites: string[] = JSON.parse(
+        localStorage.getItem('cryptobet-favorites') || '[]',
+      );
+      setIsFavorite(favorites.includes(eventId));
+    } catch {
+      // ignore parse errors
+    }
+  }, [eventId]);
+
+  const toggleFavorite = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsFavorite((prev) => {
+        const next = !prev;
+        try {
+          const favorites: string[] = JSON.parse(
+            localStorage.getItem('cryptobet-favorites') || '[]',
+          );
+          if (next) {
+            favorites.push(eventId);
+          } else {
+            const idx = favorites.indexOf(eventId);
+            if (idx >= 0) favorites.splice(idx, 1);
+          }
+          localStorage.setItem(
+            'cryptobet-favorites',
+            JSON.stringify(favorites),
+          );
+        } catch {
+          // ignore
+        }
+        return next;
+      });
+    },
+    [eventId],
+  );
+
+  return (
+    <button
+      onClick={toggleFavorite}
+      className="p-1 rounded transition-colors hover:bg-white/5"
+      aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+    >
+      <Star
+        className={cn(
+          'w-4 h-4 transition-colors',
+          isFavorite
+            ? 'fill-accent-yellow text-accent-yellow'
+            : 'text-text-dim hover:text-text-muted',
+        )}
+      />
+    </button>
+  );
+}
+
+/* ================================================================== */
+/*  EventCard -- Main component (Cloudbet-style)                       */
 /* ================================================================== */
 
 export function EventCard({ event, compact: _compact }: EventCardProps) {
   const { toggleSelection, hasSelection } = useBetSlipStore();
 
-  /* ─── Market extraction ─────────────────────────────────────── */
+  // Score pulse refs
+  const prevHomeScore = useRef<number | null>(null);
+  const prevAwayScore = useRef<number | null>(null);
+
+  /* ---- Market extraction ------------------------------------------ */
 
   const moneylineMarket = event.markets?.find(
     (m) => m.type === 'MONEYLINE',
   );
-  const spreadMarket = event.markets?.find((m) => m.type === 'SPREAD');
-  const totalMarket = event.markets?.find((m) => m.type === 'TOTAL');
-
   const mainSelections = moneylineMarket?.selections || [];
-  const spreadSelections = spreadMarket?.selections || [];
-  const totalSelections = totalMarket?.selections || [];
-
   const marketCount = event.markets ? event.markets.length : 0;
   const isThreeWay = mainSelections.length === 3;
 
-  /* ─── Sport detection ───────────────────────────────────────── */
+  /* ---- Sport detection --------------------------------------------- */
 
   const sport = event.competition?.sport;
   const sportSlug = sport?.slug || '';
-  const isNoDraw = NO_DRAW_SPORTS.has(sportSlug) || (!isThreeWay && mainSelections.length === 2);
+  const isNoDraw =
+    NO_DRAW_SPORTS.has(sportSlug) || (!isThreeWay && mainSelections.length === 2);
 
-  /* ─── Selection mapping ─────────────────────────────────────── */
+  /* ---- Selection mapping ------------------------------------------- */
 
   const homeSel =
     mainSelections.find((s) => s.outcome === 'home') ||
@@ -296,23 +405,7 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
     (isThreeWay ? mainSelections[2] : mainSelections[1]) ||
     null;
 
-  // Spread selections (home / away)
-  const homeSpread = spreadSelections.find(
-    (s) => s.outcome === 'home',
-  ) || spreadSelections[0] || null;
-  const awaySpread = spreadSelections.find(
-    (s) => s.outcome === 'away',
-  ) || spreadSelections[1] || null;
-
-  // Total selections (over / under)
-  const overSel = totalSelections.find(
-    (s) => s.outcome === 'over' || s.name.toLowerCase().includes('over'),
-  ) || totalSelections[0] || null;
-  const underSel = totalSelections.find(
-    (s) => s.outcome === 'under' || s.name.toLowerCase().includes('under'),
-  ) || totalSelections[1] || null;
-
-  /* ─── Bet slip handler ──────────────────────────────────────── */
+  /* ---- Bet slip handler -------------------------------------------- */
 
   const handleSelectOdds = useCallback(
     (selection: Selection, market: Market | undefined) => {
@@ -330,46 +423,42 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
     [toggleSelection, event],
   );
 
-  /* ─── Column headers ────────────────────────────────────────── */
+  /* ---- Outcome labels ---------------------------------------------- */
 
-  const colHeaders = isNoDraw
-    ? ['ML', 'Spread', 'Total']
-    : ['1', 'X', '2'];
+  // For two-way sports we show "1" / "2"; for three-way we show "1" / "X" / "2"
+  const homeLabel = '1';
+  const drawLabel = 'X';
+  const awayLabel = '2';
 
-  /* ─── Extract spread / total labels ─────────────────────────── */
-
-  const spreadLabel = homeSpread?.name?.match(/[+-][\d.]+/)?.[0] || '';
-  const totalLabel = overSel?.name?.match(/[\d.]+/)?.[0] || '';
-
-  /* ─── Render ────────────────────────────────────────────────── */
+  /* ---- Render ------------------------------------------------------ */
 
   return (
-    <Link
-      href={`/sports/event/${event.id}`}
+    <div
       className={cn(
-        'block rounded-lg overflow-hidden transition-all duration-200 group',
-        'bg-surface-secondary',
-        'border border-border-dim',
-        'hover:border-border-hover hover:shadow-[0_4px_24px_rgba(0,0,0,0.3)]',
+        'rounded-lg overflow-hidden transition-all duration-200 group',
+        'bg-[#1A1B1F]',
+        'border border-[rgba(255,255,255,0.08)]',
+        'hover:border-[rgba(255,255,255,0.12)]',
       )}
+      style={{ padding: '12px 16px' }}
     >
-      {/* ═══════════ HEADER ═══════════ */}
-      <div className="flex items-center justify-between px-3 py-2 bg-surface-secondary">
-        {/* Left: sport icon + competition name + live badge */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+      {/* ========== HEADER: Competition + Date/Live + Favorite ========== */}
+      <div className="flex items-center justify-between mb-2.5">
+        {/* Left: sport icon + competition */}
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {sport?.slug && (
             <SportIcon
               slug={sport.slug}
-              size={14}
+              size={12}
               emoji={sport.icon}
             />
           )}
-          <span className="text-xs text-text-dim truncate font-medium">
+          <span className="text-[11px] text-text-dim truncate font-medium leading-none">
             {event.competition?.name}
           </span>
         </div>
 
-        {/* Center/Right: Live badge or date */}
+        {/* Right: live badge or date + favorite */}
         <div className="flex items-center gap-2 shrink-0">
           {event.isLive ? (
             <LiveBadge
@@ -377,53 +466,24 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
               period={event.metadata?.period as string | undefined}
             />
           ) : (
-            <span className="text-[11px] text-text-dim font-medium">
-              {formatDate(event.startTime)}
-            </span>
+            <div className="flex items-center gap-1 text-text-dim">
+              <Clock className="w-3 h-3" />
+              <span className="text-[11px] font-medium leading-none">
+                {formatEventDate(event.startTime)}
+              </span>
+            </div>
           )}
-        </div>
-
-        {/* Right: market count + arrow */}
-        <div className="flex items-center gap-1.5 shrink-0 ml-3">
-          {marketCount > 1 && (
-            <span className="text-[10px] text-text-muted bg-surface-tertiary rounded px-1.5 py-0.5 font-medium whitespace-nowrap">
-              +{marketCount - 1}
-            </span>
-          )}
-          <ChevronRight className="w-4 h-4 text-text-dim opacity-0 group-hover:opacity-100 transition-opacity" />
+          <FavoriteButton eventId={event.id} />
         </div>
       </div>
 
-      {/* ═══════════ DIVIDER ═══════════ */}
-      <div className="border-t border-border-dim" />
-
-      {/* ═══════════ BODY: Teams + Odds Grid ═══════════ */}
+      {/* ========== BODY: Teams + Score (live) ========================= */}
       {event.homeTeam && event.awayTeam ? (
-        <div className="px-3 py-2">
-          {/* ─── Column Headers ─────────────────────────── */}
-          <div className="flex items-center mb-1.5">
-            {/* Team name spacer */}
-            <div className="flex-1" />
-            {/* Score spacer (only when live) */}
-            {event.isLive && <div className="w-8" />}
-            {/* Odds column headers */}
-            <div className="flex gap-1.5">
-              {colHeaders.map((header) => (
-                <div
-                  key={header}
-                  className="flex-1 min-w-[64px] text-center"
-                >
-                  <span className="text-[10px] text-text-dim font-medium uppercase tracking-wider">
-                    {header}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ─── Home Team Row ──────────────────────────── */}
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+        <>
+          {/* Teams row */}
+          <div className="flex items-center justify-between mb-3">
+            {/* Home team */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <TeamLogo
                 name={event.homeTeam}
                 logo={event.homeTeamLogo}
@@ -433,156 +493,118 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
                 {event.homeTeam}
               </span>
             </div>
-            {/* Live score */}
-            {event.isLive && (
-              <span className="text-sm font-bold font-mono text-white w-8 text-center tabular-nums">
-                {event.homeScore ?? 0}
+
+            {/* Score or VS */}
+            {event.isLive ? (
+              <div className="flex items-center gap-1.5 px-3 shrink-0">
+                <LiveScore
+                  score={event.homeScore ?? 0}
+                  prevScoreRef={prevHomeScore}
+                />
+                <span className="text-xs text-text-dim font-medium mx-0.5">
+                  -
+                </span>
+                <LiveScore
+                  score={event.awayScore ?? 0}
+                  prevScoreRef={prevAwayScore}
+                />
+              </div>
+            ) : (
+              <span className="text-xs text-text-dim font-medium px-3 shrink-0">
+                vs
               </span>
             )}
-            {/* Odds buttons */}
-            <div className="flex gap-1.5">
-              {isNoDraw ? (
-                <>
-                  {/* ML */}
-                  <OddsButton
-                    selection={homeSel}
-                    isSelected={homeSel ? hasSelection(homeSel.id) : false}
-                    onSelect={() =>
-                      homeSel && handleSelectOdds(homeSel, moneylineMarket)
-                    }
-                  />
-                  {/* Spread */}
-                  <OddsButton
-                    selection={homeSpread}
-                    label={spreadLabel || undefined}
-                    isSelected={
-                      homeSpread ? hasSelection(homeSpread.id) : false
-                    }
-                    onSelect={() =>
-                      homeSpread &&
-                      handleSelectOdds(homeSpread, spreadMarket)
-                    }
-                  />
-                  {/* Total Over */}
-                  <OddsButton
-                    selection={overSel}
-                    label={totalLabel ? `O ${totalLabel}` : undefined}
-                    isSelected={overSel ? hasSelection(overSel.id) : false}
-                    onSelect={() =>
-                      overSel && handleSelectOdds(overSel, totalMarket)
-                    }
-                  />
-                </>
-              ) : (
-                <>
-                  {/* 1 (Home) */}
-                  <OddsButton
-                    selection={homeSel}
-                    isSelected={homeSel ? hasSelection(homeSel.id) : false}
-                    onSelect={() =>
-                      homeSel && handleSelectOdds(homeSel, moneylineMarket)
-                    }
-                  />
-                  {/* X (Draw) */}
-                  <OddsButton
-                    selection={drawSel}
-                    isSelected={drawSel ? hasSelection(drawSel.id) : false}
-                    onSelect={() =>
-                      drawSel && handleSelectOdds(drawSel, moneylineMarket)
-                    }
-                  />
-                  {/* 2 (Away) */}
-                  <OddsButton
-                    selection={awaySel}
-                    isSelected={awaySel ? hasSelection(awaySel.id) : false}
-                    onSelect={() =>
-                      awaySel && handleSelectOdds(awaySel, moneylineMarket)
-                    }
-                  />
-                </>
-              )}
-            </div>
-          </div>
 
-          {/* ─── Away Team Row ──────────────────────────── */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* Away team */}
+            <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+              <span className="text-sm font-medium text-white truncate text-right">
+                {event.awayTeam}
+              </span>
               <TeamLogo
                 name={event.awayTeam}
                 logo={event.awayTeamLogo}
                 isHome={false}
               />
-              <span className="text-sm font-medium text-text-secondary truncate">
-                {event.awayTeam}
-              </span>
-            </div>
-            {/* Live score */}
-            {event.isLive && (
-              <span className="text-sm font-bold font-mono text-text-secondary w-8 text-center tabular-nums">
-                {event.awayScore ?? 0}
-              </span>
-            )}
-            {/* Odds buttons */}
-            <div className="flex gap-1.5">
-              {isNoDraw ? (
-                <>
-                  {/* ML */}
-                  <OddsButton
-                    selection={awaySel}
-                    isSelected={awaySel ? hasSelection(awaySel.id) : false}
-                    onSelect={() =>
-                      awaySel && handleSelectOdds(awaySel, moneylineMarket)
-                    }
-                  />
-                  {/* Spread */}
-                  <OddsButton
-                    selection={awaySpread}
-                    label={
-                      awaySpread?.name?.match(/[+-][\d.]+/)?.[0] || undefined
-                    }
-                    isSelected={
-                      awaySpread ? hasSelection(awaySpread.id) : false
-                    }
-                    onSelect={() =>
-                      awaySpread &&
-                      handleSelectOdds(awaySpread, spreadMarket)
-                    }
-                  />
-                  {/* Total Under */}
-                  <OddsButton
-                    selection={underSel}
-                    label={totalLabel ? `U ${totalLabel}` : undefined}
-                    isSelected={
-                      underSel ? hasSelection(underSel.id) : false
-                    }
-                    onSelect={() =>
-                      underSel && handleSelectOdds(underSel, totalMarket)
-                    }
-                  />
-                </>
-              ) : (
-                <>
-                  {/* Spacer cells -- away row has no odds in 3-way (handled above) */}
-                  <div className="flex-1 min-w-[64px]" />
-                  <div className="flex-1 min-w-[64px]" />
-                  <div className="flex-1 min-w-[64px]" />
-                </>
-              )}
             </div>
           </div>
 
-          {/* ─── Period scores (basketball etc.) ────────── */}
-          {event.isLive && event.metadata && (
-            <PeriodScores metadata={event.metadata} />
+          {/* ========== ODDS BUTTONS ROW ================================ */}
+          <div className="flex gap-2">
+            {isNoDraw ? (
+              <>
+                {/* Home */}
+                <OddsButton
+                  selection={homeSel}
+                  label={homeLabel}
+                  isSelected={homeSel ? hasSelection(homeSel.id) : false}
+                  onSelect={() =>
+                    homeSel && handleSelectOdds(homeSel, moneylineMarket)
+                  }
+                />
+                {/* Away */}
+                <OddsButton
+                  selection={awaySel}
+                  label={awayLabel}
+                  isSelected={awaySel ? hasSelection(awaySel.id) : false}
+                  onSelect={() =>
+                    awaySel && handleSelectOdds(awaySel, moneylineMarket)
+                  }
+                />
+              </>
+            ) : (
+              <>
+                {/* Home */}
+                <OddsButton
+                  selection={homeSel}
+                  label={homeLabel}
+                  isSelected={homeSel ? hasSelection(homeSel.id) : false}
+                  onSelect={() =>
+                    homeSel && handleSelectOdds(homeSel, moneylineMarket)
+                  }
+                />
+                {/* Draw */}
+                <OddsButton
+                  selection={drawSel}
+                  label={drawLabel}
+                  isSelected={drawSel ? hasSelection(drawSel.id) : false}
+                  onSelect={() =>
+                    drawSel && handleSelectOdds(drawSel, moneylineMarket)
+                  }
+                />
+                {/* Away */}
+                <OddsButton
+                  selection={awaySel}
+                  label={awayLabel}
+                  isSelected={awaySel ? hasSelection(awaySel.id) : false}
+                  onSelect={() =>
+                    awaySel && handleSelectOdds(awaySel, moneylineMarket)
+                  }
+                />
+              </>
+            )}
+          </div>
+
+          {/* ========== FOOTER: +N markets link ======================== */}
+          {marketCount > 1 && (
+            <div className="mt-2.5 flex items-center justify-end">
+              <Link
+                href={`/sports/event/${event.id}`}
+                className="flex items-center gap-0.5 text-[11px] text-brand-400 hover:text-brand-300 font-medium transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                +{marketCount - 1} market{marketCount - 1 > 1 ? 's' : ''}
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           )}
-        </div>
+        </>
       ) : (
-        /* ─── Fallback: no teams (outright, etc.) ──────── */
-        <div className="px-3 py-3">
-          <p className="text-sm font-medium text-white">{event.name}</p>
+        /* ---- Fallback: no teams (outrights, specials) --------------- */
+        <div>
+          <p className="text-sm font-medium text-white mb-2">{event.name}</p>
           {mainSelections.length > 0 && (
-            <div className="flex gap-1.5 mt-2">
-              {mainSelections.slice(0, 3).map((sel) => (
+            <div className="flex gap-2">
+              {mainSelections.slice(0, 3).map((sel, _idx) => (
                 <OddsButton
                   key={sel.id}
                   selection={sel}
@@ -593,8 +615,19 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
               ))}
             </div>
           )}
+          {marketCount > 1 && (
+            <div className="mt-2.5 flex items-center justify-end">
+              <Link
+                href={`/sports/event/${event.id}`}
+                className="flex items-center gap-0.5 text-[11px] text-brand-400 hover:text-brand-300 font-medium transition-colors"
+              >
+                +{marketCount - 1} market{marketCount - 1 > 1 ? 's' : ''}
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          )}
         </div>
       )}
-    </Link>
+    </div>
   );
 }

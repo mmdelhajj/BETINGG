@@ -8,6 +8,13 @@ const config: Config = {
   ],
   darkMode: 'class',
   theme: {
+    screens: {
+      sm: '480px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         brand: {
@@ -29,9 +36,11 @@ const config: Config = {
           yellow: '#FFD641',
           orange: '#f97316',
           purple: '#8D52DA',
+          lime: '#BFFF00',
           foreground: '#E0E0E0',
         },
         surface: {
+          deepest: '#0F0F12',
           DEFAULT: '#111214',
           secondary: '#1A1B1F',
           tertiary: '#222328',
@@ -40,7 +49,7 @@ const config: Config = {
         border: {
           DEFAULT: 'rgba(255, 255, 255, 0.08)',
           dim: 'rgba(255, 255, 255, 0.04)',
-          hover: 'rgba(224, 232, 255, 0.1)',
+          selected: 'rgba(224, 232, 255, 0.1)',
         },
         text: {
           primary: '#FFFFFF',
@@ -75,20 +84,25 @@ const config: Config = {
         btn: '4px',
         card: '8px',
         modal: '8px',
+        pill: '9999px',
+        'game-card': '12px',
       },
       boxShadow: {
+        'connect-btn': '0px 4px 12px rgba(0, 0, 0, 0.1)',
         card: '0px 4px 12px rgba(0, 0, 0, 0.1)',
         dialog: '0px 8px 32px rgba(0, 0, 0, 0.32)',
+        'card-hover': '0px 2px 6px rgba(0, 0, 0, 0.24)',
         'btn-hover': '0px 4px 12px rgba(0, 0, 0, 0.2)',
       },
       animation: {
         'slide-in': 'slideIn 0.3s ease-out',
         'fade-in': 'fadeIn 0.2s ease-out',
-        'pulse-slow': 'pulse 3s infinite',
         'bounce-in': 'bounceIn 0.5s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'flash-green': 'flashGreen 2s ease-out',
         'flash-red': 'flashRed 2s ease-out',
+        'pulse-slow': 'pulse 3s infinite',
+        slideUp: 'slideUp 0.3s ease-out',
       },
       keyframes: {
         slideIn: {
@@ -105,8 +119,8 @@ const config: Config = {
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
         scaleIn: {
-          from: { transform: 'scale(0)' },
-          to: { transform: 'scale(1)' },
+          from: { transform: 'scale(0)', opacity: '0' },
+          to: { transform: 'scale(1)', opacity: '1' },
         },
         flashGreen: {
           '0%': { backgroundColor: 'rgba(48, 224, 0, 0.25)' },
@@ -115,6 +129,10 @@ const config: Config = {
         flashRed: {
           '0%': { backgroundColor: 'rgba(255, 73, 74, 0.25)' },
           '100%': { backgroundColor: 'transparent' },
+        },
+        slideUp: {
+          from: { transform: 'translateY(100%)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
         },
       },
     },
