@@ -1,0 +1,496 @@
+{
+  "info": {
+    "name": "CryptoBet API",
+    "description": "Complete API collection for the CryptoBet crypto sportsbook & casino platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "apiKey", "value": "" },
+    { "key": "accessToken", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        },
+        {
+          "name": "Database Health",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health/db" }
+        },
+        {
+          "name": "Redis Health",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health/redis" }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"user@example.com\",\"password\":\"Str0ng!Pass\",\"username\":\"testuser\"}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"user@example.com\",\"password\":\"Str0ng!Pass\"}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"{{refreshToken}}\"}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}" }] }
+          }
+        },
+        {
+          "name": "Enable 2FA",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/2fa/enable",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}" }] }
+          }
+        },
+        {
+          "name": "Verify 2FA",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/2fa/verify",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"token\":\"123456\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/users/profile" }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/users/profile",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"displayName\":\"New Name\"}" }
+          }
+        },
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/v1/users/preferences",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"oddsFormat\":\"AMERICAN\",\"language\":\"en\",\"currency\":\"BTC\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallets",
+      "item": [
+        {
+          "name": "List Wallets",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/wallets" }
+        },
+        {
+          "name": "Get Deposit Address",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/wallets/BTC/deposit-address" }
+        },
+        {
+          "name": "Request Withdrawal",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/wallets/withdraw",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"currency\":\"BTC\",\"amount\":\"0.001\",\"address\":\"bc1q...\"}" }
+          }
+        },
+        {
+          "name": "Transaction History",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/wallets/transactions?limit=20&offset=0" }
+        }
+      ]
+    },
+    {
+      "name": "KYC",
+      "item": [
+        {
+          "name": "Get KYC Status",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/kyc/status" }
+        },
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/kyc/upload",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "type", "value": "PASSPORT", "type": "text" },
+                { "key": "document", "type": "file", "src": "" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sports Feed",
+      "item": [
+        {
+          "name": "List Sports",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sports" }
+        },
+        {
+          "name": "Get Sport Competitions",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sports/football/competitions" }
+        },
+        {
+          "name": "Get Events",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sports/events?sportKey=football&status=LIVE&limit=20" }
+        },
+        {
+          "name": "Get Event Details",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sports/events/:eventId" }
+        },
+        {
+          "name": "Get Event Markets",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sports/events/:eventId/markets" }
+        }
+      ]
+    },
+    {
+      "name": "Betting",
+      "item": [
+        {
+          "name": "Place Single Bet",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/betting/place",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"betType\":\"SINGLE\",\"currency\":\"BTC\",\"stake\":\"0.001\",\"selections\":[{\"selectionId\":\"sel_123\",\"odds\":1.95}]}"
+            }
+          }
+        },
+        {
+          "name": "Place Parlay Bet",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/betting/place",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"betType\":\"PARLAY\",\"currency\":\"BTC\",\"stake\":\"0.001\",\"selections\":[{\"selectionId\":\"sel_123\",\"odds\":1.95},{\"selectionId\":\"sel_456\",\"odds\":2.10}]}"
+            }
+          }
+        },
+        {
+          "name": "Get Bet Status",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/betting/:betId/status" }
+        },
+        {
+          "name": "Bet History",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/betting/history?limit=20&offset=0" }
+        },
+        {
+          "name": "Cash Out",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/betting/:betId/cashout",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"amount\":\"0.0005\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Casino",
+      "item": [
+        {
+          "name": "List Games",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/casino/games?category=originals&limit=20" }
+        },
+        {
+          "name": "Get Game",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/casino/games/:gameSlug" }
+        },
+        {
+          "name": "Play Crash",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/casino/crash/bet",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"amount\":\"0.001\",\"currency\":\"BTC\",\"autoCashOut\":2.0}" }
+          }
+        },
+        {
+          "name": "Play Dice",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/casino/dice/bet",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"amount\":\"0.001\",\"currency\":\"BTC\",\"target\":50,\"over\":true}" }
+          }
+        },
+        {
+          "name": "Verify Provably Fair",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/casino/verify/:gameId" }
+        }
+      ]
+    },
+    {
+      "name": "VIP & Rewards",
+      "item": [
+        {
+          "name": "Get VIP Status",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/vip/status" }
+        },
+        {
+          "name": "Get Rakeback Stats",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/rewards/rakeback" }
+        },
+        {
+          "name": "Claim Rakeback",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/rewards/rakeback/claim",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"type\":\"WALLET\"}" }
+          }
+        },
+        {
+          "name": "Get Calendar Rewards",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/rewards/calendar" }
+        },
+        {
+          "name": "Claim Calendar Reward",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/rewards/calendar/claim",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"slot\":1}" }
+          }
+        },
+        {
+          "name": "Activate TURBO",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/rewards/turbo/activate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Promotions",
+      "item": [
+        {
+          "name": "List Promotions",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/promotions" }
+        },
+        {
+          "name": "Redeem Promo Code",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/promotions/redeem",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"code\":\"WELCOME2024\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Referrals",
+      "item": [
+        {
+          "name": "Get Referral Code",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/referrals/code" }
+        },
+        {
+          "name": "Get Referral Stats",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/referrals/stats" }
+        }
+      ]
+    },
+    {
+      "name": "Blog",
+      "item": [
+        {
+          "name": "List Posts",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/blog/posts?page=1&limit=10" }
+        },
+        {
+          "name": "Get Post",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/blog/posts/:slug" }
+        }
+      ]
+    },
+    {
+      "name": "Help Center",
+      "item": [
+        {
+          "name": "Search Articles",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/help/search?q=deposit" }
+        },
+        {
+          "name": "List Categories",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/help/categories" }
+        },
+        {
+          "name": "Get Article",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/help/articles/:slug" }
+        }
+      ]
+    },
+    {
+      "name": "Academy",
+      "item": [
+        {
+          "name": "List Courses",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/academy/courses" }
+        },
+        {
+          "name": "Get Course",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/academy/courses/:slug" }
+        },
+        {
+          "name": "Get Lesson",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/academy/courses/:courseSlug/lessons/:lessonSlug" }
+        },
+        {
+          "name": "Submit Quiz",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/academy/progress/quiz",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"courseId\":\"course_123\",\"lessonId\":\"lesson_456\",\"answers\":[0,1,2]}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Virtual Sports",
+      "item": [
+        {
+          "name": "List Events",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/virtual-sports/events?sport=football" }
+        },
+        {
+          "name": "Get Event",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/virtual-sports/events/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/notifications?limit=20" }
+        },
+        {
+          "name": "Mark As Read",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/notifications/:id/read"
+          }
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/notifications/read-all"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public API (API Key)",
+      "description": "Endpoints using API key authentication via X-API-Key header",
+      "item": [
+        {
+          "name": "Generate API Key",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/api-keys",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"My Trading Bot\"}" }
+          }
+        },
+        {
+          "name": "[API Key] Get Sports",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/sports",
+            "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }]
+          }
+        },
+        {
+          "name": "[API Key] Place Bet",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/bets/place",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"currency\":\"BTC\",\"stake\":\"0.001\",\"selections\":[{\"selectionId\":\"sel_123\",\"odds\":1.95}]}"
+            }
+          }
+        },
+        {
+          "name": "[API Key] Get Account",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/account/profile",
+            "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}

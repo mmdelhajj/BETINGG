@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.next/
+out/
+coverage/
+playwright-report/
+prisma/migrations/
+*.min.js
+*.min.css
+package-lock.json
+pnpm-lock.yaml

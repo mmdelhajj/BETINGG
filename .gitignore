@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build
+dist/
+.next/
+frontend/.next/
+frontend/out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Prisma
+prisma/migrations/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+pino-*.log
+
+# Coverage
+coverage/
+frontend/coverage/
+
+# Test reports
+playwright-report/
+test-results/
+frontend/playwright-report/
+frontend/test-results/
+
+# Docker volumes
+docker/data/
+
+# Uploads
+uploads/
+!uploads/.gitkeep
+
+# SSL
+ssl/
+*.pem
+*.key
+*.crt
+
+# Secrets
+*.p12
+*.pfx
+credentials.json
+service-account.json
+
+# Backups
+backups/
+
+# Misc
+.turbo/
+*.tsbuildinfo

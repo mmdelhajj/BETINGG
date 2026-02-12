@@ -1,0 +1,1043 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ──────────────────────────────────────────────────────────
+
+enum KycLevel {
+  UNVERIFIED
+  BASIC
+  FULL
+}
+
+enum VipTier {
+  BRONZE
+  SILVER
+  GOLD
+  EMERALD
+  SAPPHIRE
+  RUBY
+  DIAMOND
+  BLUE_DIAMOND
+}
+
+enum OddsFormat {
+  DECIMAL
+  FRACTIONAL
+  AMERICAN
+}
+
+enum Theme {
+  DARK
+  LIGHT
+  CLASSIC
+}
+
+enum CurrencyType {
+  CRYPTO
+  FIAT
+  STABLECOIN
+}
+
+enum TxType {
+  DEPOSIT
+  WITHDRAWAL
+  BET
+  WIN
+  BONUS
+  RAKEBACK
+  REWARD
+  REFERRAL
+  ADJUSTMENT
+  SWAP
+}
+
+enum TxStatus {
+  PENDING
+  CONFIRMING
+  COMPLETED
+  FAILED
+  CANCELLED
+  APPROVED
+  REJECTED
+}
+
+enum AdminWalletType {
+  HOT
+  COLD
+  MULTISIG
+}
+
+enum EventStatus {
+  UPCOMING
+  LIVE
+  ENDED
+  CANCELLED
+  POSTPONED
+}
+
+enum MarketType {
+  MONEYLINE
+  SPREAD
+  TOTAL
+  PROP
+  OUTRIGHT
+}
+
+enum MarketStatus {
+  OPEN
+  SUSPENDED
+  SETTLED
+  CANCELLED
+  VOIDED
+}
+
+enum SelectionStatus {
+  ACTIVE
+  SUSPENDED
+  WON
+  LOST
+  VOID
+  PUSH
+}
+
+enum SelectionResult {
+  WIN
+  LOSE
+  VOID
+  PUSH
+  HALF_WIN
+  HALF_LOSE
+}
+
+enum BetType {
+  SINGLE
+  PARLAY
+  SYSTEM
+}
+
+enum BetStatus {
+  PENDING
+  ACCEPTED
+  WON
+  LOST
+  VOID
+  CASHOUT
+  PARTIALLY_SETTLED
+}
+
+enum BetLegStatus {
+  PENDING
+  WON
+  LOST
+  VOID
+  PUSH
+  HALF_WIN
+  HALF_LOSE
+}
+
+enum GameType {
+  SLOT
+  TABLE
+  LIVE
+  CRASH
+  DICE
+  COINFLIP
+  MINES
+  PLINKO
+  VIRTUAL
+}
+
+enum RewardType {
+  RAKEBACK
+  DAILY
+  WEEKLY
+  MONTHLY
+  LEVEL_UP
+  TURBO
+  WELCOME
+  CASH_VAULT
+  REFERRAL
+}
+
+enum RewardStatus {
+  PENDING
+  CLAIMABLE
+  CLAIMED
+  EXPIRED
+}
+
+enum PromoType {
+  DEPOSIT_BONUS
+  FREE_BET
+  ODDS_BOOST
+  CASHBACK
+  TOURNAMENT
+  CUSTOM
+}
+
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+}
+
+enum NotifType {
+  BET_SETTLED
+  DEPOSIT
+  WITHDRAWAL
+  PROMOTION
+  REWARD
+  VIP_UPGRADE
+  SYSTEM
+}
+
+enum KycDocType {
+  PASSPORT
+  DRIVERS_LICENSE
+  NATIONAL_ID
+  PROOF_OF_ADDRESS
+  SELFIE
+}
+
+enum KycDocStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum StreamType {
+  TWITCH
+  DIRECT_URL
+  YOUTUBE
+  EMBEDDED
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+}
+
+enum AffiliateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+// ─── USER & AUTH ─────────────────────────────────────────────────────
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  username          String    @unique
+  passwordHash      String
+  role              UserRole  @default(USER)
+  avatar            String?
+  dateOfBirth       DateTime?
+  kycLevel          KycLevel  @default(UNVERIFIED)
+  vipTier           VipTier   @default(BRONZE)
+  totalWagered      Decimal   @default(0) @db.Decimal(28, 8)
+  twoFactorSecret   String?
+  twoFactorEnabled  Boolean   @default(false)
+  preferredCurrency String    @default("USDT")
+  preferredOddsFormat OddsFormat @default(DECIMAL)
+  theme             Theme     @default(DARK)
+  language          String    @default("en")
+  isActive          Boolean   @default(true)
+  isBanned          Boolean   @default(false)
+  banReason         String?
+  depositLimit      Json?
+  lossLimit         Json?
+  wagerLimit        Json?
+  sessionTimeLimit  Int?
+  selfExcludedUntil DateTime?
+  coolingOffUntil   DateTime?
+  timeoutUntil      DateTime?
+  referralCode      String    @unique @default(cuid())
+  referredBy        String?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  googleId          String?   @unique
+  githubId          String?   @unique
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  wallets           Wallet[]
+  bets              Bet[]
+  casinoSessions    CasinoSession[]
+  rewards           Reward[]
+  notifications     Notification[]
+  kycDocuments      KycDocument[]
+  referralsAsReferrer Referral[] @relation("Referrer")
+  referralsAsReferred Referral[] @relation("Referred")
+  auditLogs         AuditLog[]
+  apiKeys           ApiKey[]
+  courseProgress     UserCourseProgress[]
+  turboSessions     TurboSession[]
+  welcomePackage    WelcomePackage?
+  provablyFairSeeds ProvablyFairSeed[]
+  favoriteGames     UserFavoriteGame[]
+
+  @@index([email])
+  @@index([username])
+  @@index([referralCode])
+  @@index([vipTier])
+  @@index([createdAt])
+}
+
+// ─── PAYMENT & WALLET ────────────────────────────────────────────────
+
+model Currency {
+  id                String       @id @default(cuid())
+  symbol            String       @unique
+  name              String
+  type              CurrencyType
+  decimals          Int
+  icon              String?
+  isActive          Boolean      @default(true)
+  isDepositEnabled  Boolean      @default(true)
+  isWithdrawEnabled Boolean      @default(true)
+  minWithdrawal     Decimal      @db.Decimal(28, 8)
+  withdrawalFee     Decimal      @db.Decimal(28, 8)
+  exchangeRateUsd   Decimal      @db.Decimal(28, 8)
+  sortOrder         Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  networks          CurrencyNetwork[]
+  wallets           Wallet[]
+
+  @@index([symbol])
+  @@index([isActive])
+}
+
+model CurrencyNetwork {
+  id              String   @id @default(cuid())
+  currencyId      String
+  currency        Currency @relation(fields: [currencyId], references: [id], onDelete: Cascade)
+  networkName     String
+  networkLabel    String
+  contractAddress String?
+  confirmations   Int      @default(1)
+  isActive        Boolean  @default(true)
+  estimatedTime   String?
+  rpcUrl          String?
+  explorerUrl     String?
+  createdAt       DateTime @default(now())
+
+  @@unique([currencyId, networkName])
+  @@index([currencyId])
+}
+
+model Wallet {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currencyId     String
+  currency       Currency @relation(fields: [currencyId], references: [id])
+  balance        Decimal  @default(0) @db.Decimal(28, 8)
+  lockedBalance  Decimal  @default(0) @db.Decimal(28, 8)
+  bonusBalance   Decimal  @default(0) @db.Decimal(28, 8)
+  depositAddress String?
+  networkId      String?
+  hdPath         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@unique([userId, currencyId])
+  @@index([userId])
+  @@index([depositAddress])
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  walletId      String
+  wallet        Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type          TxType
+  amount        Decimal  @db.Decimal(28, 8)
+  fee           Decimal  @default(0) @db.Decimal(28, 8)
+  txHash        String?
+  fromAddress   String?
+  toAddress     String?
+  networkId     String?
+  status        TxStatus @default(PENDING)
+  confirmations Int      @default(0)
+  requiredConfirmations Int @default(1)
+  approvedBy    String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([walletId])
+  @@index([type])
+  @@index([status])
+  @@index([txHash])
+  @@index([createdAt])
+}
+
+model FiatOnRampProvider {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  apiKey          String
+  secretKey       String?
+  webhookSecret   String?
+  isActive        Boolean  @default(true)
+  supportedFiats  Json
+  supportedCryptos Json
+  dailyLimit      Decimal? @db.Decimal(28, 8)
+  monthlyLimit    Decimal? @db.Decimal(28, 8)
+  feePercent      Decimal? @db.Decimal(5, 2)
+  config          Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AdminWallet {
+  id             String          @id @default(cuid())
+  label          String
+  type           AdminWalletType
+  currencySymbol String
+  address        String
+  network        String
+  balance        Decimal         @default(0) @db.Decimal(28, 8)
+  minThreshold   Decimal?        @db.Decimal(28, 8)
+  maxThreshold   Decimal?        @db.Decimal(28, 8)
+  isActive       Boolean         @default(true)
+  lastSyncAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([currencySymbol])
+}
+
+// ─── SPORTSBOOK ──────────────────────────────────────────────────────
+
+model Sport {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  slug         String        @unique
+  icon         String?
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  competitions Competition[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Competition {
+  id       String  @id @default(cuid())
+  sportId  String
+  sport    Sport   @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  name     String
+  country  String?
+  slug     String
+  isActive Boolean @default(true)
+  events   Event[]
+
+  @@unique([sportId, slug])
+  @@index([sportId])
+}
+
+model Event {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  name          String
+  homeTeam      String?
+  awayTeam      String?
+  homeTeamLogo  String?
+  awayTeamLogo  String?
+  homeScore     Int?
+  awayScore     Int?
+  startTime     DateTime
+  status        EventStatus @default(UPCOMING)
+  scores        Json?
+  metadata      Json?
+  isLive        Boolean     @default(false)
+  isFeatured    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  markets       Market[]
+  streams       EventStream[]
+
+  @@index([competitionId])
+  @@index([status])
+  @@index([startTime])
+  @@index([isLive])
+  @@index([isFeatured])
+}
+
+model Market {
+  id         String       @id @default(cuid())
+  eventId    String
+  event      Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name       String
+  marketKey  String
+  type       MarketType
+  period     String       @default("FT")
+  status     MarketStatus @default(OPEN)
+  sortOrder  Int          @default(0)
+  maxStake   Decimal?     @db.Decimal(28, 8)
+  minStake   Decimal?     @db.Decimal(28, 8)
+  margin     Decimal?     @db.Decimal(5, 4)
+  selections Selection[]
+
+  @@index([eventId])
+  @@index([status])
+  @@index([marketKey])
+}
+
+model Selection {
+  id          String           @id @default(cuid())
+  marketId    String
+  market      Market           @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  name        String
+  outcome     String
+  odds        Decimal          @db.Decimal(10, 4)
+  probability Decimal?         @db.Decimal(10, 6)
+  maxStake    Decimal?         @db.Decimal(28, 8)
+  handicap    Decimal?         @db.Decimal(10, 2)
+  params      String?
+  status      SelectionStatus  @default(ACTIVE)
+  result      SelectionResult?
+  betLegs     BetLeg[]
+
+  @@index([marketId])
+  @@index([status])
+}
+
+// ─── BETTING ─────────────────────────────────────────────────────────
+
+model Bet {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId        String    @unique @default(uuid())
+  type               BetType
+  stake              Decimal   @db.Decimal(28, 8)
+  currencySymbol     String
+  potentialWin       Decimal   @db.Decimal(28, 8)
+  actualWin          Decimal?  @db.Decimal(28, 8)
+  cashoutAmount      Decimal?  @db.Decimal(28, 8)
+  cashoutAt          DateTime?
+  odds               Decimal   @db.Decimal(10, 4)
+  status             BetStatus @default(PENDING)
+  settledAt          DateTime?
+  isLive             Boolean   @default(false)
+  isCashoutAvailable Boolean   @default(false)
+  placedVia          String    @default("WEB")
+  ipAddress          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  legs               BetLeg[]
+
+  @@index([userId])
+  @@index([referenceId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([currencySymbol])
+}
+
+model BetLeg {
+  id              String       @id @default(cuid())
+  betId           String
+  bet             Bet          @relation(fields: [betId], references: [id], onDelete: Cascade)
+  selectionId     String
+  selection       Selection    @relation(fields: [selectionId], references: [id])
+  oddsAtPlacement Decimal      @db.Decimal(10, 4)
+  status          BetLegStatus @default(PENDING)
+
+  @@index([betId])
+  @@index([selectionId])
+}
+
+// ─── CASINO ──────────────────────────────────────────────────────────
+
+model CasinoGame {
+  id              String        @id @default(cuid())
+  providerId      String?
+  provider        GameProvider? @relation(fields: [providerId], references: [id])
+  name            String
+  slug            String        @unique
+  type            GameType
+  category        String?
+  rtp             Decimal?      @db.Decimal(5, 2)
+  volatility      String?
+  houseEdge       Decimal?      @db.Decimal(5, 2)
+  thumbnail       String?
+  description     String?
+  tags            String[]
+  isActive        Boolean       @default(true)
+  isDemoAvailable Boolean       @default(true)
+  isProvablyFair  Boolean       @default(false)
+  launchUrl       String?
+  sortOrder       Int           @default(0)
+  playCount       Int           @default(0)
+  sessions        CasinoSession[]
+  favorites       UserFavoriteGame[]
+
+  @@index([type])
+  @@index([isActive])
+  @@index([slug])
+}
+
+model UserFavoriteGame {
+  id       String     @id @default(cuid())
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId   String
+  game     CasinoGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, gameId])
+}
+
+model GameProvider {
+  id       String       @id @default(cuid())
+  name     String       @unique
+  slug     String       @unique
+  logo     String?
+  apiUrl   String?
+  apiKey   String?
+  isActive Boolean      @default(true)
+  games    CasinoGame[]
+
+  @@index([slug])
+}
+
+model CasinoSession {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId     String
+  game       CasinoGame  @relation(fields: [gameId], references: [id])
+  currency   String
+  totalBet   Decimal     @default(0) @db.Decimal(28, 8)
+  totalWin   Decimal     @default(0) @db.Decimal(28, 8)
+  rounds     Int         @default(0)
+  serverSeed String?
+  clientSeed String?
+  nonce      Int?
+  startedAt  DateTime    @default(now())
+  endedAt    DateTime?
+
+  @@index([userId])
+  @@index([gameId])
+}
+
+model ProvablyFairSeed {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serverSeed     String
+  serverSeedHash String
+  clientSeed     String
+  nonce          Int       @default(0)
+  isRevealed     Boolean   @default(false)
+  revealedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ─── REWARDS & VIP ───────────────────────────────────────────────────
+
+model VipTierConfig {
+  id                   String  @id @default(cuid())
+  tier                 VipTier @unique
+  name                 String
+  minWagered           Decimal @db.Decimal(28, 8)
+  rakebackPercent      Decimal @db.Decimal(5, 2)
+  turboBoostPercent    Decimal @db.Decimal(5, 2)
+  turboDurationMin     Int
+  dailyBonusMax        Decimal @db.Decimal(28, 8)
+  weeklyBonusMax       Decimal? @db.Decimal(28, 8)
+  monthlyBonusMax      Decimal? @db.Decimal(28, 8)
+  levelUpReward        Decimal @db.Decimal(28, 8)
+  calendarSplitPercent Decimal @db.Decimal(5, 2)
+  maxLevelUpReward     Decimal? @db.Decimal(28, 8)
+  sortOrder            Int
+  benefits             Json
+
+  @@index([tier])
+}
+
+model Reward {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         RewardType
+  amount       Decimal      @db.Decimal(28, 8)
+  currency     String       @default("USDT")
+  source       String?
+  status       RewardStatus @default(PENDING)
+  claimableAt  DateTime?
+  expiresAt    DateTime?
+  claimedAt    DateTime?
+  calendarDay  Int?
+  calendarSlot Int?
+  createdAt    DateTime     @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model TurboSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  boostPercent Decimal  @db.Decimal(5, 2)
+  startedAt    DateTime @default(now())
+  endsAt       DateTime
+  isActive     Boolean  @default(true)
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model WelcomePackage {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activatedAt     DateTime @default(now())
+  expiresAt       DateTime
+  totalEarned     Decimal  @default(0) @db.Decimal(28, 8)
+  maxReward       Decimal  @default(2500) @db.Decimal(28, 8)
+  rakebackPercent Decimal  @default(10) @db.Decimal(5, 2)
+  dailyDropsClaimed Int    @default(0)
+  cashVaultAmount Decimal  @default(0) @db.Decimal(28, 8)
+  cashVaultClaimed Boolean @default(false)
+  isActive        Boolean  @default(true)
+}
+
+model Promotion {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  type        PromoType
+  code        String?   @unique
+  conditions  Json
+  reward      Json
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean   @default(true)
+  maxClaims   Int?
+  claimCount  Int       @default(0)
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  claims      PromoClaim[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([startDate, endDate])
+}
+
+model PromoClaim {
+  id          String    @id @default(cuid())
+  userId      String
+  promotionId String
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  amount      Decimal?  @db.Decimal(28, 8)
+  claimedAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([promotionId])
+}
+
+model Referral {
+  id              String         @id @default(cuid())
+  referrerId      String
+  referrer        User           @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredId      String
+  referred        User           @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
+  bonusAmount     Decimal        @default(0) @db.Decimal(28, 8)
+  referredWagered Decimal        @default(0) @db.Decimal(28, 8)
+  status          ReferralStatus @default(PENDING)
+  qualifiedAt     DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@unique([referrerId, referredId])
+  @@index([referrerId])
+  @@index([referredId])
+}
+
+// ─── NOTIFICATIONS & AUDIT ───────────────────────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotifType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean   @default(false)
+  channel   String    @default("IN_APP")
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model KycDocument {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       KycDocType
+  fileUrl    String
+  status     KycDocStatus @default(PENDING)
+  reviewedBy String?
+  reviewNote String?
+  reviewedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+model ApiKey {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key             String   @unique
+  name            String?
+  permissions     Json
+  isActive        Boolean  @default(true)
+  lastUsedAt      DateTime?
+  rateLimitPerSec Int      @default(1)
+  createdAt       DateTime @default(now())
+
+  @@index([key])
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  adminId    String?
+  action     String
+  resource   String?
+  resourceId String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SiteConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+// ─── GEO-RESTRICTION ─────────────────────────────────────────────────
+
+model GeoRestriction {
+  id          String  @id @default(cuid())
+  countryCode String  @unique
+  countryName String
+  isBlocked   Boolean @default(true)
+  reason      String?
+}
+
+// ─── LIVE STREAMING ──────────────────────────────────────────────────
+
+model EventStream {
+  id              String     @id @default(cuid())
+  eventId         String
+  event           Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  type            StreamType
+  url             String
+  isFree          Boolean    @default(false)
+  requiresDeposit Boolean    @default(true)
+  isActive        Boolean    @default(true)
+
+  @@index([eventId])
+}
+
+// ─── BLOG ────────────────────────────────────────────────────────────
+
+model BlogPost {
+  id             String     @id @default(cuid())
+  title          String
+  slug           String     @unique
+  content        String
+  excerpt        String?
+  category       String
+  tags           String[]
+  authorName     String
+  authorAvatar   String?
+  featuredImage  String?
+  seoTitle       String?
+  seoDescription String?
+  status         PostStatus @default(DRAFT)
+  publishedAt    DateTime?
+  scheduledAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([category])
+}
+
+// ─── HELP CENTER ─────────────────────────────────────────────────────
+
+model HelpArticle {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  content         String
+  category        String
+  tags            String[]
+  isPublished     Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  helpfulCount    Int      @default(0)
+  notHelpfulCount Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([slug])
+  @@index([category])
+}
+
+// ─── ACADEMY ─────────────────────────────────────────────────────────
+
+model AcademyCourse {
+  id          String          @id @default(cuid())
+  title       String
+  slug        String          @unique
+  description String
+  thumbnail   String?
+  category    String
+  sortOrder   Int
+  isActive    Boolean         @default(true)
+  lessons     AcademyLesson[]
+
+  @@index([slug])
+}
+
+model AcademyLesson {
+  id            String        @id @default(cuid())
+  courseId       String
+  course        AcademyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title         String
+  slug          String
+  content       String
+  sortOrder     Int
+  quizQuestions Json?
+
+  @@unique([courseId, slug])
+  @@index([courseId])
+}
+
+model UserCourseProgress {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  courseId          String
+  lessonId         String
+  completedLessons String[]
+  quizScores       Json?
+  completedAt      DateTime?
+
+  @@unique([userId, courseId])
+  @@index([userId])
+}
+
+// ─── VIRTUAL SPORTS ──────────────────────────────────────────────────
+
+model VirtualSport {
+  id          String         @id @default(cuid())
+  name        String
+  slug        String         @unique
+  intervalSec Int
+  isActive    Boolean        @default(true)
+  markets     Json
+  events      VirtualEvent[]
+
+  @@index([slug])
+}
+
+model VirtualEvent {
+  id             String       @id @default(cuid())
+  virtualSportId String
+  virtualSport   VirtualSport @relation(fields: [virtualSportId], references: [id], onDelete: Cascade)
+  roundNumber    Int
+  participants   Json
+  result         Json?
+  serverSeed     String
+  clientSeed     String       @default("cryptobet")
+  status         EventStatus  @default(UPCOMING)
+  startsAt       DateTime
+  settledAt      DateTime?
+
+  @@index([virtualSportId])
+  @@index([status])
+  @@index([startsAt])
+}
+
+// ─── AFFILIATE SYSTEM ────────────────────────────────────────────────
+
+model Affiliate {
+  id                String          @id @default(cuid())
+  email             String          @unique
+  passwordHash      String
+  companyName       String?
+  website           String?
+  commissionPercent Decimal         @default(25) @db.Decimal(5, 2)
+  apiKey            String?         @unique
+  status            AffiliateStatus @default(PENDING)
+  approvedBy        String?
+  totalEarned       Decimal         @default(0) @db.Decimal(28, 8)
+  totalReferred     Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  referredPlayers   AffiliatePlayer[]
+
+  @@index([email])
+  @@index([status])
+}
+
+model AffiliatePlayer {
+  id          String    @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  userId      String
+  revenue     Decimal   @default(0) @db.Decimal(28, 8)
+  commission  Decimal   @default(0) @db.Decimal(28, 8)
+  createdAt   DateTime  @default(now())
+
+  @@unique([affiliateId, userId])
+  @@index([affiliateId])
+}
