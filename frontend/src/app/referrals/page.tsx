@@ -95,7 +95,7 @@ function AnimatedStat({
       className="bg-surface-secondary rounded-card p-5 border border-border flex flex-col gap-3"
     >
       <div className="flex items-center justify-between">
-        <span className="text-text-dim text-label">{label}</span>
+        <span className="text-text-dim text-xs md:text-sm">{label}</span>
         <div className="w-9 h-9 rounded-lg bg-brand-500/15 flex items-center justify-center">
           <Icon className="w-4 h-4 text-brand-400" />
         </div>
@@ -176,16 +176,16 @@ export default function ReferralsPage() {
   ];
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-24 px-4">
       {/* ============================================================ */}
       {/* HERO SECTION                                                  */}
       {/* ============================================================ */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden -mx-4 px-4">
         {/* gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-brand-800/80 to-surface-deepest" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(141,82,218,0.35),transparent_60%)]" />
 
-        <div className="relative max-w-5xl mx-auto px-4 py-16 md:py-24 flex flex-col md:flex-row items-center gap-10">
+        <div className="relative max-w-5xl mx-auto py-12 md:py-16 flex flex-col md:flex-row items-center gap-8">
           {/* text */}
           <motion.div
             className="flex-1 text-center md:text-left"
@@ -193,10 +193,10 @@ export default function ReferralsPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
               Refer &amp; Earn
             </h1>
-            <p className="text-lg md:text-xl text-brand-200/80 max-w-md">
+            <p className="text-base md:text-lg text-brand-200/80 max-w-md mx-auto md:mx-0">
               Get cash when they play. Share your unique link, earn lifetime commissions on every
               friend you bring to CryptoBet.
             </p>
@@ -209,21 +209,21 @@ export default function ReferralsPage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="relative w-48 h-48 md:w-56 md:h-56">
+            <div className="relative w-40 h-40 md:w-48 md:h-48">
               {/* glow */}
               <div className="absolute inset-0 rounded-full bg-brand-500/20 blur-3xl" />
               {/* circle bg */}
               <div className="relative w-full h-full rounded-full bg-gradient-to-br from-brand-600/40 to-brand-900/60 border border-brand-500/20 flex items-center justify-center">
-                <Gift className="w-20 h-20 text-brand-300" strokeWidth={1.5} />
-                <DollarSign className="absolute top-6 right-4 w-10 h-10 text-accent-yellow opacity-80" />
-                <DollarSign className="absolute bottom-8 left-4 w-8 h-8 text-accent-green opacity-70 rotate-12" />
+                <Gift className="w-16 h-16 md:w-20 md:h-20 text-brand-300" strokeWidth={1.5} />
+                <DollarSign className="absolute top-4 right-2 md:top-6 md:right-4 w-8 h-8 md:w-10 md:h-10 text-accent-yellow opacity-80" />
+                <DollarSign className="absolute bottom-6 left-2 md:bottom-8 md:left-4 w-6 h-6 md:w-8 md:h-8 text-accent-green opacity-70 rotate-12" />
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      <div className="max-w-5xl mx-auto px-4 space-y-12 -mt-2">
+      <div className="max-w-5xl mx-auto space-y-12 mt-8">
         {/* ============================================================ */}
         {/* REFERRAL LINK + SHARE + QR                                   */}
         {/* ============================================================ */}
@@ -231,31 +231,32 @@ export default function ReferralsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15 }}
-          className="bg-surface-secondary rounded-card border border-border p-6 md:p-8"
+          className="bg-surface-secondary rounded-card border border-border p-5 md:p-6"
         >
-          <h2 className="text-h3 text-white mb-5">Your Referral Link</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-white mb-5">Your Referral Link</h2>
 
-          <div className="flex flex-col lg:flex-row gap-8">
+          <div className="flex flex-col lg:flex-row gap-6">
             {/* left: link + share buttons */}
-            <div className="flex-1 space-y-5">
-              {/* link box */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-surface-deepest border border-border rounded-lg px-4 py-3 text-sm text-gray-300 font-mono truncate select-all">
-                  {REFERRAL_LINK}
+            <div className="flex-1 space-y-4">
+              {/* link box - 44px touch target */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex-1 bg-surface-deepest border border-border rounded-lg px-4 py-3 text-sm text-gray-300 font-mono truncate select-all min-h-[44px] flex items-center">
+                  <span className="block sm:hidden">{REFERRAL_LINK.slice(0, 30)}...</span>
+                  <span className="hidden sm:block">{REFERRAL_LINK}</span>
                 </div>
                 <button
                   onClick={() => handleCopy()}
-                  className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-5 py-3 rounded-lg text-button transition-colors whitespace-nowrap"
+                  className="flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-5 py-3 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap min-h-[44px]"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
               </div>
 
-              {/* share buttons */}
-              <div className="flex flex-wrap gap-2">
+              {/* share buttons - 44px minimum */}
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                 {shareButtons.map((btn) => {
-                  const className = `${btn.bg} text-white px-4 py-2.5 rounded-lg text-small font-medium flex items-center gap-2 transition-colors`;
+                  const className = `${btn.bg} text-white px-4 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors min-h-[44px]`;
                   if (btn.href) {
                     return (
                       <a
@@ -266,7 +267,7 @@ export default function ReferralsPage() {
                         className={className}
                       >
                         {btn.icon}
-                        {btn.label}
+                        <span className="hidden sm:inline">{btn.label}</span>
                       </a>
                     );
                   }
@@ -279,17 +280,17 @@ export default function ReferralsPage() {
                 })}
               </div>
 
-              <p className="text-small text-text-dim">
+              <p className="text-xs md:text-sm text-text-dim">
                 Your referral code: <span className="text-brand-300 font-mono">{REFERRAL_CODE}</span>
               </p>
             </div>
 
             {/* right: QR code mock */}
             <div className="flex flex-col items-center gap-3">
-              <div className="w-36 h-36 rounded-xl bg-gradient-to-br from-brand-500 via-brand-700 to-brand-900 border border-brand-500/30 flex items-center justify-center">
-                <QrCode className="w-16 h-16 text-white/60" />
+              <div className="w-32 h-32 md:w-36 md:h-36 rounded-xl bg-gradient-to-br from-brand-500 via-brand-700 to-brand-900 border border-brand-500/30 flex items-center justify-center">
+                <QrCode className="w-14 h-14 md:w-16 md:h-16 text-white/60" />
               </div>
-              <span className="text-small text-text-dim">Scan to refer</span>
+              <span className="text-xs md:text-sm text-text-dim">Scan to refer</span>
             </div>
           </div>
         </motion.section>
@@ -298,8 +299,8 @@ export default function ReferralsPage() {
         {/* HOW IT WORKS                                                 */}
         {/* ============================================================ */}
         <section>
-          <h2 className="text-h2 text-white mb-6 text-center">How It Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <h2 className="text-xl md:text-2xl font-bold text-white mb-6 text-center">How It Works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               {
                 step: 1,
@@ -328,28 +329,28 @@ export default function ReferralsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 * i }}
-                className={`bg-gradient-to-b ${item.color} bg-surface-secondary rounded-card border border-border p-6 text-center relative overflow-hidden`}
+                className={`bg-gradient-to-b ${item.color} bg-surface-secondary rounded-card border border-border p-5 text-center relative overflow-hidden`}
               >
                 {/* step badge */}
-                <div className="absolute top-3 left-3 w-7 h-7 rounded-full bg-brand-500/25 flex items-center justify-center text-small font-bold text-brand-300">
+                <div className="absolute top-3 left-3 w-7 h-7 rounded-full bg-brand-500/25 flex items-center justify-center text-xs font-bold text-brand-300">
                   {item.step}
                 </div>
-                <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-surface-hover/60 flex items-center justify-center">
-                  <item.icon className="w-7 h-7 text-white" />
+                <div className="w-12 h-12 md:w-14 md:h-14 mx-auto mb-4 rounded-2xl bg-surface-hover/60 flex items-center justify-center">
+                  <item.icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
                 </div>
-                <h3 className="text-h4 text-white mb-2">{item.title}</h3>
-                <p className="text-small text-text-secondary leading-relaxed">{item.desc}</p>
+                <h3 className="text-base md:text-lg font-bold text-white mb-2">{item.title}</h3>
+                <p className="text-xs md:text-sm text-text-secondary leading-relaxed">{item.desc}</p>
               </motion.div>
             ))}
           </div>
         </section>
 
         {/* ============================================================ */}
-        {/* STATS DASHBOARD                                              */}
+        {/* STATS DASHBOARD - 2-col on mobile, 4-col on desktop                                              */}
         {/* ============================================================ */}
         <section>
-          <h2 className="text-h2 text-white mb-6">Your Stats</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <h2 className="text-xl md:text-2xl font-bold text-white mb-6">Your Stats</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {STATS.map((s, i) => (
               <AnimatedStat
                 key={s.label}
@@ -364,80 +365,90 @@ export default function ReferralsPage() {
         </section>
 
         {/* ============================================================ */}
-        {/* REFERRAL HISTORY TABLE                                       */}
+        {/* REFERRAL HISTORY - compact card layout on mobile                                       */}
         {/* ============================================================ */}
         <section>
-          <h2 className="text-h2 text-white mb-6">Referral History</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-white mb-6">Referral History</h2>
           <div className="bg-surface-secondary rounded-card border border-border overflow-hidden">
-            {/* header */}
-            <div className="hidden md:grid grid-cols-4 gap-4 px-6 py-3 bg-surface-hover/50 text-label text-text-dim font-semibold uppercase tracking-wider">
+            {/* header - hidden on mobile */}
+            <div className="hidden md:grid grid-cols-4 gap-4 px-6 py-3 bg-surface-hover/50 text-xs font-semibold uppercase tracking-wider text-text-dim">
               <span>Username</span>
               <span>Date Joined</span>
               <span>Status</span>
               <span className="text-right">Earned</span>
             </div>
 
-            {/* rows */}
+            {/* rows - card layout on mobile */}
             {REFERRAL_HISTORY.map((ref, i) => (
               <motion.div
                 key={ref.username}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.35, delay: 0.05 * i }}
-                className={`grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 px-6 py-4 items-center text-body ${
+                className={`grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 px-5 md:px-6 py-4 items-center text-sm ${
                   i % 2 === 0 ? 'bg-surface-secondary' : 'bg-surface-tertiary/40'
                 } border-t border-border-dim`}
               >
-                <span className="text-white font-medium">{ref.username}</span>
-                <span className="text-text-secondary">{ref.dateJoined}</span>
-                <span>
+                <div className="col-span-2 md:col-span-1">
+                  <span className="text-xs text-gray-500 md:hidden">Username</span>
+                  <span className="text-white font-medium">{ref.username}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500 md:hidden block">Date</span>
+                  <span className="text-text-secondary text-sm">{ref.dateJoined}</span>
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <span className="text-xs text-gray-500 md:hidden block mb-1">Status</span>
                   <span
-                    className={`inline-block px-2.5 py-0.5 rounded-pill text-small font-medium ${STATUS_STYLES[ref.status]}`}
+                    className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[ref.status]}`}
                   >
                     {ref.status}
                   </span>
-                </span>
-                <span className="text-white font-semibold text-right md:text-right">
-                  {ref.earned > 0 ? `$${ref.earned.toFixed(2)}` : '--'}
-                </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-gray-500 md:hidden block">Earned</span>
+                  <span className="text-white font-semibold text-sm">
+                    {ref.earned > 0 ? `$${ref.earned.toFixed(2)}` : '--'}
+                  </span>
+                </div>
               </motion.div>
             ))}
           </div>
         </section>
 
         {/* ============================================================ */}
-        {/* COMMISSION STRUCTURE                                         */}
+        {/* COMMISSION STRUCTURE - responsive table/cards                                         */}
         {/* ============================================================ */}
         <section>
-          <h2 className="text-h2 text-white mb-2">Commission Structure</h2>
-          <p className="text-body text-text-secondary mb-6 max-w-2xl">
+          <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Commission Structure</h2>
+          <p className="text-sm md:text-base text-text-secondary mb-6 max-w-2xl">
             Earn a percentage of the house edge generated by every referred player. The more friends
             you bring, the higher your commission tier. Commissions are calculated in real-time and
             credited daily. Your earnings have <strong className="text-white">no lifetime cap</strong>.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {COMMISSION_TIERS.map((tier, i) => (
               <motion.div
                 key={tier.tier}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, delay: 0.08 * i }}
-                className="bg-surface-secondary rounded-card border border-border p-5 flex flex-col gap-3"
+                className="bg-surface-secondary rounded-card border border-border p-4 md:p-5 flex flex-col gap-3"
               >
                 <div className="flex items-center gap-2">
                   <Award className={`w-5 h-5 ${tier.color}`} />
-                  <span className={`text-h4 ${tier.color}`}>{tier.tier}</span>
+                  <span className={`text-base md:text-lg font-bold ${tier.color}`}>{tier.tier}</span>
                 </div>
-                <div className="text-3xl font-bold text-white">{tier.rate}</div>
-                <span className="text-small text-text-dim">
+                <div className="text-2xl md:text-3xl font-bold text-white">{tier.rate}</div>
+                <span className="text-xs md:text-sm text-text-dim">
                   {tier.referrals} referrals
                 </span>
               </motion.div>
             ))}
           </div>
 
-          <div className="mt-6 bg-surface-tertiary/60 rounded-card border border-border p-5 text-body text-text-secondary space-y-2">
+          <div className="mt-6 bg-surface-tertiary/60 rounded-card border border-border p-4 md:p-5 text-sm md:text-base text-text-secondary space-y-2">
             <div className="flex items-start gap-2">
               <ChevronRight className="w-4 h-4 mt-0.5 text-brand-400 flex-shrink-0" />
               <span>
@@ -466,7 +477,7 @@ export default function ReferralsPage() {
         <div className="text-center pb-4">
           <Link
             href="/terms"
-            className="text-small text-text-dim hover:text-brand-400 transition-colors underline underline-offset-4"
+            className="text-xs md:text-sm text-text-dim hover:text-brand-400 transition-colors underline underline-offset-4 min-h-[44px] inline-flex items-center"
           >
             Referral Programme Terms &amp; Conditions
           </Link>

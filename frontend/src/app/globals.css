@@ -50,35 +50,37 @@
     --gradient-download-card: linear-gradient(126deg, rgba(120, 120, 120, 0.2) 9.49%, rgba(0, 0, 0, 0) 71.04%), #1A1B1F;
     --gradient-connect-btn: linear-gradient(0deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.15));
 
-    /* Safe area insets for iOS */
+    /* Safe area insets for iOS (notch, home indicator) */
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-left: env(safe-area-inset-left, 0px);
     --safe-area-right: env(safe-area-inset-right, 0px);
   }
 
-  /* ── Smooth scrolling ── */
+  /* ── Smooth scrolling & iOS optimization ── */
   html {
+    font-size: 16px; /* Base font size for mobile - prevents iOS auto-zoom */
     scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%; /* Prevent iOS font scaling */
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; /* Disable double-tap zoom */
   }
 
   /* ── Base dark theme body ── */
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 14px;
+    font-size: 0.875rem; /* 14px at 16px root */
     line-height: 1.6;
     color: var(--color-text-primary);
     background-color: var(--color-bg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    padding-top: var(--safe-area-top);
-    padding-bottom: var(--safe-area-bottom);
     overflow-x: hidden;
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
   }
 
-  /* ── Selection color ── */
+  /* ── Selection color (brand purple) ── */
   ::selection {
     background-color: rgba(141, 82, 218, 0.4);
     color: #FFFFFF;
@@ -89,7 +91,7 @@
     color: #FFFFFF;
   }
 
-  /* ── Scrollbar: thin, dark ── */
+  /* ── Scrollbar: thin, dark, professional ── */
   * {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
@@ -107,13 +109,25 @@
   ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
+    transition: background 0.2s ease;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
   }
 
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   /* ── Input focus styles ── */
+  input,
+  textarea,
+  select {
+    /* CRITICAL: Minimum 16px font size to prevent iOS auto-zoom */
+    font-size: 16px;
+  }
+
   input:focus,
   textarea:focus,
   select:focus {
@@ -143,26 +157,34 @@
   a {
     color: var(--color-primary);
     text-decoration: none;
+    transition: color 0.2s ease;
   }
 
   a:hover {
     color: var(--color-primary-hover);
   }
 
+  a:active {
+    opacity: 0.8;
+  }
+
   img,
   video {
     max-width: 100%;
     height: auto;
+    display: block;
   }
 
   hr {
     border: none;
     border-top: 1px solid var(--color-border);
+    margin: 1rem 0;
   }
 
   /* ── Placeholder color ── */
   ::placeholder {
     color: var(--color-text-dim);
+    opacity: 1; /* Firefox */
   }
 
   ::-webkit-input-placeholder {
@@ -171,6 +193,16 @@
 
   ::-moz-placeholder {
     color: var(--color-text-dim);
+    opacity: 1;
+  }
+
+  /* ── Autofill styles ── */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-text-primary);
+    -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset;
+    transition: background-color 5000s ease-in-out 0s;
   }
 }
 
@@ -186,56 +218,142 @@
 
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
+    height: 4px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    border-radius: 2px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Safe area utilities for fixed elements */
+  .safe-top {
+    padding-top: var(--safe-area-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: var(--safe-area-bottom);
+  }
+
+  .safe-left {
+    padding-left: var(--safe-area-left);
+  }
+
+  .safe-right {
+    padding-right: var(--safe-area-right);
+  }
+
+  .safe-x {
+    padding-left: var(--safe-area-left);
+    padding-right: var(--safe-area-right);
+  }
+
+  .safe-y {
+    padding-top: var(--safe-area-top);
+    padding-bottom: var(--safe-area-bottom);
+  }
+
+  /* Fixed element safe areas (for nav bars) */
+  .fixed-top-safe {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding-top: var(--safe-area-top);
+    padding-left: var(--safe-area-left);
+    padding-right: var(--safe-area-right);
+  }
+
+  .fixed-bottom-safe {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: var(--safe-area-bottom);
+    padding-left: var(--safe-area-left);
+    padding-right: var(--safe-area-right);
+  }
+
+  /* Touch target utilities - WCAG 2.1 compliant (44x44px minimum) */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .touch-target-sm {
+    min-height: 36px;
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .touch-target-lg {
+    min-height: 48px;
+    min-width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
 /* ── Component classes ── */
 @layer components {
-  /* Buttons */
+  /* Buttons - Professional betting site styling */
   .btn-primary {
-    @apply bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
+    @apply bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
     box-shadow: none;
+    min-height: 44px;
+    font-size: 14px;
   }
-  .btn-primary:hover {
+  .btn-primary:hover:not(:disabled) {
     box-shadow: var(--shadow-btn-hover);
   }
 
   .btn-secondary {
-    @apply bg-surface-tertiary hover:bg-surface-hover text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+    @apply bg-surface-tertiary hover:bg-surface-hover text-white font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
+    min-height: 44px;
+    font-size: 14px;
   }
 
   .btn-accent {
-    @apply hover:brightness-110 text-black font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+    @apply hover:brightness-110 text-black font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
     background-color: var(--color-live);
+    min-height: 44px;
+    font-size: 14px;
   }
 
   .btn-connect {
     background: var(--gradient-connect-btn);
     box-shadow: var(--shadow-connect-btn);
-    @apply text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+    @apply text-white font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
+    min-height: 44px;
+    font-size: 14px;
   }
 
   .btn-success {
-    @apply bg-accent-green hover:brightness-110 text-black font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+    @apply bg-accent-green hover:brightness-110 text-black font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
+    min-height: 44px;
+    font-size: 14px;
   }
 
   .btn-danger {
-    @apply bg-accent-red hover:brightness-110 text-white font-semibold px-4 py-2 rounded-btn transition-all duration-200 active:scale-[0.98];
+    @apply bg-accent-red hover:brightness-110 text-white font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
+    min-height: 44px;
+    font-size: 14px;
   }
 
-  /* Cards */
+  /* Cards - Enhanced with smooth transitions */
   .card {
-    @apply bg-surface-secondary border border-border rounded-card p-4;
+    @apply bg-surface-secondary border border-border rounded-card p-4 transition-shadow duration-200;
     box-shadow: var(--shadow-card);
   }
   .card:hover {
@@ -243,8 +361,12 @@
   }
 
   .game-card {
-    @apply bg-surface-secondary border border-border p-0 overflow-hidden;
+    @apply bg-surface-secondary border border-border p-0 overflow-hidden transition-all duration-200;
     border-radius: var(--radius-game-card);
+  }
+  .game-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
   }
 
   .glass-card {
@@ -261,10 +383,11 @@
     border-radius: var(--radius-card);
   }
 
-  /* Inputs */
+  /* Inputs - Mobile-optimized with 16px font size */
   .input {
-    @apply w-full bg-surface-tertiary border border-border rounded-btn px-3 py-2 text-white transition-colors;
-    font-size: 14px;
+    @apply w-full bg-surface-tertiary border border-border rounded-btn px-3 py-2.5 text-white transition-colors;
+    font-size: 16px; /* CRITICAL: Prevents iOS auto-zoom */
+    min-height: 44px;
   }
   .input::placeholder {
     color: var(--color-text-dim);
@@ -281,27 +404,49 @@
     border-radius: var(--radius-btn);
     color: white;
     padding: 10px 12px;
-    font-size: 14px;
+    font-size: 16px; /* CRITICAL: Prevents iOS auto-zoom */
     width: 100%;
     outline: none;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.2s ease;
+    min-height: 44px;
   }
   .input-cloudbet:focus {
     border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(141, 82, 218, 0.25);
   }
   .input-cloudbet::placeholder {
     color: var(--color-text-dim);
   }
 
-  /* Odds buttons */
+  /* Odds buttons - Professional betting site style */
   .odds-btn {
-    @apply flex flex-col items-center justify-center px-3 py-2 rounded-btn bg-surface-tertiary hover:bg-surface-hover border border-transparent transition-all cursor-pointer text-sm min-h-[44px];
+    @apply flex flex-col items-center justify-center px-3 py-2 rounded-btn bg-surface-tertiary hover:bg-surface-hover border border-transparent transition-all duration-150 cursor-pointer;
+    min-height: 44px;
+    min-width: 64px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .odds-btn:hover {
+    border-color: var(--color-border-selected);
+  }
+  .odds-btn:active {
+    transform: scale(0.98);
   }
   .odds-btn.selected {
     @apply bg-brand-500/20 border-brand-500 text-brand-400;
   }
 
-  /* Dialog / Modal */
+  .odds-value {
+    @apply font-semibold text-base;
+    line-height: 1.2;
+  }
+
+  .odds-label {
+    @apply text-xs text-text-secondary mt-0.5;
+    line-height: 1.2;
+  }
+
+  /* Dialog / Modal - Enhanced for mobile */
   .dialog {
     @apply bg-surface-secondary rounded-modal;
     box-shadow: var(--shadow-dialog);
@@ -339,17 +484,15 @@
     animation: skeleton-pulse 1.5s ease-in-out infinite;
   }
 
-  /* Touch target minimum size */
-  .touch-target {
-    @apply min-w-[44px] min-h-[44px] flex items-center justify-center;
-  }
-
-  /* Transition utilities */
+  /* Transition utilities - Smooth professional feel */
   .transition-fast {
     transition: all 0.15s ease;
   }
   .transition-normal {
     transition: all 0.3s ease;
+  }
+  .transition-slow {
+    transition: all 0.5s ease;
   }
 
   /* Button hover effect */
@@ -403,6 +546,37 @@
 @keyframes modalBackdropIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 /* ── Animation utility classes ── */

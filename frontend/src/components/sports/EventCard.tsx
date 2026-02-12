@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useBetSlipStore } from '@/stores/betSlipStore';
 import { formatOdds, cn } from '@/lib/utils';
 import { Star, Clock, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { SportIcon } from '@/components/sports/SportIcon';
 import type { Event, Selection, Market } from '@/types';
@@ -43,19 +42,26 @@ const NO_DRAW_SPORTS = new Set([
 interface EventCardProps {
   event: Event;
   compact?: boolean;
+  featured?: boolean;
 }
 
 /* ================================================================== */
 /*  Helpers                                                            */
 /* ================================================================== */
 
-function formatEventDate(dateStr: string): string {
+function formatEventDate(dateStr: string, isMobile = false): string {
   const date = new Date(dateStr);
+  const timeStr = format(date, 'HH:mm');
+
+  if (isMobile) {
+    return timeStr;
+  }
+
   if (isToday(date)) {
-    return `Today, ${format(date, 'HH:mm')}`;
+    return `Today, ${timeStr}`;
   }
   if (isTomorrow(date)) {
-    return `Tomorrow, ${format(date, 'HH:mm')}`;
+    return `Tomorrow, ${timeStr}`;
   }
   return format(date, 'MMM d, HH:mm');
 }
@@ -68,10 +74,12 @@ function TeamLogo({
   name,
   logo,
   isHome = true,
+  size = 'default',
 }: {
   name: string;
   logo?: string | null;
   isHome?: boolean;
+  size?: 'compact' | 'default' | 'featured';
 }) {
   const initials = name
     .split(' ')
@@ -82,14 +90,27 @@ function TeamLogo({
 
   const [imgError, setImgError] = useState(false);
 
+  const sizeClasses = {
+    compact: 'w-6 h-6',
+    default: 'w-7 h-7',
+    featured: 'w-9 h-9',
+  };
+
+  const textSizeClasses = {
+    compact: 'text-[9px]',
+    default: 'text-[10px]',
+    featured: 'text-xs',
+  };
+
   if (logo && !imgError) {
     return (
       <img
         src={logo}
         alt={name}
-        width={28}
-        height={28}
-        className="w-7 h-7 rounded-full object-contain shrink-0 bg-white/5"
+        className={cn(
+          sizeClasses[size],
+          'rounded-full object-contain shrink-0 bg-white/5',
+        )}
         loading="lazy"
         onError={() => setImgError(true)}
       />
@@ -99,7 +120,9 @@ function TeamLogo({
   return (
     <div
       className={cn(
-        'w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
+        sizeClasses[size],
+        textSizeClasses[size],
+        'rounded-full flex items-center justify-center font-bold shrink-0',
         isHome
           ? 'bg-brand-500/20 text-brand-400'
           : 'bg-accent-purple/20 text-accent-purple',
@@ -111,7 +134,7 @@ function TeamLogo({
 }
 
 /* ================================================================== */
-/*  OddsButton -- Cloudbet-style with framer-motion flash              */
+/*  OddsButton -- Bet365/Cloudbet style with CSS transitions           */
 /* ================================================================== */
 
 type OddsFlash = 'up' | 'down' | null;
@@ -121,11 +144,13 @@ function OddsButton({
   label,
   isSelected,
   onSelect,
+  compact = false,
 }: {
   selection: Selection | null;
   label: string;
   isSelected: boolean;
   onSelect: () => void;
+  compact?: boolean;
 }) {
   const [flash, setFlash] = useState<OddsFlash>(null);
   const prevOdds = useRef<string | null>(null);
@@ -149,11 +174,17 @@ function OddsButton({
     return (
       <div
         className={cn(
-          'flex-1 min-w-[72px] py-2 px-3 rounded-md flex flex-col items-center justify-center gap-0.5',
-          'bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)]',
+          'flex-1 min-w-[64px] rounded-md flex flex-col items-center justify-center gap-0.5',
+          'bg-white/[0.03] border border-white/[0.06]',
+          compact ? 'h-10 px-2' : 'h-11 px-3',
         )}
       >
-        <span className="text-[10px] font-medium text-text-dim leading-none uppercase">
+        <span
+          className={cn(
+            'font-medium text-text-dim leading-none uppercase tracking-wide',
+            compact ? 'text-[10px]' : 'text-[11px]',
+          )}
+        >
           {label}
         </span>
         <span className="text-xs text-text-dim font-mono">-</span>
@@ -163,59 +194,68 @@ function OddsButton({
 
   const isSuspended = selection.status === 'SUSPENDED';
 
-  // Determine flash background color for framer-motion
-  const flashBg =
-    flash === 'up'
-      ? 'rgba(48, 224, 0, 0.20)'
-      : flash === 'down'
-        ? 'rgba(255, 73, 74, 0.20)'
-        : 'transparent';
-
   return (
-    <motion.button
+    <button
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         if (!isSuspended) onSelect();
       }}
       disabled={isSuspended}
-      animate={{
-        backgroundColor: flashBg,
-      }}
-      transition={{ duration: flash ? 0.15 : 1.2, ease: 'easeOut' }}
       className={cn(
-        'flex-1 min-w-[72px] py-2 px-3 rounded-md flex flex-col items-center justify-center gap-0.5',
-        'font-mono transition-colors duration-200 relative overflow-hidden cursor-pointer',
-        'border',
+        'flex-1 min-w-[64px] rounded-md flex flex-col items-center justify-center gap-0.5',
+        'font-mono relative overflow-hidden cursor-pointer',
+        'border transition-all duration-200',
+        compact ? 'h-10 px-2' : 'h-11 px-3',
+        // Selected state - lime green background (#BFFF00)
+        isSelected && [
+          'bg-[#BFFF00] border-[#BFFF00]',
+          'shadow-[0_0_0_1px_rgba(191,255,0,0.3)]',
+        ],
+        // Flash up state - green
+        !isSelected &&
+          flash === 'up' && [
+            'bg-accent-green/20 border-accent-green/40',
+            'odds-flash-up',
+          ],
+        // Flash down state - red
+        !isSelected &&
+          flash === 'down' && [
+            'bg-accent-red/20 border-accent-red/40',
+            'odds-flash-down',
+          ],
         // Default state
         !isSelected &&
-          !flash &&
-          'bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.12)]',
-        // Selected state -- purple
-        isSelected &&
-          'bg-[rgba(141,82,218,0.15)] border-[#8D52DA]',
-        // Flash override borders
-        flash === 'up' && !isSelected && 'border-accent-green/40',
-        flash === 'down' && !isSelected && 'border-accent-red/40',
+          !flash && [
+            'bg-white/[0.03] border-white/[0.06]',
+            'hover:bg-white/[0.06] hover:border-white/[0.10]',
+            'active:scale-[0.98]',
+          ],
         // Suspended
         isSuspended && 'opacity-30 cursor-not-allowed',
       )}
+      style={{
+        // Minimum touch target height
+        minHeight: '44px',
+      }}
     >
       {/* Outcome label */}
       <span
         className={cn(
-          'text-[10px] font-medium leading-none uppercase tracking-wide',
-          isSelected ? 'text-brand-300' : 'text-text-dim',
+          'font-medium leading-none uppercase tracking-wide',
+          compact ? 'text-[10px]' : 'text-[11px]',
+          isSelected ? 'text-[#1A1B1F]' : 'text-text-dim',
         )}
       >
         {label}
       </span>
-      {/* Odds value */}
+      {/* Odds value - reserved min-width to prevent layout shift */}
       <span
         className={cn(
-          'text-sm font-bold leading-tight',
+          'font-bold leading-tight min-w-[32px] text-center',
+          compact ? 'text-sm' : 'text-[14px]',
           isSelected
-            ? 'text-brand-200'
+            ? 'text-[#1A1B1F]'
             : flash === 'up'
               ? 'text-accent-green'
               : flash === 'down'
@@ -225,7 +265,7 @@ function OddsButton({
       >
         {formatOdds(selection.odds)}
       </span>
-    </motion.button>
+    </button>
   );
 }
 
@@ -266,10 +306,16 @@ function LiveBadge({
 }
 
 /* ================================================================== */
-/*  LiveScore -- score display with pulse animation on change          */
+/*  LiveScore -- score display with CSS pulse animation                */
 /* ================================================================== */
 
-function LiveScore({ score, prevScoreRef }: { score: number; prevScoreRef: React.MutableRefObject<number | null> }) {
+function LiveScore({
+  score,
+  prevScoreRef,
+}: {
+  score: number;
+  prevScoreRef: React.MutableRefObject<number | null>;
+}) {
   const [pulse, setPulse] = useState(false);
 
   useEffect(() => {
@@ -282,20 +328,14 @@ function LiveScore({ score, prevScoreRef }: { score: number; prevScoreRef: React
   }, [score, prevScoreRef]);
 
   return (
-    <motion.span
-      animate={
-        pulse
-          ? {
-              scale: [1, 1.3, 1],
-              color: ['#FFFFFF', '#30E000', '#FFFFFF'],
-            }
-          : {}
-      }
-      transition={{ duration: 0.8, ease: 'easeOut' }}
-      className="text-lg font-bold font-mono text-white tabular-nums leading-none"
+    <span
+      className={cn(
+        'text-lg font-bold font-mono text-white tabular-nums leading-none min-w-[20px] text-center',
+        pulse && 'score-pulse',
+      )}
     >
       {score}
-    </motion.span>
+    </span>
   );
 }
 
@@ -349,15 +389,18 @@ function FavoriteButton({ eventId }: { eventId: string }) {
   return (
     <button
       onClick={toggleFavorite}
-      className="p-1 rounded transition-colors hover:bg-white/5"
+      className={cn(
+        'rounded transition-colors hover:bg-white/5',
+        'min-w-[32px] min-h-[32px] flex items-center justify-center',
+      )}
       aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
     >
       <Star
         className={cn(
-          'w-4 h-4 transition-colors',
+          'w-4 h-4 transition-all duration-200',
           isFavorite
-            ? 'fill-accent-yellow text-accent-yellow'
-            : 'text-text-dim hover:text-text-muted',
+            ? 'fill-accent-yellow text-accent-yellow scale-110'
+            : 'text-text-dim hover:text-text-muted hover:scale-110',
         )}
       />
     </button>
@@ -365,10 +408,14 @@ function FavoriteButton({ eventId }: { eventId: string }) {
 }
 
 /* ================================================================== */
-/*  EventCard -- Main component (Cloudbet-style)                       */
+/*  EventCard -- Main component (Bet365/Cloudbet mobile-first style)  */
 /* ================================================================== */
 
-export function EventCard({ event, compact: _compact }: EventCardProps) {
+export function EventCard({
+  event,
+  compact = false,
+  featured = false,
+}: EventCardProps) {
   const { toggleSelection, hasSelection } = useBetSlipStore();
 
   // Score pulse refs
@@ -425,41 +472,51 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
 
   /* ---- Outcome labels ---------------------------------------------- */
 
-  // For two-way sports we show "1" / "2"; for three-way we show "1" / "X" / "2"
   const homeLabel = '1';
   const drawLabel = 'X';
   const awayLabel = '2';
+
+  /* ---- Logo size based on variant --------------------------------- */
+
+  const logoSize = featured ? 'featured' : compact ? 'compact' : 'default';
 
   /* ---- Render ------------------------------------------------------ */
 
   return (
     <div
       className={cn(
-        'rounded-lg overflow-hidden transition-all duration-200 group',
+        'rounded-xl overflow-hidden transition-all duration-200 group',
         'bg-[#1A1B1F]',
-        'border border-[rgba(255,255,255,0.08)]',
-        'hover:border-[rgba(255,255,255,0.12)]',
+        'border border-white/[0.08]',
+        'hover:border-white/[0.12] hover:shadow-lg',
+        compact ? 'p-3' : 'p-3 md:p-4',
+        featured && 'md:p-5',
       )}
-      style={{ padding: '12px 16px' }}
     >
       {/* ========== HEADER: Competition + Date/Live + Favorite ========== */}
-      <div className="flex items-center justify-between mb-2.5">
+      <div className="flex items-center justify-between mb-2 md:mb-2.5">
         {/* Left: sport icon + competition */}
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {sport?.slug && (
             <SportIcon
               slug={sport.slug}
-              size={12}
+              size={compact ? 11 : 12}
               emoji={sport.icon}
             />
           )}
-          <span className="text-[11px] text-text-dim truncate font-medium leading-none">
+          <span
+            className={cn(
+              'text-text-dim font-medium leading-none line-clamp-1',
+              compact ? 'text-[10px]' : 'text-[11px] md:text-xs',
+            )}
+            title={event.competition?.name}
+          >
             {event.competition?.name}
           </span>
         </div>
 
         {/* Right: live badge or date + favorite */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
           {event.isLive ? (
             <LiveBadge
               matchTime={event.metadata?.matchTime as string | undefined}
@@ -467,9 +524,13 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
             />
           ) : (
             <div className="flex items-center gap-1 text-text-dim">
-              <Clock className="w-3 h-3" />
-              <span className="text-[11px] font-medium leading-none">
-                {formatEventDate(event.startTime)}
+              <Clock className={cn('w-3 h-3', compact && 'w-2.5 h-2.5')} />
+              {/* Mobile: condensed time, Desktop: full date */}
+              <span className="text-[11px] font-medium leading-none md:hidden">
+                {formatEventDate(event.startTime, true)}
+              </span>
+              <span className="text-[11px] font-medium leading-none hidden md:inline">
+                {formatEventDate(event.startTime, false)}
               </span>
             </div>
           )}
@@ -481,22 +542,36 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
       {event.homeTeam && event.awayTeam ? (
         <>
           {/* Teams row */}
-          <div className="flex items-center justify-between mb-3">
+          <div
+            className={cn(
+              'flex items-center justify-between',
+              compact ? 'mb-2' : 'mb-2.5 md:mb-3',
+            )}
+          >
             {/* Home team */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <TeamLogo
                 name={event.homeTeam}
                 logo={event.homeTeamLogo}
                 isHome
+                size={logoSize}
               />
-              <span className="text-sm font-medium text-white truncate">
+              <span
+                className={cn(
+                  'font-medium text-white',
+                  // 2-line clamp on mobile, prevent truncation to "Manches..."
+                  'line-clamp-2 break-words',
+                  compact ? 'text-[13px]' : 'text-sm md:text-[15px]',
+                )}
+                title={event.homeTeam}
+              >
                 {event.homeTeam}
               </span>
             </div>
 
-            {/* Score or VS */}
+            {/* Score or VS - reserved min-width to prevent layout shift */}
             {event.isLive ? (
-              <div className="flex items-center gap-1.5 px-3 shrink-0">
+              <div className="flex items-center gap-1.5 px-2 md:px-3 shrink-0 min-w-[60px] justify-center">
                 <LiveScore
                   score={event.homeScore ?? 0}
                   prevScoreRef={prevHomeScore}
@@ -510,20 +585,29 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
                 />
               </div>
             ) : (
-              <span className="text-xs text-text-dim font-medium px-3 shrink-0">
+              <span className="text-xs text-text-dim font-medium px-2 md:px-3 shrink-0 min-w-[40px] text-center">
                 vs
               </span>
             )}
 
             {/* Away team */}
             <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-              <span className="text-sm font-medium text-white truncate text-right">
+              <span
+                className={cn(
+                  'font-medium text-white text-right',
+                  // 2-line clamp on mobile
+                  'line-clamp-2 break-words',
+                  compact ? 'text-[13px]' : 'text-sm md:text-[15px]',
+                )}
+                title={event.awayTeam}
+              >
                 {event.awayTeam}
               </span>
               <TeamLogo
                 name={event.awayTeam}
                 logo={event.awayTeamLogo}
                 isHome={false}
+                size={logoSize}
               />
             </div>
           </div>
@@ -540,6 +624,7 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
                   onSelect={() =>
                     homeSel && handleSelectOdds(homeSel, moneylineMarket)
                   }
+                  compact={compact}
                 />
                 {/* Away */}
                 <OddsButton
@@ -549,6 +634,7 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
                   onSelect={() =>
                     awaySel && handleSelectOdds(awaySel, moneylineMarket)
                   }
+                  compact={compact}
                 />
               </>
             ) : (
@@ -561,6 +647,7 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
                   onSelect={() =>
                     homeSel && handleSelectOdds(homeSel, moneylineMarket)
                   }
+                  compact={compact}
                 />
                 {/* Draw */}
                 <OddsButton
@@ -570,6 +657,7 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
                   onSelect={() =>
                     drawSel && handleSelectOdds(drawSel, moneylineMarket)
                   }
+                  compact={compact}
                 />
                 {/* Away */}
                 <OddsButton
@@ -579,6 +667,7 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
                   onSelect={() =>
                     awaySel && handleSelectOdds(awaySel, moneylineMarket)
                   }
+                  compact={compact}
                 />
               </>
             )}
@@ -586,10 +675,13 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
 
           {/* ========== FOOTER: +N markets link ======================== */}
           {marketCount > 1 && (
-            <div className="mt-2.5 flex items-center justify-end">
+            <div className="mt-2 md:mt-2.5 flex items-center justify-end">
               <Link
                 href={`/sports/event/${event.id}`}
-                className="flex items-center gap-0.5 text-[11px] text-brand-400 hover:text-brand-300 font-medium transition-colors"
+                className={cn(
+                  'flex items-center gap-0.5 text-brand-400 hover:text-brand-300 font-medium transition-colors',
+                  compact ? 'text-[10px]' : 'text-[11px]',
+                )}
                 onClick={(e) => e.stopPropagation()}
               >
                 +{marketCount - 1} market{marketCount - 1 > 1 ? 's' : ''}
@@ -601,25 +693,36 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
       ) : (
         /* ---- Fallback: no teams (outrights, specials) --------------- */
         <div>
-          <p className="text-sm font-medium text-white mb-2">{event.name}</p>
+          <p
+            className={cn(
+              'font-medium text-white mb-2 line-clamp-2',
+              compact ? 'text-[13px]' : 'text-sm',
+            )}
+          >
+            {event.name}
+          </p>
           {mainSelections.length > 0 && (
             <div className="flex gap-2">
-              {mainSelections.slice(0, 3).map((sel, _idx) => (
+              {mainSelections.slice(0, 3).map((sel) => (
                 <OddsButton
                   key={sel.id}
                   selection={sel}
                   label={sel.name}
                   isSelected={hasSelection(sel.id)}
                   onSelect={() => handleSelectOdds(sel, moneylineMarket)}
+                  compact={compact}
                 />
               ))}
             </div>
           )}
           {marketCount > 1 && (
-            <div className="mt-2.5 flex items-center justify-end">
+            <div className="mt-2 md:mt-2.5 flex items-center justify-end">
               <Link
                 href={`/sports/event/${event.id}`}
-                className="flex items-center gap-0.5 text-[11px] text-brand-400 hover:text-brand-300 font-medium transition-colors"
+                className={cn(
+                  'flex items-center gap-0.5 text-brand-400 hover:text-brand-300 font-medium transition-colors',
+                  compact ? 'text-[10px]' : 'text-[11px]',
+                )}
               >
                 +{marketCount - 1} market{marketCount - 1 > 1 ? 's' : ''}
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -628,6 +731,40 @@ export function EventCard({ event, compact: _compact }: EventCardProps) {
           )}
         </div>
       )}
+
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes score-pulse {
+          0%,
+          100% {
+            transform: scale(1);
+            color: #ffffff;
+          }
+          50% {
+            transform: scale(1.3);
+            color: #30e000;
+          }
+        }
+
+        :global(.score-pulse) {
+          animation: score-pulse 0.8s ease-out;
+        }
+
+        @keyframes odds-flash {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.7;
+          }
+        }
+
+        :global(.odds-flash-up),
+        :global(.odds-flash-down) {
+          animation: odds-flash 1.5s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

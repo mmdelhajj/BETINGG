@@ -6,26 +6,27 @@ import { useAuthStore } from '@/stores/authStore';
 import { bettingApi } from '@/lib/api';
 import { formatOdds } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo, useMotionValue } from 'framer-motion';
 import {
   X,
   Trash2,
-  ChevronUp,
+  ChevronDown,
   Receipt,
   AlertTriangle,
   ArrowUp,
   ArrowDown,
   Check,
   Info,
+  TrendingUp,
 } from 'lucide-react';
 
 // ─── Constants ──────────────────────────────────────────────────────
-const QUICK_STAKES = [10, 25, 50, 100];
-const TAB_LABELS: Record<string, string> = {
-  single: 'Single',
-  parlay: 'Multi',
-  system: 'System',
-};
+const QUICK_STAKES = [5, 10, 25, 50, 100];
+const DRAG_CLOSE_THRESHOLD = 70; // 60-80px as specified
+const DRAG_ELASTICITY = 0.35; // 0.3-0.4 elasticity
+const MAX_SHEET_HEIGHT = 'calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))';
+const TAB_HEIGHT = 44; // Touch-friendly tab height
+const _BUTTON_HEIGHT = 48; // Prominent button height
 
 // ─── Sub-components ─────────────────────────────────────────────────
 
@@ -36,8 +37,8 @@ function OddsChangeBadge({ direction }: { direction: 'up' | 'down' }) {
       className={cn(
         'inline-flex items-center gap-0.5 text-[10px] font-bold px-1 py-0.5 rounded',
         direction === 'up'
-          ? 'bg-accent-green/15 text-accent-green'
-          : 'bg-accent-red/15 text-accent-red'
+          ? 'bg-green-500/15 text-green-400'
+          : 'bg-red-500/15 text-red-400'
       )}
     >
       {direction === 'up' ? (
@@ -49,20 +50,28 @@ function OddsChangeBadge({ direction }: { direction: 'up' | 'down' }) {
   );
 }
 
-/** Individual selection card */
+/** Individual selection card - condensed for mobile */
 function SelectionCard({
   item,
   betType,
   stake,
   oddsChange,
+  isMobile,
   onRemove,
   onStakeChange,
   onQuickStake,
 }: {
-  item: { selectionId: string; selectionName: string; marketName: string; eventName: string; odds: string };
+  item: {
+    selectionId: string;
+    selectionName: string;
+    marketName: string;
+    eventName: string;
+    odds: string;
+  };
   betType: string;
   stake: string;
   oddsChange?: { direction: 'up' | 'down'; previousOdds: string; currentOdds: string } | null;
+  isMobile?: boolean;
   onRemove: () => void;
   onStakeChange: (value: string) => void;
   onQuickStake: (amount: number) => void;
@@ -82,41 +91,64 @@ function SelectionCard({
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ duration: 0.2 }}
-      className="bg-surface-tertiary rounded-lg overflow-hidden"
+      className={cn(
+        'bg-surface-tertiary rounded-lg overflow-hidden',
+        isMobile ? 'mb-2' : ''
+      )}
     >
-      <div className="p-2.5">
-        {/* Header row: event name + remove */}
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-[11px] text-gray-500 leading-tight truncate flex-1">
+      <div className={cn(isMobile ? 'p-2' : 'p-3')}>
+        {/* Header: Event name + Remove button */}
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <p
+            className={cn(
+              'text-gray-400 leading-tight truncate flex-1',
+              isMobile ? 'text-[10px]' : 'text-[11px]'
+            )}
+          >
             {item.eventName}
           </p>
           <button
             onClick={onRemove}
-            className="text-gray-600 hover:text-accent-red p-0.5 -mt-0.5 -mr-0.5 rounded transition-colors shrink-0"
+            className="text-gray-500 hover:text-red-400 p-0.5 rounded transition-colors shrink-0 min-h-[44px] min-w-[44px] -m-1 flex items-center justify-center"
             aria-label="Remove selection"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className={cn(isMobile ? 'w-3.5 h-3.5' : 'w-4 h-4')} />
           </button>
         </div>
 
-        {/* Selection + odds row */}
-        <div className="flex items-center justify-between mt-0.5 gap-2">
+        {/* Selection + Market inline on mobile, stacked on desktop */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate leading-snug">
+            <p
+              className={cn(
+                'font-semibold text-white truncate',
+                isMobile ? 'text-xs' : 'text-sm'
+              )}
+            >
               {item.selectionName}
             </p>
-            <p className="text-[11px] text-gray-500 truncate">{item.marketName}</p>
+            <p
+              className={cn(
+                'text-gray-500 truncate',
+                isMobile ? 'text-[10px]' : 'text-[11px]'
+              )}
+            >
+              {item.marketName}
+            </p>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+
+          {/* Odds with change indicator */}
+          <div className="flex items-center gap-1.5 shrink-0">
             {oddsChange && <OddsChangeBadge direction={oddsChange.direction} />}
             <span
               className={cn(
-                'font-mono text-sm font-bold px-2 py-0.5 rounded',
+                'font-mono font-bold rounded px-2 py-1',
+                isMobile ? 'text-sm' : 'text-base',
                 oddsChange
                   ? oddsChange.direction === 'up'
-                    ? 'bg-accent-green/10 text-accent-green'
-                    : 'bg-accent-red/10 text-accent-red'
-                  : 'text-brand-400'
+                    ? 'bg-green-500/10 text-green-400'
+                    : 'bg-red-500/10 text-red-400'
+                  : 'bg-brand-500/10 text-brand-400'
               )}
             >
               {formatOdds(item.odds)}
@@ -126,9 +158,9 @@ function SelectionCard({
 
         {/* Stake input (single mode only) */}
         {betType === 'single' && (
-          <div className="mt-2">
+          <div className={cn(isMobile ? 'mt-2' : 'mt-3')}>
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-mono">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
                 $
               </span>
               <input
@@ -139,26 +171,41 @@ function SelectionCard({
                 value={stake}
                 onChange={(e) => onStakeChange(e.target.value)}
                 placeholder="0.00"
-                className="input text-sm py-1.5 pl-6 pr-2 font-mono tabular-nums"
+                className={cn(
+                  'w-full bg-surface-secondary border border-border rounded-lg pl-7 pr-3 font-mono text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all',
+                  isMobile ? 'py-2 text-base' : 'py-2.5 text-sm'
+                )}
+                style={{ fontSize: '16px' }} // Prevents iOS zoom
               />
             </div>
-            {/* Quick stakes row for single */}
-            <div className="flex gap-1 mt-1.5">
+
+            {/* Quick stakes row */}
+            <div className={cn('flex gap-1.5', isMobile ? 'mt-2' : 'mt-2')}>
               {QUICK_STAKES.map((amount) => (
                 <button
                   key={amount}
                   onClick={() => onQuickStake(amount)}
-                  className="flex-1 py-1 text-[10px] font-medium bg-surface-hover/50 hover:bg-surface-hover rounded transition-colors text-gray-400 hover:text-gray-200"
+                  className={cn(
+                    'flex-1 font-semibold bg-surface-hover/50 hover:bg-surface-hover active:bg-surface-hover rounded-md transition-colors text-gray-300 hover:text-white touch-manipulation',
+                    'min-h-[44px]',
+                    isMobile ? 'text-xs' : 'text-[11px]'
+                  )}
                 >
-                  +${amount}
+                  ${amount}
                 </button>
               ))}
             </div>
+
             {/* Potential win for this selection */}
             {potentialWin && (
-              <div className="flex justify-between items-center mt-1.5 text-[11px]">
+              <div
+                className={cn(
+                  'flex justify-between items-center',
+                  isMobile ? 'mt-2 text-xs' : 'mt-2.5 text-[11px]'
+                )}
+              >
                 <span className="text-gray-500">Potential Win</span>
-                <span className="font-mono font-semibold text-accent-green">
+                <span className="font-mono font-semibold text-green-400">
                   ${potentialWin}
                 </span>
               </div>
@@ -204,10 +251,21 @@ export function BetSlipPanel() {
   } = useBetSlipStore();
 
   const { isAuthenticated } = useAuthStore();
-  const [sheetExpanded, setSheetExpanded] = useState(true);
   const [placeBetError, setPlaceBetError] = useState<string | null>(null);
   const [placeBetSuccess, setPlaceBetSuccess] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const dragY = useMotionValue(0);
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Detect duplicate events for parlay warning
   const duplicateEventIds = useMemo(() => {
@@ -226,22 +284,22 @@ export function BetSlipPanel() {
 
   // Available tabs
   const availableTabs = useMemo(() => {
-    const tabs: Array<'single' | 'parlay' | 'system'> = ['single'];
-    if (items.length >= 2) tabs.push('parlay');
-    if (items.length >= 3) tabs.push('system');
+    const tabs: Array<{ key: 'single' | 'parlay' | 'system'; label: string }> = [
+      { key: 'single', label: 'Single' },
+    ];
+    if (items.length >= 2) tabs.push({ key: 'parlay', label: 'Parlay' });
+    if (items.length >= 3) tabs.push({ key: 'system', label: 'Same Game' });
     return tabs;
   }, [items.length]);
 
   // Available system bet types
   const itemCount = items.length;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const systemBetTypes = useMemo(() => getSystemBetTypes(), [itemCount]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const systemBetCount = useMemo(() => getSystemBetCount(), [systemType]);
+  const systemBetTypes = useMemo(() => getSystemBetTypes(), [itemCount, getSystemBetTypes]);
+  const systemBetCount = useMemo(() => getSystemBetCount(), [systemType, getSystemBetCount]);
 
   // Lock body scroll on mobile when sheet is open
   useEffect(() => {
-    if (isOpen && typeof window !== 'undefined' && window.innerWidth < 1024) {
+    if (isOpen && isMobile) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -249,7 +307,7 @@ export function BetSlipPanel() {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
 
   // Clear success message after a few seconds
   useEffect(() => {
@@ -261,7 +319,7 @@ export function BetSlipPanel() {
 
   // Reset bet type if current tab no longer available
   useEffect(() => {
-    if (!availableTabs.includes(betType as 'single' | 'parlay' | 'system')) {
+    if (!availableTabs.some((tab) => tab.key === betType)) {
       setBetType('single');
     }
   }, [availableTabs, betType, setBetType]);
@@ -322,13 +380,8 @@ export function BetSlipPanel() {
   };
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.y > 100) {
+    if (info.offset.y > DRAG_CLOSE_THRESHOLD) {
       setIsOpen(false);
-      setSheetExpanded(true);
-    } else if (info.offset.y > 50) {
-      setSheetExpanded(false);
-    } else if (info.offset.y < -50) {
-      setSheetExpanded(true);
     }
   };
 
@@ -350,11 +403,11 @@ export function BetSlipPanel() {
   const panelContent = (
     <div className="flex flex-col h-full">
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-secondary/80 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-sm text-white">Bet Slip</h3>
+          <h3 className="font-bold text-base text-white">Bet Slip</h3>
           {items.length > 0 && (
-            <span className="bg-brand-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
+            <span className="bg-brand-500 text-white text-xs font-bold min-w-[20px] h-[20px] flex items-center justify-center rounded-full px-1.5">
               {items.length}
             </span>
           )}
@@ -363,42 +416,44 @@ export function BetSlipPanel() {
           {items.length > 0 && (
             <button
               onClick={clearSlip}
-              className="text-[11px] text-gray-500 hover:text-accent-red flex items-center gap-1 transition-colors"
+              className="text-xs text-gray-400 hover:text-red-400 flex items-center gap-1.5 transition-colors font-medium min-h-[44px] px-2 touch-manipulation"
             >
-              <Trash2 className="w-3 h-3" />
-              Clear All
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear
             </button>
           )}
-          <button
-            onClick={() => setIsOpen(false)}
-            className="lg:hidden text-gray-500 hover:text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {isMobile && (
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-gray-400 hover:text-white transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              <ChevronDown className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Empty State ────────────────────────────────────────────────── */}
       {items.length === 0 ? (
         <div className="flex-1 flex items-center justify-center p-8">
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-surface-tertiary flex items-center justify-center">
-              <Receipt className="w-6 h-6 text-gray-600" />
+          <div className="text-center max-w-xs">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-tertiary flex items-center justify-center">
+              <Receipt className="w-7 h-7 text-gray-600" />
             </div>
-            <p className="text-sm text-gray-400 font-medium mb-1">
+            <p className="text-base text-gray-300 font-semibold mb-2">
               Your bet slip is empty
             </p>
-            <p className="text-xs text-gray-600">
-              Click on odds to add selections.
+            <p className="text-sm text-gray-500 mb-4">
+              Click on odds to add selections and start betting.
             </p>
             {placeBetSuccess && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 flex items-center gap-2 text-accent-green text-sm justify-center"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-6 flex items-center gap-2 text-green-400 text-sm justify-center bg-green-500/10 rounded-lg py-3 px-4"
               >
-                <Check className="w-4 h-4" />
-                <span>Bet placed successfully!</span>
+                <Check className="w-5 h-5" />
+                <span className="font-semibold">Bet placed successfully!</span>
               </motion.div>
             )}
           </div>
@@ -406,23 +461,27 @@ export function BetSlipPanel() {
       ) : (
         <>
           {/* ── Tab Bar ──────────────────────────────────────────────────── */}
-          <div className="flex border-b border-border bg-surface-secondary/50">
-            {availableTabs.map((type) => (
+          <div
+            className="flex border-b border-border bg-surface-secondary/50 shrink-0"
+            style={{ minHeight: `${TAB_HEIGHT}px` }}
+          >
+            {availableTabs.map((tab) => (
               <button
-                key={type}
-                onClick={() => setBetType(type)}
+                key={tab.key}
+                onClick={() => setBetType(tab.key)}
                 className={cn(
-                  'flex-1 py-2.5 text-xs font-semibold transition-all relative',
-                  betType === type
+                  'flex-1 text-sm font-bold transition-all relative touch-manipulation',
+                  'min-h-[44px] flex items-center justify-center',
+                  betType === tab.key
                     ? 'text-brand-400'
                     : 'text-gray-500 hover:text-gray-300'
                 )}
               >
-                {TAB_LABELS[type]}
-                {type === 'parlay' && hasDuplicateEvents && (
-                  <span className="absolute top-1 right-1/4 w-1.5 h-1.5 bg-accent-red rounded-full" />
+                {tab.label}
+                {tab.key === 'parlay' && hasDuplicateEvents && (
+                  <span className="absolute top-2 right-1/4 w-2 h-2 bg-red-500 rounded-full" />
                 )}
-                {betType === type && (
+                {betType === tab.key && (
                   <motion.div
                     layoutId="betslip-tab-indicator"
                     className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-400"
@@ -440,26 +499,26 @@ export function BetSlipPanel() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
+                className="overflow-hidden shrink-0"
               >
-                <div className="px-3 py-2 bg-accent-yellow/10 border-b border-accent-yellow/20">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-accent-yellow shrink-0 mt-0.5" />
+                <div className="px-4 py-3 bg-yellow-500/10 border-b border-yellow-500/20">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-[11px] text-accent-yellow font-medium">
-                        Odds have changed for {oddsChanges.length} selection
+                      <p className="text-xs text-yellow-400 font-semibold mb-2">
+                        Odds changed for {oddsChanges.length} selection
                         {oddsChanges.length > 1 ? 's' : ''}
                       </p>
-                      <div className="flex gap-2 mt-1.5">
+                      <div className="flex gap-2">
                         <button
                           onClick={acceptOddsChanges}
-                          className="text-[10px] font-semibold px-2.5 py-1 rounded bg-accent-green/20 text-accent-green hover:bg-accent-green/30 transition-colors"
+                          className="text-xs font-bold px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors min-h-[44px] touch-manipulation"
                         >
                           Accept Changes
                         </button>
                         <button
                           onClick={rejectOddsChanges}
-                          className="text-[10px] font-semibold px-2.5 py-1 rounded bg-accent-red/20 text-accent-red hover:bg-accent-red/30 transition-colors"
+                          className="text-xs font-bold px-3 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors min-h-[44px] touch-manipulation"
                         >
                           Remove
                         </button>
@@ -478,12 +537,12 @@ export function BetSlipPanel() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
+                className="overflow-hidden shrink-0"
               >
-                <div className="px-3 py-2 bg-accent-red/10 border-b border-accent-red/20 flex items-start gap-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-accent-red shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-accent-red">
-                    You have 2+ selections from the same event. Remove duplicates to place a multi bet.
+                <div className="px-4 py-3 bg-red-500/10 border-b border-red-500/20 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-400 font-medium">
+                    Multiple selections from the same event. Remove duplicates to place a parlay bet.
                   </p>
                 </div>
               </motion.div>
@@ -491,7 +550,7 @@ export function BetSlipPanel() {
           </AnimatePresence>
 
           {/* ── Selections List ───────────────────────────────────────────── */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
+          <div className="flex-1 overflow-y-auto px-3 py-3 overscroll-contain">
             <AnimatePresence mode="popLayout">
               {items.map((item) => (
                 <SelectionCard
@@ -500,6 +559,7 @@ export function BetSlipPanel() {
                   betType={betType}
                   stake={stakes[item.selectionId] || ''}
                   oddsChange={getOddsChange(item.selectionId)}
+                  isMobile={isMobile}
                   onRemove={() => removeSelection(item.selectionId)}
                   onStakeChange={(val) => setStake(item.selectionId, val)}
                   onQuickStake={(amount) => handleQuickStakeForItem(item.selectionId, amount)}
@@ -510,17 +570,17 @@ export function BetSlipPanel() {
 
           {/* ── Parlay Stake Section ─────────────────────────────────────── */}
           {betType === 'parlay' && (
-            <div className="px-3 pb-2 border-t border-border pt-2">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] text-gray-500 font-medium uppercase tracking-wide">
+            <div className="px-4 py-3 border-t border-border bg-surface-secondary/50 shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wide">
                   Combined Odds
                 </span>
-                <span className="text-sm text-brand-400 font-mono font-bold">
+                <span className="text-base text-brand-400 font-mono font-bold">
                   {combinedOdds}
                 </span>
               </div>
-              <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-mono">
+              <div className="relative mb-2">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
                   $
                 </span>
                 <input
@@ -531,26 +591,27 @@ export function BetSlipPanel() {
                   value={parlayStake}
                   onChange={(e) => setParlayStake(e.target.value)}
                   placeholder="0.00"
-                  className="input text-sm py-1.5 pl-6 pr-2 font-mono tabular-nums"
+                  className="w-full bg-surface-secondary border border-border rounded-lg py-2.5 pl-7 pr-3 font-mono text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
               {/* Quick stakes */}
-              <div className="flex gap-1 mt-1.5">
+              <div className="flex gap-1.5 mb-3">
                 {QUICK_STAKES.map((amount) => (
                   <button
                     key={amount}
                     onClick={() => handleQuickStakeParlay(amount)}
-                    className="flex-1 py-1 text-[10px] font-medium bg-surface-hover/50 hover:bg-surface-hover rounded transition-colors text-gray-400 hover:text-gray-200"
+                    className="flex-1 min-h-[44px] text-xs font-semibold bg-surface-hover/50 hover:bg-surface-hover active:bg-surface-hover rounded-md transition-colors text-gray-300 hover:text-white touch-manipulation"
                   >
-                    +${amount}
+                    ${amount}
                   </button>
                 ))}
               </div>
               {/* Parlay potential win */}
               {parlayStake && parseFloat(parlayStake) > 0 && (
-                <div className="flex justify-between items-center mt-2 text-xs">
-                  <span className="text-gray-500">Potential Win</span>
-                  <span className="font-mono font-semibold text-accent-green">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Potential Win</span>
+                  <span className="font-mono font-bold text-green-400">
                     ${potentialWin}
                   </span>
                 </div>
@@ -560,33 +621,33 @@ export function BetSlipPanel() {
 
           {/* ── System Bet Section ───────────────────────────────────────── */}
           {betType === 'system' && (
-            <div className="px-3 pb-2 border-t border-border pt-2">
+            <div className="px-4 py-3 border-t border-border bg-surface-secondary/50 shrink-0">
               {systemBetTypes.length > 0 ? (
                 <>
-                  <label className="text-[11px] text-gray-500 font-medium uppercase tracking-wide block mb-1.5">
+                  <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide block mb-2">
                     System Type
                   </label>
-                  <div className="space-y-1 mb-2">
+                  <div className="space-y-2 mb-3">
                     {systemBetTypes.map((sbt) => (
                       <button
                         key={sbt.key}
                         onClick={() => setSystemType(sbt.key)}
                         className={cn(
-                          'w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition-colors',
+                          'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-colors min-h-[44px] touch-manipulation',
                           systemType === sbt.key
-                            ? 'bg-brand-500/15 border border-brand-500/40'
-                            : 'bg-surface-tertiary hover:bg-surface-hover border border-transparent'
+                            ? 'bg-brand-500/15 border-2 border-brand-500/40'
+                            : 'bg-surface-tertiary hover:bg-surface-hover border-2 border-transparent'
                         )}
                       >
                         <div>
-                          <span className="text-xs font-semibold text-white">
+                          <span className="text-sm font-bold text-white block">
                             {sbt.name}
                           </span>
                           <p className="text-[10px] text-gray-500 mt-0.5">
                             {sbt.description}
                           </p>
                         </div>
-                        <span className="text-[10px] text-gray-400 font-mono shrink-0 ml-2">
+                        <span className="text-xs text-gray-400 font-mono shrink-0 ml-3">
                           {sbt.bets} bets
                         </span>
                       </button>
@@ -594,16 +655,16 @@ export function BetSlipPanel() {
                   </div>
 
                   {/* System stake input (per bet) */}
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] text-gray-500 font-medium">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-400 font-semibold">
                       Stake per bet
                     </span>
-                    <span className="text-[10px] text-gray-600">
+                    <span className="text-xs text-gray-500">
                       {systemBetCount} bets total
                     </span>
                   </div>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-mono">
+                  <div className="relative mb-2">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
                       $
                     </span>
                     <input
@@ -614,27 +675,28 @@ export function BetSlipPanel() {
                       value={systemStake}
                       onChange={(e) => setSystemStake(e.target.value)}
                       placeholder="0.00"
-                      className="input text-sm py-1.5 pl-6 pr-2 font-mono tabular-nums"
+                      className="w-full bg-surface-secondary border border-border rounded-lg py-2.5 pl-7 pr-3 font-mono text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
+                      style={{ fontSize: '16px' }}
                     />
                   </div>
                   {/* Quick stakes */}
-                  <div className="flex gap-1 mt-1.5">
+                  <div className="flex gap-1.5">
                     {QUICK_STAKES.map((amount) => (
                       <button
                         key={amount}
                         onClick={() => handleQuickStakeSystem(amount)}
-                        className="flex-1 py-1 text-[10px] font-medium bg-surface-hover/50 hover:bg-surface-hover rounded transition-colors text-gray-400 hover:text-gray-200"
+                        className="flex-1 min-h-[44px] text-xs font-semibold bg-surface-hover/50 hover:bg-surface-hover active:bg-surface-hover rounded-md transition-colors text-gray-300 hover:text-white touch-manipulation"
                       >
-                        +${amount}
+                        ${amount}
                       </button>
                     ))}
                   </div>
                 </>
               ) : (
-                <div className="flex items-start gap-2 py-2">
-                  <Info className="w-3.5 h-3.5 text-gray-500 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-gray-500">
-                    No system bet types available for {items.length} selections. System bets require a specific number of selections (3, 4, 5, 6, 7, or 8).
+                <div className="flex items-start gap-2.5 py-3">
+                  <Info className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-gray-500">
+                    No system bet types available for {items.length} selections. System bets require 3-8 selections.
                   </p>
                 </div>
               )}
@@ -642,22 +704,22 @@ export function BetSlipPanel() {
           )}
 
           {/* ── Accept Odds Changes Toggle ────────────────────────────────── */}
-          <div className="px-3 pb-2">
+          <div className="px-4 py-2 border-t border-border/50 shrink-0">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] text-gray-500">Odds changes</span>
+              <span className="text-xs text-gray-500 font-medium">Odds changes</span>
               <div className="flex items-center gap-1">
                 {(['any', 'better', 'none'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setOddsChangeMode(mode)}
                     className={cn(
-                      'text-[10px] font-medium px-2 py-0.5 rounded transition-colors capitalize',
+                      'text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition-colors capitalize min-h-[32px] touch-manipulation',
                       oddsChangeMode === mode
                         ? 'bg-brand-500/20 text-brand-400'
                         : 'text-gray-600 hover:text-gray-400'
                     )}
                   >
-                    {mode === 'any' ? 'Accept All' : mode === 'better' ? 'Higher' : 'None'}
+                    {mode === 'any' ? 'All' : mode === 'better' ? 'Better' : 'None'}
                   </button>
                 ))}
               </div>
@@ -665,7 +727,7 @@ export function BetSlipPanel() {
           </div>
 
           {/* ── Summary / Footer ─────────────────────────────────────────── */}
-          <div className="border-t border-border p-3 space-y-2 bg-surface-secondary">
+          <div className="border-t border-border px-4 py-4 space-y-3 bg-surface-secondary shrink-0">
             {/* Error message */}
             <AnimatePresence>
               {placeBetError && (
@@ -673,7 +735,7 @@ export function BetSlipPanel() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="text-[11px] text-accent-red bg-accent-red/10 rounded px-2.5 py-1.5"
+                  className="text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2.5 font-medium"
                 >
                   {placeBetError}
                 </motion.div>
@@ -681,43 +743,65 @@ export function BetSlipPanel() {
             </AnimatePresence>
 
             {/* Total stake */}
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">Total Stake</span>
-              <span className="font-mono font-medium text-white">
-                ${totalStake} <span className="text-gray-500 text-xs">USDT</span>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-400 font-medium">Total Stake</span>
+              <span className="font-mono font-bold text-white text-base">
+                ${totalStake}{' '}
+                <span className="text-gray-500 text-xs font-normal">USDT</span>
               </span>
             </div>
 
             {/* Total potential win */}
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-400">
-                {betType === 'system' ? 'Max Potential Win' : 'Potential Win'}
+            <div className="flex justify-between items-center pb-1">
+              <span className="text-sm text-gray-400 font-medium">
+                Potential Win
               </span>
-              <span className="font-mono font-bold text-accent-green">
-                ${potentialWin} <span className="text-gray-500 text-xs font-normal">USDT</span>
+              <span className="font-mono font-bold text-[#BFFF00] text-lg">
+                ${potentialWin}
               </span>
             </div>
 
-            {/* Place Bet button */}
+            {/* Place Bet button - Cloudbet/bet365 style */}
             <button
               onClick={handlePlaceBet}
               disabled={!canPlaceBet}
               className={cn(
-                'w-full text-sm py-3 font-bold rounded-xl transition-all duration-200 active:scale-[0.98]',
+                'w-full font-bold rounded-xl transition-all duration-200 touch-manipulation flex items-center justify-center gap-2',
+                'text-base shadow-lg active:scale-[0.98]',
+                isMobile ? 'py-3.5 min-h-[52px]' : 'py-3 min-h-[48px]',
                 canPlaceBet
-                  ? 'bg-accent-green hover:brightness-110 text-white shadow-lg shadow-accent-green/20'
-                  : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+                  ? 'bg-[#BFFF00] hover:bg-[#D4FF33] text-black shadow-[#BFFF00]/30'
+                  : 'bg-gray-700/50 text-gray-500 cursor-not-allowed shadow-none'
               )}
             >
-              {!isAuthenticated
-                ? 'Sign in to place bet'
-                : isSubmitting
-                  ? 'Placing Bet...'
-                  : oddsChanges.length > 0
-                    ? 'Accept Odds Changes First'
-                    : betType === 'parlay' && hasDuplicateEvents
-                      ? 'Remove Duplicate Events'
-                      : `Place ${betType === 'single' ? (items.length === 1 ? 'Bet' : `${items.length} Bets`) : betType === 'parlay' ? 'Multi Bet' : 'System Bet'}`}
+              {!isAuthenticated ? (
+                'Sign in to place bet'
+              ) : isSubmitting ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                    className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full"
+                  />
+                  Placing Bet...
+                </>
+              ) : oddsChanges.length > 0 ? (
+                'Accept Odds Changes First'
+              ) : betType === 'parlay' && hasDuplicateEvents ? (
+                'Remove Duplicate Events'
+              ) : (
+                <>
+                  <TrendingUp className="w-5 h-5" />
+                  Place{' '}
+                  {betType === 'single'
+                    ? items.length === 1
+                      ? 'Bet'
+                      : `${items.length} Bets`
+                    : betType === 'parlay'
+                      ? 'Parlay'
+                      : 'System Bet'}
+                </>
+              )}
             </button>
           </div>
         </>
@@ -728,21 +812,22 @@ export function BetSlipPanel() {
   // ─── Render ─────────────────────────────────────────────────────────
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-72 border-l border-border bg-surface-secondary shrink-0 overflow-hidden">
+      {/* Desktop sidebar - Fixed 320px right panel */}
+      <aside className="hidden lg:flex flex-col w-80 border-l border-border bg-surface-secondary shrink-0 overflow-hidden fixed right-0 top-0 bottom-0 z-30">
         {panelContent}
       </aside>
 
-      {/* Mobile bottom sheet */}
+      {/* Mobile bottom sheet with drag */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && isMobile && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop overlay */}
             <motion.div
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 bg-black z-40"
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
               onClick={() => setIsOpen(false)}
             />
 
@@ -750,43 +835,29 @@ export function BetSlipPanel() {
             <motion.div
               ref={sheetRef}
               initial={{ y: '100%' }}
-              animate={{ y: sheetExpanded ? 0 : '60%' }}
+              animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              style={{ maxHeight: '85vh' }}
               drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.2}
+              dragElastic={DRAG_ELASTICITY}
+              dragMomentum={false}
               onDragEnd={handleDragEnd}
-              className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-secondary rounded-t-2xl flex flex-col shadow-dialog"
+              style={{
+                y: dragY,
+                maxHeight: MAX_SHEET_HEIGHT,
+              }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-surface-secondary rounded-t-3xl flex flex-col shadow-2xl"
             >
               {/* Drag handle */}
-              <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
-                <div className="w-10 h-1 bg-gray-600 rounded-full" />
+              <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing shrink-0">
+                <div className="w-12 h-1.5 bg-gray-600 rounded-full" />
               </div>
 
               {/* Sheet content */}
-              <div className="flex-1 overflow-y-auto overscroll-contain">
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {panelContent}
               </div>
-
-              {/* Collapsed summary bar */}
-              {!sheetExpanded && items.length > 0 && (
-                <motion.button
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  onClick={() => setSheetExpanded(true)}
-                  className="absolute top-12 left-0 right-0 flex items-center justify-between px-4 py-3 bg-surface-tertiary border-t border-border"
-                >
-                  <div className="flex items-center gap-2">
-                    <ChevronUp className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm font-medium text-white">
-                      {items.length} selection{items.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <span className="text-sm font-mono text-brand-400">${totalStake}</span>
-                </motion.button>
-              )}
             </motion.div>
           </>
         )}
@@ -794,20 +865,18 @@ export function BetSlipPanel() {
 
       {/* Mobile floating bet slip toggle button (when closed) */}
       <AnimatePresence>
-        {!isOpen && items.length > 0 && (
+        {!isOpen && items.length > 0 && isMobile && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             onClick={() => setIsOpen(true)}
-            className="lg:hidden fixed bottom-4 right-4 z-40 bg-brand-500 hover:bg-brand-600 text-white rounded-full p-3.5 shadow-lg shadow-brand-500/30 flex items-center gap-2"
+            className="fixed bottom-6 right-6 z-30 bg-[#BFFF00] hover:bg-[#D4FF33] text-black rounded-full px-5 py-3.5 shadow-2xl shadow-[#BFFF00]/30 flex items-center gap-2.5 font-bold text-sm touch-manipulation active:scale-95 transition-transform"
           >
             <Receipt className="w-5 h-5" />
-            <span className="text-sm font-bold pr-1">
-              {items.length}
-            </span>
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-green rounded-full flex items-center justify-center text-[10px] font-bold">
+            <span>Bet Slip</span>
+            <span className="bg-black text-[#BFFF00] rounded-full min-w-[24px] h-[24px] flex items-center justify-center text-xs font-bold px-1.5">
               {items.length}
             </span>
           </motion.button>

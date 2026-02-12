@@ -309,43 +309,6 @@ const MOCK_FEATURED_EVENTS: Event[] = [
       },
     ],
   }),
-  mockEvent({
-    id: 'feat-7',
-    name: 'Atletico Madrid vs Sevilla',
-    homeTeam: 'Atletico Madrid',
-    awayTeam: 'Sevilla',
-    isFeatured: true,
-    startTime: new Date(Date.now() + 28800000).toISOString(),
-    competition: { id: 'c9', name: 'La Liga', slug: 'la-liga', country: 'Spain', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
-    markets: [
-      {
-        id: 'mf7', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
-        selections: [
-          { id: 'sf-16', name: 'Atletico Madrid', outcome: 'home', odds: '1.60', status: 'ACTIVE', marketId: 'mf7' },
-          { id: 'sf-17', name: 'Draw', outcome: 'draw', odds: '3.70', status: 'ACTIVE', marketId: 'mf7' },
-          { id: 'sf-18', name: 'Sevilla', outcome: 'away', odds: '5.00', status: 'ACTIVE', marketId: 'mf7' },
-        ],
-      },
-    ],
-  }),
-  mockEvent({
-    id: 'feat-8',
-    name: 'Maple Leafs vs Rangers',
-    homeTeam: 'Toronto Maple Leafs',
-    awayTeam: 'New York Rangers',
-    isFeatured: true,
-    startTime: new Date(Date.now() + 32400000).toISOString(),
-    competition: { id: 'c10', name: 'NHL', slug: 'nhl', country: 'USA', sportId: 's5', sport: { id: 's5', name: 'Ice Hockey', slug: 'ice-hockey', icon: null, isActive: true, sortOrder: 5 } },
-    markets: [
-      {
-        id: 'mf8', name: 'Moneyline', type: 'MONEYLINE', status: 'OPEN',
-        selections: [
-          { id: 'sf-19', name: 'Maple Leafs', outcome: 'home', odds: '2.25', status: 'ACTIVE', marketId: 'mf8' },
-          { id: 'sf-20', name: 'Rangers', outcome: 'away', odds: '1.65', status: 'ACTIVE', marketId: 'mf8' },
-        ],
-      },
-    ],
-  }),
 ];
 
 const MOCK_CASINO_GAMES = [
@@ -404,11 +367,17 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between mb-4">
-      <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+      <h2
+        className="font-semibold text-white flex items-center gap-2"
+        style={{ fontSize: 'clamp(1rem, 3vw, 1.125rem)' }}
+      >
         {icon}
         {title}
         {liveCount !== undefined && liveCount > 0 && (
-          <span className="text-xs font-bold bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full">
+          <span
+            className="font-bold bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full"
+            style={{ fontSize: 'clamp(0.6875rem, 2vw, 0.75rem)' }}
+          >
             {liveCount}
           </span>
         )}
@@ -416,7 +385,8 @@ function SectionHeader({
       {href && (
         <Link
           href={href}
-          className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors font-medium"
+          className="text-lime-400 hover:text-lime-300 flex items-center gap-1 transition-colors font-medium"
+          style={{ fontSize: 'clamp(0.8125rem, 2.5vw, 0.875rem)' }}
         >
           {linkText}
           <ChevronRight className="w-4 h-4" />
@@ -426,7 +396,7 @@ function SectionHeader({
   );
 }
 
-/** Horizontal scroll container with smooth touch scrolling */
+/** Horizontal scroll container with fade gradients and scroll snap */
 function HScrollContainer({
   children,
   className,
@@ -434,20 +404,57 @@ function HScrollContainer({
   children: React.ReactNode;
   className?: string;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftGradient, setShowLeftGradient] = useState(false);
+  const [showRightGradient, setShowRightGradient] = useState(true);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    setShowLeftGradient(el.scrollLeft > 10);
+    setShowRightGradient(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    handleScroll();
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   return (
-    <div
-      className={cn(
-        'flex gap-3 overflow-x-auto pb-2 scrollbar-hide',
-        className,
+    <div className="relative">
+      {/* Left fade gradient */}
+      {showLeftGradient && (
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#0F0F11] to-transparent z-10 pointer-events-none" />
       )}
-      style={{ WebkitOverflowScrolling: 'touch' }}
-    >
-      {children}
+
+      {/* Right fade gradient */}
+      {showRightGradient && (
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0F0F11] to-transparent z-10 pointer-events-none" />
+      )}
+
+      <div
+        ref={scrollRef}
+        className={cn(
+          'flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-4 scroll-smooth',
+          className,
+        )}
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          scrollSnapType: 'x mandatory',
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
 
-/** Hero Banner Carousel */
+/** Hero Banner Carousel with proper aspect ratios */
 function HeroBannerCarousel() {
   const [active, setActive] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -472,7 +479,23 @@ function HeroBannerCarousel() {
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl" style={{ aspectRatio: '16/6' }}>
+    <div
+      className="relative w-full overflow-hidden rounded-xl md:rounded-2xl"
+      style={{
+        aspectRatio: 'var(--hero-aspect)',
+      }}
+    >
+      <style jsx>{`
+        div {
+          --hero-aspect: 16 / 9;
+        }
+        @media (min-width: 768px) {
+          div {
+            --hero-aspect: 16 / 6;
+          }
+        }
+      `}</style>
+
       <AnimatePresence mode="wait">
         {HERO_BANNERS.map(
           (banner, idx) =>
@@ -488,7 +511,7 @@ function HeroBannerCarousel() {
                 <Link href={banner.href} className="block h-full">
                   <div
                     className={cn(
-                      'h-full w-full bg-gradient-to-r rounded-2xl relative overflow-hidden',
+                      'h-full w-full bg-gradient-to-r rounded-xl md:rounded-2xl relative overflow-hidden',
                       banner.gradient,
                     )}
                   >
@@ -499,15 +522,29 @@ function HeroBannerCarousel() {
                     </div>
 
                     {/* Content */}
-                    <div className="relative z-10 h-full flex flex-col justify-center px-6 sm:px-10 md:px-14">
-                      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
+                    <div className="relative z-10 h-full flex flex-col justify-center px-4 sm:px-6 md:px-10">
+                      <h2
+                        className="font-bold text-white mb-2 leading-tight"
+                        style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)' }}
+                      >
                         {banner.title}
                       </h2>
-                      <p className="text-sm sm:text-base text-white/70 mb-4 max-w-md">
+                      <p
+                        className="text-white/80 mb-4 max-w-md"
+                        style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
+                      >
                         {banner.subtitle}
                       </p>
                       <div>
-                        <span className="inline-block px-5 py-2 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white text-sm font-semibold transition-colors border border-white/10">
+                        <span
+                          className="inline-flex items-center justify-center rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white font-semibold transition-colors border border-white/10 cursor-pointer"
+                          style={{
+                            minHeight: '44px',
+                            minWidth: '120px',
+                            padding: '0 1.25rem',
+                            fontSize: 'clamp(0.875rem, 2.5vw, 0.9375rem)',
+                          }}
+                        >
                           {banner.cta}
                         </span>
                       </div>
@@ -522,8 +559,15 @@ function HeroBannerCarousel() {
         )}
       </AnimatePresence>
 
-      {/* Dots */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+      {/* Dot indicators */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 flex gap-2 z-20"
+        style={{
+          bottom: 'clamp(0.75rem, 2vw, 1rem)',
+          minHeight: '44px',
+          alignItems: 'center',
+        }}
+      >
         {HERO_BANNERS.map((_, idx) => (
           <button
             key={idx}
@@ -534,6 +578,7 @@ function HeroBannerCarousel() {
                 ? 'w-6 h-2 bg-white'
                 : 'w-2 h-2 bg-white/40 hover:bg-white/60',
             )}
+            style={{ minWidth: idx === active ? '24px' : '8px', minHeight: '8px' }}
             aria-label={`Go to slide ${idx + 1}`}
           />
         ))}
@@ -551,10 +596,17 @@ function CasinoGameCard({
   aspect?: string;
 }) {
   return (
-    <Link href={`/casino/${game.slug}`} className="shrink-0 w-[130px] sm:w-[140px] group">
+    <Link
+      href={`/casino/${game.slug}`}
+      className="shrink-0 group"
+      style={{
+        width: 'clamp(140px, 45vw, 160px)',
+        scrollSnapAlign: 'start',
+      }}
+    >
       <div
         className={cn(
-          'relative rounded-xl overflow-hidden border border-white/5 group-hover:border-purple-500/40 transition-all duration-200 group-hover:scale-[1.03]',
+          'relative rounded-xl overflow-hidden border border-white/5 group-hover:border-lime-500/40 transition-all duration-200 group-hover:scale-[1.03]',
           `bg-gradient-to-br ${game.gradient}`,
         )}
         style={{ aspectRatio: aspect }}
@@ -568,9 +620,163 @@ function CasinoGameCard({
 
         {/* Bottom overlay */}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2.5 pt-8">
-          <p className="text-xs font-semibold text-white truncate">{game.name}</p>
-          <p className="text-[10px] text-gray-400 truncate">{game.provider}</p>
+          <p
+            className="font-semibold text-white truncate"
+            style={{ fontSize: 'clamp(0.75rem, 2vw, 0.8125rem)' }}
+          >
+            {game.name}
+          </p>
+          <p
+            className="text-gray-400 truncate"
+            style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
+          >
+            {game.provider}
+          </p>
         </div>
+      </div>
+    </Link>
+  );
+}
+
+/** Live Event Card with prominent scores and time */
+function LiveEventCardCompact({ event }: { event: Event }) {
+  const matchTime = event.metadata?.matchTime || '';
+  const homeOdds = event.markets?.[0]?.selections?.find(s => s.outcome === 'home')?.odds || '';
+  const drawOdds = event.markets?.[0]?.selections?.find(s => s.outcome === 'draw')?.odds || '';
+  const awayOdds = event.markets?.[0]?.selections?.find(s => s.outcome === 'away')?.odds || '';
+
+  return (
+    <Link
+      href={`/sports/${event.competition?.sport?.slug || 'football'}/${event.slug}`}
+      className="block shrink-0 group"
+      style={{
+        minWidth: 'clamp(280px, 85vw, 320px)',
+        scrollSnapAlign: 'start',
+      }}
+    >
+      <div className="bg-[#1A1B1F] border border-white/5 rounded-xl p-4 hover:border-lime-500/30 transition-all">
+        {/* Live indicator and time */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            </span>
+            <span
+              className="text-red-400 font-semibold uppercase"
+              style={{ fontSize: 'clamp(0.6875rem, 2vw, 0.75rem)' }}
+            >
+              Live
+            </span>
+            <span
+              className="text-lime-400 font-bold"
+              style={{ fontSize: 'clamp(0.75rem, 2vw, 0.8125rem)' }}
+            >
+              {matchTime}
+            </span>
+          </div>
+          <span
+            className="text-gray-500"
+            style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
+          >
+            {event.competition?.name}
+          </span>
+        </div>
+
+        {/* Teams and scores */}
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center justify-between">
+            <span
+              className="text-white font-medium truncate flex-1"
+              style={{ fontSize: 'clamp(0.875rem, 2.5vw, 0.9375rem)' }}
+            >
+              {event.homeTeam}
+            </span>
+            <span
+              className="text-white font-bold ml-3"
+              style={{ fontSize: 'clamp(1.25rem, 3vw, 1.5rem)' }}
+            >
+              {event.homeScore}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span
+              className="text-white font-medium truncate flex-1"
+              style={{ fontSize: 'clamp(0.875rem, 2.5vw, 0.9375rem)' }}
+            >
+              {event.awayTeam}
+            </span>
+            <span
+              className="text-white font-bold ml-3"
+              style={{ fontSize: 'clamp(1.25rem, 3vw, 1.5rem)' }}
+            >
+              {event.awayScore}
+            </span>
+          </div>
+        </div>
+
+        {/* Odds */}
+        {event.markets && event.markets.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {homeOdds && (
+              <button
+                className="bg-white/5 hover:bg-lime-600/20 border border-white/5 hover:border-lime-500/40 rounded-lg py-2 transition-all"
+                style={{ minHeight: '44px' }}
+              >
+                <div
+                  className="text-gray-400"
+                  style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
+                >
+                  Home
+                </div>
+                <div
+                  className="text-white font-semibold"
+                  style={{ fontSize: 'clamp(0.875rem, 2vw, 0.9375rem)' }}
+                >
+                  {homeOdds}
+                </div>
+              </button>
+            )}
+            {drawOdds && (
+              <button
+                className="bg-white/5 hover:bg-lime-600/20 border border-white/5 hover:border-lime-500/40 rounded-lg py-2 transition-all"
+                style={{ minHeight: '44px' }}
+              >
+                <div
+                  className="text-gray-400"
+                  style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
+                >
+                  Draw
+                </div>
+                <div
+                  className="text-white font-semibold"
+                  style={{ fontSize: 'clamp(0.875rem, 2vw, 0.9375rem)' }}
+                >
+                  {drawOdds}
+                </div>
+              </button>
+            )}
+            {awayOdds && (
+              <button
+                className="bg-white/5 hover:bg-lime-600/20 border border-white/5 hover:border-lime-500/40 rounded-lg py-2 transition-all"
+                style={{ minHeight: '44px' }}
+              >
+                <div
+                  className="text-gray-400"
+                  style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
+                >
+                  Away
+                </div>
+                <div
+                  className="text-white font-semibold"
+                  style={{ fontSize: 'clamp(0.875rem, 2vw, 0.9375rem)' }}
+                >
+                  {awayOdds}
+                </div>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </Link>
   );
@@ -584,144 +790,159 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('football');
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 lg:pb-8 space-y-6">
-      {/* ────────────────────────────────────────────────────────
-          1. HERO BANNER CAROUSEL
-      ──────────────────────────────────────────────────────── */}
-      <section>
-        <HeroBannerCarousel />
+    <div className="pb-24 lg:pb-8">
+      {/* Hero Banner - Full width */}
+      <section className="mb-6 md:mb-8">
+        <div className="w-full">
+          <HeroBannerCarousel />
+        </div>
       </section>
 
-      {/* ────────────────────────────────────────────────────────
-          2. QUICK SPORT CATEGORY BUTTONS
-      ──────────────────────────────────────────────────────── */}
-      <section>
-        <HScrollContainer className="gap-2">
-          {SPORT_CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.slug;
-            const Icon = cat.icon;
-            return (
-              <button
-                key={cat.slug}
-                onClick={() => setActiveCategory(cat.slug)}
-                className={cn(
-                  'shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap border',
-                  isActive
-                    ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_16px_rgba(147,51,234,0.3)]'
-                    : 'bg-[#1A1B1F] border-white/5 text-gray-400 hover:bg-[#22232A] hover:text-white hover:border-white/10',
-                )}
+      {/* Container for all other sections */}
+      <div className="max-w-6xl mx-auto px-4 md:px-6 space-y-6 md:space-y-8">
+        {/* ────────────────────────────────────────────────────────
+            SPORT CATEGORY FILTER PILLS
+        ──────────────────────────────────────────────────────── */}
+        <section>
+          <HScrollContainer>
+            {SPORT_CATEGORIES.map((cat) => {
+              const isActive = activeCategory === cat.slug;
+              const Icon = cat.icon;
+              return (
+                <button
+                  key={cat.slug}
+                  onClick={() => setActiveCategory(cat.slug)}
+                  className={cn(
+                    'shrink-0 flex items-center gap-2 px-4 rounded-full font-medium transition-all duration-200 whitespace-nowrap border',
+                    isActive
+                      ? 'bg-lime-600 border-lime-500 text-white shadow-[0_0_16px_rgba(132,204,22,0.3)]'
+                      : 'bg-[#1A1B1F] border-white/5 text-gray-400 hover:bg-[#22232A] hover:text-white hover:border-white/10',
+                  )}
+                  style={{
+                    height: '44px',
+                    fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)',
+                    scrollSnapAlign: 'start',
+                  }}
+                >
+                  <Icon className="w-4 h-4" />
+                  {cat.label}
+                </button>
+              );
+            })}
+          </HScrollContainer>
+        </section>
+
+        {/* ────────────────────────────────────────────────────────
+            LIVE NOW SECTION
+        ──────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Live Now"
+            icon={
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+              </span>
+            }
+            href="/sports/live"
+            linkText="View all"
+            liveCount={MOCK_LIVE_EVENTS.length}
+          />
+          <HScrollContainer>
+            {MOCK_LIVE_EVENTS.map((event) => (
+              <LiveEventCardCompact key={event.id} event={event} />
+            ))}
+          </HScrollContainer>
+        </section>
+
+        {/* ────────────────────────────────────────────────────────
+            POPULAR EVENTS SECTION (Featured Events)
+        ──────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Popular Events"
+            icon={<Star className="w-5 h-5 text-yellow-400" />}
+            href="/sports"
+            linkText="View all"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {MOCK_FEATURED_EVENTS.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </section>
+
+        {/* ────────────────────────────────────────────────────────
+            CASINO SECTION
+        ──────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Popular Games"
+            icon={<Flame className="w-5 h-5 text-orange-400" />}
+            href="/casino"
+            linkText="View all"
+          />
+          <HScrollContainer>
+            {MOCK_CASINO_GAMES.map((game) => (
+              <CasinoGameCard key={game.slug} game={game} aspect="3/4" />
+            ))}
+          </HScrollContainer>
+        </section>
+
+        {/* ────────────────────────────────────────────────────────
+            JUMP BACK IN (Recently Played)
+        ──────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Jump back in"
+            icon={<Clock className="w-5 h-5 text-purple-400" />}
+            href="/casino"
+            linkText="View all"
+          />
+          <HScrollContainer>
+            {MOCK_RECENT_GAMES.map((game) => (
+              <CasinoGameCard key={`recent-${game.slug}`} game={game} aspect="1/1" />
+            ))}
+          </HScrollContainer>
+        </section>
+
+        {/* ────────────────────────────────────────────────────────
+            TOP LEAGUES SECTION
+        ──────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Top Leagues"
+            icon={<Trophy className="w-5 h-5 text-amber-400" />}
+            href="/sports"
+            linkText="All sports"
+          />
+          <HScrollContainer>
+            {TOP_LEAGUES.map((league) => (
+              <Link
+                key={league.competition}
+                href={`/sports/${league.slug}/${league.competition}`}
+                className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-[#1A1B1F] border border-white/5 hover:border-lime-500/30 hover:bg-[#1F2028] transition-all group shrink-0"
+                style={{
+                  minHeight: '56px',
+                  scrollSnapAlign: 'start',
+                }}
               >
-                <Icon className="w-4 h-4" />
-                {cat.label}
-              </button>
-            );
-          })}
-        </HScrollContainer>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────
-          3. LIVE NOW SECTION
-      ──────────────────────────────────────────────────────── */}
-      <section>
-        <SectionHeader
-          title="Live Now"
-          icon={
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-            </span>
-          }
-          href="/sports/live"
-          linkText="View all"
-          liveCount={MOCK_LIVE_EVENTS.length}
-        />
-        <HScrollContainer>
-          {MOCK_LIVE_EVENTS.map((event) => (
-            <div key={event.id} className="shrink-0 w-[300px] sm:w-[320px]">
-              <EventCard event={event} compact />
-            </div>
-          ))}
-        </HScrollContainer>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────
-          4. FEATURED EVENTS
-      ──────────────────────────────────────────────────────── */}
-      <section>
-        <SectionHeader
-          title="Featured"
-          icon={<Star className="w-5 h-5 text-yellow-400" />}
-          href="/sports"
-          linkText="View all"
-        />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {MOCK_FEATURED_EVENTS.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────
-          5. POPULAR CASINO GAMES
-      ──────────────────────────────────────────────────────── */}
-      <section>
-        <SectionHeader
-          title="Popular Games"
-          icon={<Flame className="w-5 h-5 text-orange-400" />}
-          href="/casino"
-          linkText="View all"
-        />
-        <HScrollContainer>
-          {MOCK_CASINO_GAMES.map((game) => (
-            <CasinoGameCard key={game.slug} game={game} aspect="3/4" />
-          ))}
-        </HScrollContainer>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────
-          6. JUMP BACK IN (Recently Played)
-      ──────────────────────────────────────────────────────── */}
-      <section>
-        <SectionHeader
-          title="Jump back in"
-          icon={<Clock className="w-5 h-5 text-purple-400" />}
-          href="/casino"
-          linkText="View all"
-        />
-        <HScrollContainer>
-          {MOCK_RECENT_GAMES.map((game) => (
-            <CasinoGameCard key={`recent-${game.slug}`} game={game} aspect="1/1" />
-          ))}
-        </HScrollContainer>
-      </section>
-
-      {/* ────────────────────────────────────────────────────────
-          7. TOP LEAGUES
-      ──────────────────────────────────────────────────────── */}
-      <section>
-        <SectionHeader
-          title="Top Leagues"
-          icon={<Trophy className="w-5 h-5 text-amber-400" />}
-          href="/sports"
-          linkText="All sports"
-        />
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-          {TOP_LEAGUES.map((league) => (
-            <Link
-              key={league.competition}
-              href={`/sports/${league.slug}/${league.competition}`}
-              className="flex items-center gap-2.5 px-3.5 py-3 rounded-lg bg-[#1A1B1F] border border-white/5 hover:border-purple-500/30 hover:bg-[#1F2028] transition-all group"
-            >
-              <span className="shrink-0 w-7 h-7 rounded-md bg-white/5 flex items-center justify-center text-[10px] font-bold text-gray-400 group-hover:text-white transition-colors">
-                {league.flag}
-              </span>
-              <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors truncate">
-                {league.name}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
+                <span className="shrink-0 w-8 h-8 rounded-md bg-white/5 flex items-center justify-center font-bold text-gray-400 group-hover:text-white transition-colors"
+                  style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
+                >
+                  {league.flag}
+                </span>
+                <span
+                  className="font-medium text-gray-300 group-hover:text-white transition-colors whitespace-nowrap"
+                  style={{ fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)' }}
+                >
+                  {league.name}
+                </span>
+              </Link>
+            ))}
+          </HScrollContainer>
+        </section>
+      </div>
     </div>
   );
 }

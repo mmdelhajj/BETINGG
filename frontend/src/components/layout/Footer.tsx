@@ -139,22 +139,24 @@ export function Footer() {
         borderTop: '1px solid rgba(255, 255, 255, 0.04)',
       }}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-6">
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 pt-12 pb-6">
         {/* ── Language Selector ─────────────────────────────────── */}
         <div className="flex justify-center mb-10">
           <div className="relative">
             <button
               onClick={() => setLangOpen(!langOpen)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-colors min-h-[44px]"
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.06)',
                 color: 'rgba(255, 255, 255, 0.7)',
               }}
+              aria-label="Select language"
+              aria-expanded={langOpen}
             >
-              <Globe className="w-4 h-4" />
+              <Globe className="w-5 h-5" />
               <span>{currentLangLabel}</span>
               <ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${
+                className={`w-5 h-5 transition-transform duration-200 ${
                   langOpen ? 'rotate-180' : ''
                 }`}
               />
@@ -166,11 +168,13 @@ export function Footer() {
                 <div
                   className="fixed inset-0 z-40"
                   onClick={() => setLangOpen(false)}
+                  aria-hidden="true"
                 />
-                {/* Dropdown */}
+                {/* Dropdown - opens upward */}
                 <div
-                  className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 rounded-lg py-1 z-50 shadow-xl"
+                  className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 rounded-lg py-1 z-50 shadow-xl max-h-[280px] overflow-y-auto"
                   style={{ backgroundColor: '#1A1A1F' }}
+                  role="listbox"
                 >
                   {LANGUAGES.map((lang) => (
                     <button
@@ -179,11 +183,13 @@ export function Footer() {
                         setSelectedLang(lang.code);
                         setLangOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors min-h-[44px] ${
                         selectedLang === lang.code
                           ? 'text-white bg-white/10'
                           : 'text-white/60 hover:text-white hover:bg-white/5'
                       }`}
+                      role="option"
+                      aria-selected={selectedLang === lang.code}
                     >
                       {lang.label}
                     </button>
@@ -195,7 +201,7 @@ export function Footer() {
         </div>
 
         {/* ── Social Links Row ──────────────────────────────────── */}
-        <div className="flex items-center justify-center gap-6 mb-10">
+        <div className="flex items-center justify-center gap-4 lg:gap-6 mb-10">
           {SOCIAL_LINKS.map((social) => {
             const Icon = social.icon;
             return (
@@ -205,7 +211,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={social.label}
-                className="transition-colors"
+                className="transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 style={{ color: 'rgba(255, 255, 255, 0.4)' }}
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)')
@@ -214,7 +220,7 @@ export function Footer() {
                   (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.4)')
                 }
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-6 h-6 lg:w-5 lg:h-5" />
               </a>
             );
           })}
@@ -227,7 +233,7 @@ export function Footer() {
         />
 
         {/* ── Footer Link Columns ──────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-6 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-6 mb-12">
           {FOOTER_COLUMNS.map((column) => (
             <div key={column.title}>
               <h4
@@ -236,12 +242,12 @@ export function Footer() {
               >
                 {column.title}
               </h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-1">
                 {column.links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-[13px] transition-colors block"
+                      className="text-[13px] lg:text-sm transition-colors block py-2 min-h-[44px] flex items-center"
                       style={{ color: 'rgba(255, 255, 255, 0.4)' }}
                       onMouseEnter={(e) =>
                         (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)')
@@ -266,21 +272,21 @@ export function Footer() {
         />
 
         {/* ── Crypto Icons Row ─────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-center gap-5 mb-8">
+        <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-5 mb-8">
           {CRYPTO_TOKENS.map((token) => {
             const Icon = token.icon;
             return (
               <div
                 key={token.symbol}
-                className="flex items-center gap-1.5"
+                className="flex items-center gap-1.5 min-h-[32px]"
                 title={token.symbol}
               >
                 <Icon
-                  className="w-4 h-4"
+                  className="w-5 h-5 lg:w-4 lg:h-4"
                   style={{ color: 'rgba(255, 255, 255, 0.3)' }}
                 />
                 <span
-                  className="text-[11px] font-medium"
+                  className="text-xs lg:text-[11px] font-medium"
                   style={{ color: 'rgba(255, 255, 255, 0.3)' }}
                 >
                   {token.symbol}
@@ -298,25 +304,26 @@ export function Footer() {
 
         {/* ── License Info ─────────────────────────────────────── */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="flex items-center gap-4 mb-5">
+          <div className="flex flex-col lg:flex-row items-center gap-4 mb-5">
             {/* 18+ Badge */}
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+              className="w-12 h-12 lg:w-10 lg:h-10 rounded-full flex items-center justify-center text-base lg:text-sm font-bold shrink-0"
               style={{
                 border: '2px solid rgba(255, 255, 255, 0.3)',
                 color: 'rgba(255, 255, 255, 0.8)',
               }}
+              aria-label="18 and over only"
             >
               18+
             </div>
 
             {/* License Badge */}
             <div
-              className="flex items-center gap-2 px-4 py-2 rounded text-xs"
+              className="flex items-center gap-2 px-4 py-3 lg:py-2 rounded text-xs lg:text-xs min-h-[44px] lg:min-h-0"
               style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
             >
               <Shield
-                className="w-4 h-4 shrink-0"
+                className="w-5 h-5 lg:w-4 lg:h-4 shrink-0"
                 style={{ color: 'rgba(255, 255, 255, 0.5)' }}
               />
               <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
@@ -342,7 +349,7 @@ export function Footer() {
         {/* ── Responsible Gambling Disclaimer ───────────────────── */}
         <div className="max-w-2xl mx-auto">
           <p
-            className="text-[11px] text-center leading-relaxed"
+            className="text-xs lg:text-[11px] text-center leading-relaxed"
             style={{ color: 'rgba(255, 255, 255, 0.25)' }}
           >
             Gambling can be addictive. Please play responsibly. CryptoBet only
@@ -354,7 +361,7 @@ export function Footer() {
               href="https://www.begambleaware.org"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline transition-colors"
+              className="underline transition-colors inline-block min-h-[44px] py-2 lg:min-h-0 lg:py-0"
               style={{ color: 'rgba(255, 255, 255, 0.35)' }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)')

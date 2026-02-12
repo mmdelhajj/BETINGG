@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Gift, Tag, Percent, Clock, ArrowRight, Zap, Trophy, Star, Ticket, TrendingUp, UserPlus } from 'lucide-react';
 
-// ─── Types ──────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────
 
 type PromotionCategory = 'all' | 'sports' | 'casino' | 'vip' | 'new-users';
 type PromotionBadge = 'Deposit Bonus' | 'Free Bet' | 'Cashback' | 'Odds Boost' | 'Referral';
@@ -25,7 +25,7 @@ interface Promotion {
   icon: React.ReactNode;
 }
 
-// ─── Constants ──────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────
 
 const CATEGORY_TABS: { key: PromotionCategory; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -158,7 +158,7 @@ const PROMOTIONS: Promotion[] = [
   },
 ];
 
-// ─── Component ──────────────────────────────────────────────────
+// ─── Component ──────────────────────────────────────────────────────
 
 export default function PromotionsPage() {
   const [activeCategory, setActiveCategory] = useState<PromotionCategory>('all');
@@ -200,13 +200,13 @@ export default function PromotionsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-12">
+    <div className="max-w-6xl mx-auto space-y-8 pb-24 px-4">
       {/* ─── Header ────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl md:text-4xl font-bold text-white">Promotions</h1>
         <button
           onClick={() => setShowPromoModal(!showPromoModal)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#8D52DA] text-[#B47EFF] hover:bg-[#8D52DA]/10 transition-colors text-sm font-medium"
+          className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-[#8D52DA] text-[#B47EFF] hover:bg-[#8D52DA]/10 transition-colors text-sm font-medium min-h-[44px]"
         >
           <Tag size={16} />
           Enter promo code
@@ -215,37 +215,40 @@ export default function PromotionsPage() {
 
       {/* ─── Inline Promo Code Entry (toggled) ─────────────────── */}
       {showPromoModal && (
-        <div className="bg-[#1A1B1F] border border-[#2A2B30] rounded-xl p-5 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-          <div className="flex-1 w-full">
-            <label htmlFor="header-promo" className="block text-sm text-gray-400 mb-1.5">
-              Promo Code
-            </label>
-            <input
-              id="header-promo"
-              type="text"
-              value={promoCode}
-              onChange={(e) => {
-                setPromoCode(e.target.value);
-                if (promoCodeStatus !== 'idle') {
-                  setPromoCodeStatus('idle');
-                  setPromoCodeMessage('');
-                }
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && handleApplyPromoCode()}
-              placeholder="e.g. WELCOME500"
-              className="w-full bg-[#12131A] border border-[#2A2B30] rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-[#8D52DA] transition-colors text-sm"
-            />
+        <div className="bg-[#1A1B1F] border border-[#2A2B30] rounded-xl p-5 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+            <div className="flex-1 w-full">
+              <label htmlFor="header-promo" className="block text-sm text-gray-400 mb-1.5">
+                Promo Code
+              </label>
+              <input
+                id="header-promo"
+                type="text"
+                value={promoCode}
+                onChange={(e) => {
+                  setPromoCode(e.target.value);
+                  if (promoCodeStatus !== 'idle') {
+                    setPromoCodeStatus('idle');
+                    setPromoCodeMessage('');
+                  }
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleApplyPromoCode()}
+                placeholder="e.g. WELCOME500"
+                className="w-full bg-[#12131A] border border-[#2A2B30] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#8D52DA] transition-colors text-base min-h-[44px]"
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+            <button
+              onClick={handleApplyPromoCode}
+              className="px-6 py-3 bg-[#8D52DA] hover:bg-[#7B45C3] text-white font-medium rounded-lg transition-colors text-sm whitespace-nowrap min-h-[44px]"
+            >
+              Apply
+            </button>
           </div>
-          <button
-            onClick={handleApplyPromoCode}
-            className="px-6 py-2.5 bg-[#8D52DA] hover:bg-[#7B45C3] text-white font-medium rounded-lg transition-colors text-sm whitespace-nowrap"
-          >
-            Apply
-          </button>
           {promoCodeMessage && (
             <p
               className={cn(
-                'text-sm sm:self-center',
+                'text-sm',
                 promoCodeStatus === 'success' ? 'text-emerald-400' : 'text-red-400'
               )}
             >
@@ -255,25 +258,27 @@ export default function PromotionsPage() {
         </div>
       )}
 
-      {/* ─── Category Tabs ─────────────────────────────────────── */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-        {CATEGORY_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveCategory(tab.key)}
-            className={cn(
-              'px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
-              activeCategory === tab.key
-                ? 'bg-[#8D52DA] text-white'
-                : 'bg-[#1A1B1F] text-gray-400 hover:text-white hover:bg-[#252630]'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* ─── Category Tabs - 44px height, horizontal scroll ─────────────────────────────────────── */}
+      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+        <div className="flex gap-2 min-w-max pb-1">
+          {CATEGORY_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveCategory(tab.key)}
+              className={cn(
+                'px-5 py-2.5 h-[44px] rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
+                activeCategory === tab.key
+                  ? 'bg-[#8D52DA] text-white'
+                  : 'bg-[#1A1B1F] text-gray-400 hover:text-white hover:bg-[#252630]'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ─── Promotion Cards Grid ──────────────────────────────── */}
+      {/* ─── Promotion Cards Grid - single column on mobile ──────────────────────────────────── */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filtered.map((promo) => {
@@ -283,10 +288,10 @@ export default function PromotionsPage() {
                 key={promo.id}
                 className="bg-[#1A1B1F] rounded-xl overflow-hidden border border-transparent hover:border-[#8D52DA]/40 transition-all group"
               >
-                {/* Banner */}
+                {/* Banner - aspect-[16/10] on mobile */}
                 <div
                   className={cn(
-                    'relative aspect-video bg-gradient-to-br flex items-center justify-center',
+                    'relative aspect-[16/10] md:aspect-video bg-gradient-to-br flex items-center justify-center',
                     promo.gradient
                   )}
                 >
@@ -304,7 +309,7 @@ export default function PromotionsPage() {
                     {promo.icon}
                   </div>
 
-                  {/* Status indicator */}
+                  {/* Status indicator - properly positioned */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1">
                     <span className={cn('w-2 h-2 rounded-full', statusInfo.dot)} />
                     <span className={cn('text-[11px] font-medium', statusInfo.text)}>
@@ -312,7 +317,7 @@ export default function PromotionsPage() {
                     </span>
                   </div>
 
-                  {/* Badge */}
+                  {/* Badge - properly positioned */}
                   <div className="absolute top-3 right-3">
                     <span
                       className={cn(
@@ -341,24 +346,24 @@ export default function PromotionsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
                     {promo.cta === 'Claim Now' ? (
-                      <button className="flex items-center gap-2 px-5 py-2 bg-[#8D52DA] hover:bg-[#7B45C3] text-white text-sm font-medium rounded-lg transition-colors">
+                      <button className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#8D52DA] hover:bg-[#7B45C3] text-white text-sm font-medium rounded-lg transition-colors min-h-[44px] flex-1 sm:flex-initial">
                         {promo.cta}
                         <ArrowRight size={14} />
                       </button>
                     ) : promo.cta === 'Opt In' ? (
-                      <button className="flex items-center gap-2 px-5 py-2 bg-[#8D52DA] hover:bg-[#7B45C3] text-white text-sm font-medium rounded-lg transition-colors">
+                      <button className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#8D52DA] hover:bg-[#7B45C3] text-white text-sm font-medium rounded-lg transition-colors min-h-[44px] flex-1 sm:flex-initial">
                         {promo.cta}
                         <ArrowRight size={14} />
                       </button>
                     ) : (
-                      <button className="flex items-center gap-2 px-5 py-2 border border-[#8D52DA] text-[#B47EFF] hover:bg-[#8D52DA]/10 text-sm font-medium rounded-lg transition-colors">
+                      <button className="flex items-center justify-center gap-2 px-5 py-2.5 border border-[#8D52DA] text-[#B47EFF] hover:bg-[#8D52DA]/10 text-sm font-medium rounded-lg transition-colors min-h-[44px] flex-1 sm:flex-initial">
                         {promo.cta}
                         <ArrowRight size={14} />
                       </button>
                     )}
-                    <button className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-2 transition-colors">
+                    <button className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-2 transition-colors min-h-[44px] flex items-center">
                       T&Cs apply
                     </button>
                   </div>
@@ -379,7 +384,7 @@ export default function PromotionsPage() {
         </div>
       )}
 
-      {/* ─── Promo Code Section (Bottom) ───────────────────────── */}
+      {/* ─── Promo Code Section (Bottom) - 16px font, clear CTA ───────────────────────── */}
       <div className="bg-[#1A1B1F] rounded-xl border border-[#2A2B30] p-6 md:p-8">
         <div className="max-w-xl mx-auto text-center">
           <div className="w-12 h-12 bg-[#8D52DA]/20 rounded-full mx-auto mb-4 flex items-center justify-center">
@@ -390,7 +395,7 @@ export default function PromotionsPage() {
             Enter your promotional code below to unlock exclusive bonuses and offers.
           </p>
 
-          <div className="flex gap-3 max-w-md mx-auto">
+          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
             <input
               type="text"
               value={promoCode}
@@ -403,11 +408,12 @@ export default function PromotionsPage() {
               }}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyPromoCode()}
               placeholder="Enter promo code"
-              className="flex-1 bg-[#12131A] border border-[#2A2B30] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#8D52DA] transition-colors text-sm text-center uppercase tracking-wider"
+              className="flex-1 bg-[#12131A] border border-[#2A2B30] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#8D52DA] transition-colors text-center uppercase tracking-wider min-h-[44px]"
+              style={{ fontSize: '16px' }}
             />
             <button
               onClick={handleApplyPromoCode}
-              className="px-8 py-3 bg-[#8D52DA] hover:bg-[#7B45C3] text-white font-semibold rounded-lg transition-colors text-sm"
+              className="px-8 py-3 bg-[#8D52DA] hover:bg-[#7B45C3] text-white font-semibold rounded-lg transition-colors text-sm whitespace-nowrap min-h-[44px]"
             >
               Apply
             </button>

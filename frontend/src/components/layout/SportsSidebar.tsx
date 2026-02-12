@@ -1,21 +1,15 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSportsStore } from '@/stores/sportsStore';
 import { cn } from '@/lib/utils';
 import {
   Star,
-  Gift,
-  MessageCircle,
-  HelpCircle,
-  BookOpen,
-  Gamepad2,
-  Trophy,
-  Zap,
   X,
   Menu,
+  Search,
+  Flame,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SportIcon } from '@/components/sports/SportIcon';
@@ -24,29 +18,26 @@ import { SportIcon } from '@/components/sports/SportIcon';
 // Types
 // ---------------------------------------------------------------------------
 
-type SidebarTab = 'sports' | 'casino' | 'esports';
+type SportsTab = 'all' | 'live' | 'favorites';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const FAVORITES_STORAGE_KEY = 'cryptobet_sidebar_favorites';
-const ACTIVE_TAB_KEY = 'cryptobet_sidebar_tab';
-
+const FAVORITES_STORAGE_KEY = 'cryptobet_favorites';
 const DIVIDER_COLOR = 'rgba(255, 255, 255, 0.06)';
 
 /**
  * Static sports list with slug, display name, and emoji fallback.
- * The sidebar will merge live counts from the store when available,
- * but always renders this full list so the UI is never empty.
+ * Merged with live data from store.
  */
-const ALL_SPORTS: { slug: string; name: string; emoji: string }[] = [
-  { slug: 'football', name: 'Soccer', emoji: '\u26BD' },
-  { slug: 'basketball', name: 'Basketball', emoji: '\uD83C\uDFC0' },
-  { slug: 'tennis', name: 'Tennis', emoji: '\uD83C\uDFBE' },
-  { slug: 'american-football', name: 'American Football', emoji: '\uD83C\uDFC8' },
-  { slug: 'baseball', name: 'Baseball', emoji: '\u26BE' },
-  { slug: 'ice-hockey', name: 'Ice Hockey', emoji: '\uD83C\uDFD2' },
+const ALL_SPORTS: { slug: string; name: string; emoji: string; popular?: boolean }[] = [
+  { slug: 'football', name: 'Soccer', emoji: '\u26BD', popular: true },
+  { slug: 'basketball', name: 'Basketball', emoji: '\uD83C\uDFC0', popular: true },
+  { slug: 'tennis', name: 'Tennis', emoji: '\uD83C\uDFBE', popular: true },
+  { slug: 'american-football', name: 'American Football', emoji: '\uD83C\uDFC8', popular: true },
+  { slug: 'baseball', name: 'Baseball', emoji: '\u26BE', popular: true },
+  { slug: 'ice-hockey', name: 'Ice Hockey', emoji: '\uD83C\uDFD2', popular: true },
   { slug: 'mma', name: 'MMA', emoji: '\uD83E\uDD4A' },
   { slug: 'boxing', name: 'Boxing', emoji: '\uD83E\uDD4A' },
   { slug: 'cricket', name: 'Cricket', emoji: '\uD83C\uDFCF' },
@@ -68,8 +59,6 @@ const ALL_SPORTS: { slug: string; name: string; emoji: string }[] = [
   { slug: 'politics', name: 'Politics', emoji: '\uD83C\uDFDB\uFE0F' },
   { slug: 'entertainment', name: 'Entertainment', emoji: '\uD83C\uDFAC' },
 ];
-
-const ESPORTS_SLUGS = new Set(['cs2', 'dota-2', 'league-of-legends', 'valorant']);
 
 // ---------------------------------------------------------------------------
 // Mobile drawer hook
@@ -102,12 +91,13 @@ function useMobileDrawer() {
 // ---------------------------------------------------------------------------
 
 function Divider() {
-  return <div className="mx-3 my-2" style={{ borderBottom: `1px solid ${DIVIDER_COLOR}` }} />;
+  return <div className="mx-4 my-2" style={{ borderBottom: `1px solid ${DIVIDER_COLOR}` }} />;
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children, icon }: { children: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <div className="px-4 pt-4 pb-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider select-none">
+    <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider select-none">
+      {icon}
       {children}
     </div>
   );
@@ -119,17 +109,15 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export function SportsSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { sports, isLoading } = useSportsStore();
   const drawer = useMobileDrawer();
 
-  // ---- Tab state (persisted) ----
-  const [activeTab, setActiveTab] = useState<SidebarTab>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(ACTIVE_TAB_KEY);
-      if (stored === 'sports' || stored === 'casino' || stored === 'esports') return stored;
-    }
-    return 'sports';
-  });
+  // ---- Tab state ----
+  const [activeTab, setActiveTab] = useState<SportsTab>('all');
+
+  // ---- Search state ----
+  const [searchQuery, setSearchQuery] = useState('');
 
   // ---- Favorites state (persisted) ----
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -161,6 +149,7 @@ export function SportsSidebar() {
         slug: item.slug,
         name: item.name,
         emoji: item.emoji,
+        popular: item.popular,
         id: stored?.id ?? item.slug,
         liveCount: stored?.liveCount ?? 0,
         eventCount: stored?.eventCount ?? 0,
@@ -168,14 +157,21 @@ export function SportsSidebar() {
     });
   }, [sportBySlug]);
 
-  // ---- Split into regular sports and esports ----
-  const regularSports = useMemo(
-    () => mergedSports.filter((s) => !ESPORTS_SLUGS.has(s.slug)),
+  // ---- Popular sports ----
+  const popularSports = useMemo(
+    () => mergedSports.filter((s) => s.popular),
     [mergedSports]
   );
 
-  const esportsList = useMemo(
-    () => mergedSports.filter((s) => ESPORTS_SLUGS.has(s.slug)),
+  // ---- All sports (alphabetically sorted) ----
+  const allSportsAlphabetical = useMemo(
+    () => [...mergedSports].sort((a, b) => a.name.localeCompare(b.name)),
+    [mergedSports]
+  );
+
+  // ---- Live sports ----
+  const liveSports = useMemo(
+    () => mergedSports.filter((s) => s.liveCount > 0).sort((a, b) => b.liveCount - a.liveCount),
     [mergedSports]
   );
 
@@ -185,12 +181,26 @@ export function SportsSidebar() {
     [mergedSports, favorites]
   );
 
-  // ---- Persist tab ----
-  useEffect(() => {
-    try {
-      localStorage.setItem(ACTIVE_TAB_KEY, activeTab);
-    } catch {}
-  }, [activeTab]);
+  // ---- Filtered sports based on search ----
+  const filteredSports = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return activeTab === 'all'
+        ? allSportsAlphabetical
+        : activeTab === 'live'
+        ? liveSports
+        : favoriteSports;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const baseList =
+      activeTab === 'all'
+        ? allSportsAlphabetical
+        : activeTab === 'live'
+        ? liveSports
+        : favoriteSports;
+
+    return baseList.filter((s) => s.name.toLowerCase().includes(query));
+  }, [searchQuery, activeTab, allSportsAlphabetical, liveSports, favoriteSports]);
 
   // ---- Persist favorites ----
   useEffect(() => {
@@ -198,12 +208,6 @@ export function SportsSidebar() {
       localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
     } catch {}
   }, [favorites]);
-
-  // ---- Auto-detect tab from pathname ----
-  useEffect(() => {
-    if (pathname?.startsWith('/casino')) setActiveTab('casino');
-    else if (pathname?.startsWith('/esports')) setActiveTab('esports');
-  }, [pathname]);
 
   // ---- Close drawer on navigation ----
   useEffect(() => {
@@ -220,317 +224,138 @@ export function SportsSidebar() {
     );
   }, []);
 
+  // ---- Navigate to sport and close drawer on mobile ----
+  const handleSportClick = useCallback(
+    (slug: string) => {
+      router.push(`/sports/${slug}`);
+      drawer.close();
+    },
+    [router, drawer]
+  );
+
   // ---------------------------------------------------------------------------
   // Sport row
   // ---------------------------------------------------------------------------
 
   const SportRow = ({
     sport,
-    showStar,
     isFavorite,
   }: {
     sport: (typeof mergedSports)[0];
-    showStar?: boolean;
     isFavorite?: boolean;
   }) => {
     const href = `/sports/${sport.slug}`;
     const isActive = pathname === href;
     const hasLive = (sport.liveCount ?? 0) > 0;
+    const eventCount = sport.eventCount ?? 0;
 
     return (
-      <div
+      <button
+        onClick={() => handleSportClick(sport.slug)}
         className={cn(
-          'flex items-center gap-2.5 px-4 py-[7px] text-[14px] cursor-pointer transition-colors group',
-          isActive ? 'bg-[#1a1b1f] text-white' : 'text-gray-300 hover:bg-[#1a1b1f]/60'
+          'flex items-center gap-3 px-4 w-full text-left transition-colors group',
+          // 44px minimum touch target height
+          'min-h-[44px] py-2',
+          isActive
+            ? 'bg-white/[0.08] text-white'
+            : 'text-gray-300 hover:bg-white/[0.04] active:bg-white/[0.06]'
         )}
       >
-        {/* Star for favorites section */}
-        {showStar && (
-          <button
-            onClick={(e) => toggleFavorite(e, sport.id)}
-            className="shrink-0"
-            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-          >
-            <Star
-              className={cn(
-                'w-3.5 h-3.5 transition-colors',
-                isFavorite
-                  ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-gray-600 hover:text-gray-400'
-              )}
-            />
-          </button>
-        )}
+        {/* Sport icon */}
+        <div className="shrink-0">
+          <SportIcon slug={sport.slug} size={18} emoji={sport.emoji} />
+        </div>
 
-        {/* Sport link */}
-        <Link href={href} className="flex-1 flex items-center gap-2.5 min-w-0">
-          <SportIcon slug={sport.slug} size={16} emoji={sport.emoji} />
-          <span className="truncate leading-tight">{sport.name}</span>
-        </Link>
+        {/* Sport name */}
+        <span className="flex-1 text-[14px] font-medium leading-tight truncate">
+          {sport.name}
+        </span>
 
-        {/* Live count badge */}
+        {/* Live badge */}
         {hasLive && (
-          <span className="flex items-center gap-1 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[12px] text-green-400 tabular-nums font-medium">
+          <div className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded-full bg-red-500/10">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-[11px] text-red-400 font-bold tabular-nums">
               {sport.liveCount}
             </span>
+          </div>
+        )}
+
+        {/* Event count */}
+        {!hasLive && eventCount > 0 && (
+          <span className="text-[12px] text-gray-500 tabular-nums font-medium shrink-0">
+            {eventCount}
           </span>
         )}
 
-        {/* Hover favorite toggle (non-favorites section only) */}
-        {!showStar && (
-          <button
-            onClick={(e) => toggleFavorite(e, sport.id)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 p-0.5"
-            aria-label="Toggle favorite"
-          >
-            <Star
-              className={cn(
-                'w-3 h-3 transition-colors',
-                favorites.includes(sport.id)
-                  ? 'fill-yellow-400 text-yellow-400'
-                  : 'text-gray-600 hover:text-gray-400'
-              )}
-            />
-          </button>
-        )}
-      </div>
+        {/* Star button - 32px minimum tap area */}
+        <button
+          onClick={(e) => toggleFavorite(e, sport.id)}
+          className={cn(
+            'shrink-0 flex items-center justify-center transition-opacity',
+            // 32px minimum tap area
+            'w-8 h-8 -mr-1',
+            'opacity-0 group-hover:opacity-100',
+            isFavorite && 'opacity-100'
+          )}
+          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <Star
+            className={cn(
+              'w-4 h-4 transition-colors',
+              isFavorite
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'text-gray-600 hover:text-gray-400'
+            )}
+          />
+        </button>
+      </button>
     );
   };
 
   // ---------------------------------------------------------------------------
-  // Tab contents
-  // ---------------------------------------------------------------------------
-
-  const renderSportsTab = () => (
-    <>
-      {/* Refer & Earn */}
-      <Link
-        href="/referrals"
-        className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-gray-300 hover:bg-[#1a1b1f]/60 transition-colors"
-      >
-        <Gift className="w-4 h-4 text-yellow-400" />
-        <span className="font-medium">Refer &amp; Earn</span>
-      </Link>
-
-      <Divider />
-
-      {/* My Favorites */}
-      {favoriteSports.length > 0 && (
-        <>
-          <SectionLabel>My Favorites</SectionLabel>
-          {favoriteSports.map((sport) => (
-            <SportRow key={`fav-${sport.id}`} sport={sport} showStar isFavorite />
-          ))}
-          <Divider />
-        </>
-      )}
-
-      {/* All Sports */}
-      <SectionLabel>All Sports</SectionLabel>
-
-      {isLoading ? (
-        <div className="px-3 space-y-1.5 mt-1">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-8 rounded bg-white/[0.03] animate-pulse"
-              style={{ animationDelay: `${i * 60}ms` }}
-            />
-          ))}
-        </div>
-      ) : (
-        regularSports.map((sport) => <SportRow key={sport.slug} sport={sport} />)
-      )}
-
-      <Divider />
-
-      {/* Footer links */}
-      <div className="pb-6">
-        <Link
-          href="/academy"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <BookOpen className="w-4 h-4 text-gray-500" />
-          Blog
-        </Link>
-        <a
-          href="https://t.me/cryptobet"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <MessageCircle className="w-4 h-4 text-gray-500" />
-          Telegram
-        </a>
-        <Link
-          href="/support"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <HelpCircle className="w-4 h-4 text-gray-500" />
-          Support
-        </Link>
-      </div>
-    </>
-  );
-
-  const renderCasinoTab = () => (
-    <>
-      <Link
-        href="/casino"
-        className={cn(
-          'flex items-center gap-2.5 px-4 py-2.5 text-[14px] transition-colors',
-          pathname === '/casino' ? 'text-white bg-[#1a1b1f]' : 'text-gray-300 hover:bg-[#1a1b1f]/60'
-        )}
-      >
-        <Gamepad2 className="w-4 h-4 text-purple-400" />
-        <span className="font-medium">All Games</span>
-      </Link>
-      <Link
-        href="/casino?type=live"
-        className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-gray-300 hover:bg-[#1a1b1f]/60 transition-colors"
-      >
-        <span className="w-4 text-center text-[14px] shrink-0">{'\uD83C\uDFB2'}</span>
-        <span>Live Dealer</span>
-      </Link>
-      <Link
-        href="/casino?type=slots"
-        className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-gray-300 hover:bg-[#1a1b1f]/60 transition-colors"
-      >
-        <span className="w-4 text-center text-[14px] shrink-0">{'\uD83C\uDFB0'}</span>
-        <span>Slots</span>
-      </Link>
-      <Link
-        href="/casino?type=table"
-        className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-gray-300 hover:bg-[#1a1b1f]/60 transition-colors"
-      >
-        <span className="w-4 text-center text-[14px] shrink-0">{'\uD83C\uDCCF'}</span>
-        <span>Table Games</span>
-      </Link>
-      <Link
-        href="/casino?type=blackjack"
-        className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-gray-300 hover:bg-[#1a1b1f]/60 transition-colors"
-      >
-        <span className="w-4 text-center text-[14px] shrink-0">{'\u2660\uFE0F'}</span>
-        <span>Blackjack</span>
-      </Link>
-      <Link
-        href="/casino?type=roulette"
-        className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-gray-300 hover:bg-[#1a1b1f]/60 transition-colors"
-      >
-        <span className="w-4 text-center text-[14px] shrink-0">{'\uD83C\uDFAF'}</span>
-        <span>Roulette</span>
-      </Link>
-
-      <Divider />
-
-      <div className="pb-6">
-        <Link
-          href="/academy"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <BookOpen className="w-4 h-4 text-gray-500" />
-          Blog
-        </Link>
-        <a
-          href="https://t.me/cryptobet"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <MessageCircle className="w-4 h-4 text-gray-500" />
-          Telegram
-        </a>
-        <Link
-          href="/support"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <HelpCircle className="w-4 h-4 text-gray-500" />
-          Support
-        </Link>
-      </div>
-    </>
-  );
-
-  const renderEsportsTab = () => (
-    <>
-      <Link
-        href="/sports?filter=esports"
-        className={cn(
-          'flex items-center gap-2.5 px-4 py-2.5 text-[14px] transition-colors',
-          pathname === '/esports' ? 'text-white bg-[#1a1b1f]' : 'text-gray-300 hover:bg-[#1a1b1f]/60'
-        )}
-      >
-        <Zap className="w-4 h-4 text-purple-400" />
-        <span className="font-medium">All Esports</span>
-      </Link>
-
-      <Divider />
-
-      <SectionLabel>Games</SectionLabel>
-      {esportsList.map((sport) => (
-        <SportRow key={sport.slug} sport={sport} />
-      ))}
-
-      <Divider />
-
-      <div className="pb-6">
-        <Link
-          href="/academy"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <BookOpen className="w-4 h-4 text-gray-500" />
-          Blog
-        </Link>
-        <a
-          href="https://t.me/cryptobet"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <MessageCircle className="w-4 h-4 text-gray-500" />
-          Telegram
-        </a>
-        <Link
-          href="/support"
-          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-400 hover:text-white hover:bg-[#1a1b1f]/60 transition-colors"
-        >
-          <HelpCircle className="w-4 h-4 text-gray-500" />
-          Support
-        </Link>
-      </div>
-    </>
-  );
-
-  // ---------------------------------------------------------------------------
-  // Tab bar (shared between desktop and mobile)
+  // Tab bar (3 tabs: All Sports, Live, Favorites)
   // ---------------------------------------------------------------------------
 
   const TabBar = () => (
-    <div className="flex shrink-0" style={{ borderBottom: `1px solid ${DIVIDER_COLOR}` }}>
+    <div
+      className="flex shrink-0 border-b"
+      style={{ borderColor: DIVIDER_COLOR }}
+    >
       {(
         [
-          { key: 'sports' as const, label: 'Sports', Icon: Trophy },
-          { key: 'casino' as const, label: 'Casino', Icon: Gamepad2 },
-          { key: 'esports' as const, label: 'Esports', Icon: Zap },
+          { key: 'all' as const, label: 'All Sports' },
+          { key: 'live' as const, label: 'Live', badge: liveSports.length },
+          { key: 'favorites' as const, label: 'Favorites', badge: favoriteSports.length },
         ]
-      ).map(({ key, label, Icon }) => (
+      ).map(({ key, label, badge }) => (
         <button
           key={key}
           onClick={() => setActiveTab(key)}
           className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-3 text-[13px] font-medium transition-colors relative',
+            'flex-1 flex items-center justify-center gap-1.5 py-3 text-[13px] font-semibold transition-colors relative',
+            // 44px minimum touch target
+            'min-h-[44px]',
             activeTab === key ? 'text-white' : 'text-gray-500 hover:text-gray-300'
           )}
         >
-          <Icon className="w-4 h-4" />
           <span>{label}</span>
+          {badge !== undefined && badge > 0 && (
+            <span
+              className={cn(
+                'px-1.5 py-0.5 rounded-full text-[10px] font-bold min-w-[18px] text-center',
+                activeTab === key
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'bg-gray-700 text-gray-400'
+              )}
+            >
+              {badge}
+            </span>
+          )}
           {activeTab === key && (
             <motion.div
-              layoutId="sidebar-tab-indicator"
-              className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
-              style={{ backgroundColor: '#8D52DA' }}
+              layoutId="sports-tab-indicator"
+              className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-green-500"
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             />
           )}
@@ -540,14 +365,133 @@ export function SportsSidebar() {
   );
 
   // ---------------------------------------------------------------------------
+  // Search bar
+  // ---------------------------------------------------------------------------
+
+  const SearchBar = () => (
+    <div className="px-4 pt-4 pb-3 shrink-0">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <input
+          type="text"
+          placeholder="Search sports..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className={cn(
+            'w-full pl-10 pr-4 py-2.5 rounded-lg',
+            'bg-white/[0.04] border border-white/[0.08]',
+            'text-[14px] text-white placeholder-gray-500',
+            'focus:outline-none focus:border-green-500/50 focus:bg-white/[0.06]',
+            'transition-colors'
+          )}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  // ---------------------------------------------------------------------------
   // Scrollable content
   // ---------------------------------------------------------------------------
 
   const ScrollContent = () => (
     <div className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-      {activeTab === 'sports' && renderSportsTab()}
-      {activeTab === 'casino' && renderCasinoTab()}
-      {activeTab === 'esports' && renderEsportsTab()}
+      {/* Loading state */}
+      {isLoading && (
+        <div className="px-4 space-y-2 mt-2">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-11 rounded-lg bg-white/[0.03] animate-pulse"
+              style={{ animationDelay: `${i * 60}ms` }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* All Sports tab */}
+      {!isLoading && activeTab === 'all' && (
+        <>
+          {!searchQuery && popularSports.length > 0 && (
+            <>
+              <SectionLabel icon={<Flame className="w-3.5 h-3.5 text-orange-400" />}>
+                Popular
+              </SectionLabel>
+              {popularSports.map((sport) => (
+                <SportRow
+                  key={sport.slug}
+                  sport={sport}
+                  isFavorite={favorites.includes(sport.id)}
+                />
+              ))}
+              <Divider />
+            </>
+          )}
+
+          <SectionLabel>All Sports</SectionLabel>
+          {filteredSports.length === 0 ? (
+            <div className="px-4 py-8 text-center text-gray-500 text-[13px]">
+              No sports found
+            </div>
+          ) : (
+            filteredSports.map((sport) => (
+              <SportRow
+                key={sport.slug}
+                sport={sport}
+                isFavorite={favorites.includes(sport.id)}
+              />
+            ))
+          )}
+        </>
+      )}
+
+      {/* Live tab */}
+      {!isLoading && activeTab === 'live' && (
+        <>
+          <SectionLabel>Live Now</SectionLabel>
+          {filteredSports.length === 0 ? (
+            <div className="px-4 py-8 text-center text-gray-500 text-[13px]">
+              {searchQuery ? 'No live sports found' : 'No live events at the moment'}
+            </div>
+          ) : (
+            filteredSports.map((sport) => (
+              <SportRow
+                key={sport.slug}
+                sport={sport}
+                isFavorite={favorites.includes(sport.id)}
+              />
+            ))
+          )}
+        </>
+      )}
+
+      {/* Favorites tab */}
+      {!isLoading && activeTab === 'favorites' && (
+        <>
+          <SectionLabel>My Favorites</SectionLabel>
+          {filteredSports.length === 0 ? (
+            <div className="px-4 py-8 text-center text-gray-500 text-[13px]">
+              {searchQuery
+                ? 'No favorites found'
+                : 'No favorites yet. Star your favorite sports!'}
+            </div>
+          ) : (
+            filteredSports.map((sport) => (
+              <SportRow key={sport.slug} sport={sport} isFavorite />
+            ))
+          )}
+        </>
+      )}
+
+      {/* Bottom spacing */}
+      <div className="h-6" />
     </div>
   );
 
@@ -558,31 +502,44 @@ export function SportsSidebar() {
   return (
     <>
       {/* ------------------------------------------------------------------ */}
-      {/* Mobile hamburger trigger                                            */}
+      {/* Mobile hamburger trigger - Fixed position with safe-area support   */}
       {/* ------------------------------------------------------------------ */}
       <button
         onClick={drawer.toggle}
-        className="fixed top-[14px] left-3 z-50 md:hidden p-2 rounded-lg bg-[#1a1b1f] text-gray-300 hover:text-white transition-colors"
+        className={cn(
+          'fixed z-50 md:hidden',
+          'p-2.5 rounded-lg',
+          'bg-[#1a1b1f] text-gray-300 hover:text-white',
+          'transition-colors shadow-lg',
+          'touch-manipulation'
+        )}
+        style={{
+          top: 'max(12px, env(safe-area-inset-top))',
+          left: 'max(12px, env(safe-area-inset-left))',
+        }}
         aria-label="Toggle sidebar"
       >
         {drawer.isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Mobile drawer (< 768px)                                             */}
+      {/* Mobile drawer (< 768px) - Max-width 85vw, slides from left        */}
       {/* ------------------------------------------------------------------ */}
       <AnimatePresence>
         {drawer.isOpen && (
           <>
-            {/* Overlay */}
+            {/* Backdrop overlay */}
             <motion.div
               key="sidebar-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
               onClick={drawer.close}
+              style={{
+                touchAction: 'none',
+              }}
             />
 
             {/* Drawer panel */}
@@ -591,18 +548,37 @@ export function SportsSidebar() {
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-              className="fixed top-0 left-0 z-50 h-full w-[280px] flex flex-col md:hidden"
-              style={{ backgroundColor: '#111214' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className={cn(
+                'fixed z-50 h-full flex flex-col md:hidden',
+                'shadow-2xl'
+              )}
+              style={{
+                top: 0,
+                left: 0,
+                bottom: 0,
+                backgroundColor: '#111214',
+                // Max-width 85vw, but respect safe areas
+                maxWidth: 'min(85vw, 360px)',
+                width: '100%',
+                paddingTop: 'env(safe-area-inset-top)',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+                paddingLeft: 'env(safe-area-inset-left)',
+              }}
             >
-              {/* Close button inside drawer */}
-              <div className="flex items-center justify-between px-4 py-3 shrink-0">
-                <span className="text-[15px] font-semibold text-white tracking-tight">
-                  CryptoBet
-                </span>
+              {/* Header with close button */}
+              <div className="flex items-center justify-between px-4 py-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                    <span className="text-white font-bold text-[16px]">C</span>
+                  </div>
+                  <span className="text-[17px] font-bold text-white tracking-tight">
+                    CryptoBet
+                  </span>
+                </div>
                 <button
                   onClick={drawer.close}
-                  className="p-1 rounded text-gray-400 hover:text-white transition-colors"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
                   aria-label="Close sidebar"
                 >
                   <X className="w-5 h-5" />
@@ -610,6 +586,7 @@ export function SportsSidebar() {
               </div>
 
               <TabBar />
+              <SearchBar />
               <ScrollContent />
             </motion.aside>
           </>
@@ -617,15 +594,21 @@ export function SportsSidebar() {
       </AnimatePresence>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Desktop sidebar (>= 768px)                                          */}
+      {/* Desktop sidebar (>= 768px) - Fixed 240px width                    */}
       {/* ------------------------------------------------------------------ */}
       <aside
         className={cn(
-          'hidden md:flex flex-col fixed left-0 top-[60px] bottom-0 z-30',
-          'w-[200px] lg:w-[240px]'
+          'hidden md:flex flex-col',
+          'fixed left-0 top-[60px] bottom-0 z-30',
+          'w-[240px]',
+          'border-r'
         )}
-        style={{ backgroundColor: '#111214' }}
+        style={{
+          backgroundColor: '#111214',
+          borderColor: DIVIDER_COLOR,
+        }}
       >
+        <SearchBar />
         <TabBar />
         <ScrollContent />
       </aside>

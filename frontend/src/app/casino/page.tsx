@@ -14,14 +14,11 @@ import {
   Bomb,
   CircleDot,
   Coins,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Trophy,
   X,
   Gamepad2,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/authStore';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -187,25 +184,20 @@ const TOP_WINNERS: TopWin[] = [
 
 // ─── GameCard Component ─────────────────────────────────────────────────────
 function GameCard({ game, onToggleFavorite }: { game: CasinoGame; onToggleFavorite: (id: string) => void }) {
-  const [hovered, setHovered] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.2 }}
-      className="relative group"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div className="relative group">
       <Link href={`/casino/${game.id}`} className="block">
         <div
-          className="relative overflow-hidden rounded-xl bg-[#1A1B1F] transition-all duration-200"
-          style={{
-            transform: hovered ? 'scale(1.02)' : 'scale(1)',
-            boxShadow: hovered ? '0 8px 30px rgba(0,0,0,0.4)' : '0 2px 8px rgba(0,0,0,0.2)',
+          className="relative overflow-hidden rounded-lg bg-[#1A1B1F] transition-transform duration-200 active:scale-95"
+          onClick={(e) => {
+            // On mobile, first tap shows overlay, second tap navigates
+            if (window.innerWidth < 768 && !showOverlay) {
+              e.preventDefault();
+              setShowOverlay(true);
+              setTimeout(() => setShowOverlay(false), 3000);
+            }
           }}
         >
           {/* Thumbnail */}
@@ -213,78 +205,85 @@ function GameCard({ game, onToggleFavorite }: { game: CasinoGame; onToggleFavori
             className="aspect-[3/4] w-full flex items-center justify-center relative"
             style={{ background: game.image }}
           >
-            <span className="text-white/20 text-[40px] font-bold select-none">
+            <span className="text-white/20 text-3xl md:text-4xl font-bold select-none">
               {game.name.charAt(0)}
             </span>
 
             {/* Badges - top left */}
-            <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+            <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10">
               {game.isNew && (
-                <span className="text-[10px] font-bold bg-emerald-500 text-white px-1.5 py-0.5 rounded leading-tight">
+                <span className="text-[9px] font-bold bg-emerald-500 text-white px-1.5 py-0.5 rounded leading-none">
                   NEW
                 </span>
               )}
               {game.isHot && (
-                <span className="text-[10px] font-bold bg-gradient-to-r from-red-500 to-orange-500 text-white px-1.5 py-0.5 rounded leading-tight flex items-center gap-0.5">
-                  <Flame className="w-2.5 h-2.5" /> HOT
+                <span className="text-[9px] font-bold bg-gradient-to-r from-red-500 to-orange-500 text-white px-1.5 py-0.5 rounded leading-none flex items-center gap-0.5">
+                  <Flame className="w-2 h-2" /> HOT
                 </span>
               )}
               {game.isJackpot && (
-                <span className="text-[10px] font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-white px-1.5 py-0.5 rounded leading-tight flex items-center gap-0.5">
-                  <Trophy className="w-2.5 h-2.5" /> JACKPOT
+                <span className="text-[9px] font-bold bg-gradient-to-r from-yellow-500 to-amber-600 text-white px-1.5 py-0.5 rounded leading-none flex items-center gap-0.5">
+                  <Trophy className="w-2 h-2" /> JACKPOT
                 </span>
               )}
             </div>
 
-            {/* Favorite heart - top right */}
+            {/* Favorite heart - ALWAYS visible on mobile, hover on desktop */}
             <button
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 onToggleFavorite(game.id);
               }}
-              className={`absolute top-2 right-2 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
+              className={`absolute top-1.5 right-1.5 z-10 w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
                 game.isFavorite
                   ? 'bg-red-500/90 text-white'
-                  : 'bg-black/40 text-white/50 opacity-0 group-hover:opacity-100 hover:bg-black/60 hover:text-white'
+                  : 'bg-black/40 text-white/70 md:opacity-0 md:group-hover:opacity-100 hover:bg-black/60 hover:text-white'
               }`}
             >
-              <Heart className={`w-3.5 h-3.5 ${game.isFavorite ? 'fill-current' : ''}`} />
+              <Heart className={`w-4 h-4 md:w-3.5 md:h-3.5 ${game.isFavorite ? 'fill-current' : ''}`} />
             </button>
 
-            {/* Hover overlay with Play / Demo */}
-            <AnimatePresence>
-              {hovered && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 z-[5]"
-                >
-                  <button className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
-                    <Play className="w-4 h-4 fill-current" /> Play
-                  </button>
-                  <button className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium px-4 py-1.5 rounded-lg transition-colors">
-                    Demo
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Play overlay - tap on mobile, hover on desktop */}
+            <div
+              className={`absolute inset-0 bg-black/70 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 z-[5] transition-opacity duration-200 ${
+                showOverlay ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100 pointer-events-none md:group-hover:pointer-events-auto'
+              }`}
+            >
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.href = `/casino/${game.id}`;
+                }}
+                className="flex items-center gap-1.5 bg-lime-500 hover:bg-lime-400 active:bg-lime-600 text-black text-sm font-bold px-5 py-2.5 rounded-lg transition-colors"
+              >
+                <Play className="w-4 h-4 fill-current" /> Play Now
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 active:bg-white/5 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                Demo
+              </button>
+            </div>
           </div>
 
           {/* Info below image */}
-          <div className="px-2.5 py-2">
-            <p className="text-[13px] font-bold text-white truncate leading-tight">
+          <div className="px-2 py-2">
+            <p className="text-xs md:text-[13px] font-semibold text-white truncate leading-tight">
               {game.name}
             </p>
-            <p className="text-[11px] text-gray-500 truncate mt-0.5">
+            <p className="text-[10px] md:text-[11px] text-gray-500 truncate mt-0.5">
               {game.provider}
             </p>
           </div>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 
@@ -295,6 +294,7 @@ export default function CasinoPage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeProvider, setActiveProvider] = useState('All Providers');
   const [showProviderDropdown, setShowProviderDropdown] = useState(false);
+  const [displayCount, setDisplayCount] = useState(30);
   const [favorites, setFavorites] = useState<Set<string>>(
     () => new Set(MOCK_GAMES.filter((g) => g.isFavorite).map((g) => g.id))
   );
@@ -356,6 +356,11 @@ export default function CasinoPage() {
     return games;
   }, [gamesWithFavState, activeCategory, activeProvider, search]);
 
+  // Display games (for load more functionality)
+  const displayedGames = useMemo(() => {
+    return filteredGames.slice(0, displayCount);
+  }, [filteredGames, displayCount]);
+
   // Recently played games
   const recentlyPlayed = useMemo(
     () =>
@@ -365,317 +370,335 @@ export default function CasinoPage() {
     [gamesWithFavState]
   );
 
-  // Scroll category tabs
-  const scrollTabs = (direction: 'left' | 'right') => {
-    if (tabsRef.current) {
-      tabsRef.current.scrollBy({
-        left: direction === 'left' ? -200 : 200,
-        behavior: 'smooth',
-      });
-    }
+  const handleLoadMore = () => {
+    setDisplayCount((prev) => prev + 30);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-      {/* ── Search Bar ─────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-white">Casino</h1>
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search games or providers..."
-            className="w-full bg-[#1A1B1F] border border-white/[0.08] rounded-xl pl-10 pr-9 py-2.5 text-[13px] text-white placeholder:text-gray-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Category Tabs ──────────────────────────────────────────── */}
-      <div className="relative mb-5">
-        <button
-          onClick={() => scrollTabs('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[#1A1B1F]/90 border border-white/[0.08] items-center justify-center text-gray-400 hover:text-white transition-colors backdrop-blur-sm hidden sm:flex"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <div
-          ref={tabsRef}
-          className="flex gap-2 overflow-x-auto scrollbar-hide px-0 sm:px-9 pb-1"
-        >
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.key;
-            return (
-              <button
-                key={cat.key}
-                onClick={() => setActiveCategory(cat.key)}
-                className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-all duration-200 ${
-                  isActive
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
-                    : 'bg-[#1A1B1F] text-gray-400 hover:bg-[#252630] hover:text-white border border-white/[0.06]'
-                }`}
-              >
-                {cat.label}
-              </button>
-            );
-          })}
-        </div>
-        <button
-          onClick={() => scrollTabs('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[#1A1B1F]/90 border border-white/[0.08] items-center justify-center text-gray-400 hover:text-white transition-colors backdrop-blur-sm hidden sm:flex"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* ── Provider Filter ────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 mb-6">
-        <div ref={providerRef} className="relative">
-          <button
-            onClick={() => setShowProviderDropdown(!showProviderDropdown)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1A1B1F] border border-white/[0.08] text-[13px] text-gray-300 hover:bg-[#252630] hover:text-white transition-colors"
-          >
-            {activeProvider}
-            <ChevronDown
-              className={`w-3.5 h-3.5 transition-transform ${
-                showProviderDropdown ? 'rotate-180' : ''
-              }`}
+    <div className="min-h-screen bg-[#0F1014]">
+      {/* Container with proper mobile-first padding */}
+      <div className="mx-auto max-w-7xl px-4 py-3 md:py-4">
+        {/* ── Search Bar ─────────────────────────────────────────────── */}
+        <div className="mb-4">
+          <div className="relative w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search games..."
+              className="w-full h-11 bg-[#1A1B1F] border border-white/[0.08] rounded-lg pl-10 pr-10 text-base text-white placeholder:text-gray-500 outline-none focus:border-lime-500/50 focus:ring-2 focus:ring-lime-500/20 transition-all"
+              style={{ fontSize: '16px' }} // Prevent iOS zoom
             />
-          </button>
-          {showProviderDropdown && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              className="absolute left-0 top-full mt-1 w-52 bg-[#1E1F25] border border-white/[0.08] rounded-xl shadow-xl py-1 z-30"
-            >
-              {PROVIDERS.map((p) => (
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors active:scale-90"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Category Tabs ──────────────────────────────────────────── */}
+        <div className="mb-4">
+          <div
+            ref={tabsRef}
+            className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {CATEGORIES.map((cat) => {
+              const isActive = activeCategory === cat.key;
+              return (
                 <button
-                  key={p}
-                  onClick={() => {
-                    setActiveProvider(p);
-                    setShowProviderDropdown(false);
-                  }}
-                  className={`w-full text-left px-4 py-2.5 text-[13px] transition-colors ${
-                    activeProvider === p
-                      ? 'text-purple-400 bg-purple-500/10'
-                      : 'text-gray-300 hover:bg-white/[0.04] hover:text-white'
+                  key={cat.key}
+                  onClick={() => setActiveCategory(cat.key)}
+                  className={`h-11 px-4 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 snap-start shrink-0 ${
+                    isActive
+                      ? 'bg-lime-500 text-black'
+                      : 'bg-[#1A1B1F] text-gray-400 hover:bg-[#252630] hover:text-white border border-white/[0.06] active:scale-95'
                   }`}
                 >
-                  {p}
+                  {cat.label}
                 </button>
-              ))}
-            </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Featured Game Banner ───────────────────────────────────── */}
+        <section className="mb-6">
+          <Link href="/casino/s3" className="block group">
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 p-4 md:p-8 transition-transform duration-200 active:scale-[0.99]">
+              {/* Background decorative elements */}
+              <div className="absolute -top-10 -right-10 w-40 h-40 md:w-60 md:h-60 rounded-full bg-purple-500/10 blur-3xl" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 md:w-40 md:h-40 rounded-full bg-indigo-500/10 blur-3xl" />
+
+              <div className="absolute top-3 right-3 md:top-4 md:right-4">
+                <span className="text-[9px] md:text-[10px] font-bold bg-gradient-to-r from-red-500 to-orange-500 text-white px-2 py-1 rounded-full flex items-center gap-1">
+                  <Flame className="w-2.5 h-2.5 md:w-3 md:h-3" /> FEATURED
+                </span>
+              </div>
+
+              <div className="relative z-10 max-w-xl">
+                <p className="text-purple-300 text-[11px] md:text-xs font-semibold uppercase tracking-wider mb-1">
+                  Pragmatic Play
+                </p>
+                <h2 className="text-xl md:text-3xl font-bold text-white mb-2">
+                  Gates of Olympus
+                </h2>
+                <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-3 md:mb-4">
+                  Unleash the power of Zeus with multipliers up to 500x.
+                </p>
+                <div className="flex items-center gap-2 mb-4 md:mb-5 flex-wrap">
+                  <span className="text-[10px] md:text-[11px] bg-white/10 text-gray-300 px-2 py-1 rounded font-mono">
+                    RTP 96.5%
+                  </span>
+                  <span className="text-[10px] md:text-[11px] bg-white/10 text-gray-300 px-2 py-1 rounded">
+                    Max Win 5,000x
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] md:text-[11px] bg-yellow-500/15 text-yellow-400 px-2 py-1 rounded">
+                    <Star className="w-3 h-3 fill-current" /> 4.8
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 md:gap-3">
+                  <button className="flex items-center gap-1.5 bg-lime-500 hover:bg-lime-400 active:bg-lime-600 text-black font-bold px-5 py-2.5 md:px-6 md:py-3 rounded-lg transition-colors text-sm md:text-base">
+                    <Play className="w-4 h-4 fill-current" /> Play Now
+                  </button>
+                  <button className="bg-white/10 hover:bg-white/15 active:bg-white/5 text-white font-medium px-4 py-2.5 md:px-5 md:py-3 rounded-lg transition-colors text-sm md:text-base">
+                    Demo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </section>
+
+        {/* ── CryptoBet Originals Section ────────────────────────────── */}
+        <section className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="w-4 h-4 md:w-5 md:h-5 text-lime-500" />
+            <h2 className="text-base md:text-lg font-bold text-white">CryptoBet Originals</h2>
+            <span className="inline-flex items-center gap-1 text-[9px] md:text-[10px] bg-lime-500/20 text-lime-400 px-2 py-0.5 rounded-full font-semibold">
+              <ShieldCheck className="w-2.5 h-2.5 md:w-3 md:h-3" />
+              Provably Fair
+            </span>
+          </div>
+
+          {/* Horizontal scroll on mobile */}
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:overflow-visible">
+            <div className="flex md:grid md:grid-cols-3 lg:grid-cols-5 gap-3 snap-x snap-mandatory md:snap-none">
+              {ORIGINALS.map((game) => {
+                const GameIcon = game.Icon;
+                return (
+                  <Link
+                    key={game.slug}
+                    href={`/casino/${game.id}`}
+                    className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${game.gradient} p-4 md:p-6 transition-transform duration-200 active:scale-95 md:hover:scale-105 snap-start shrink-0 w-[140px] md:w-auto`}
+                  >
+                    <div className="absolute -top-4 -right-4 w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/5" />
+                    <div className="absolute -bottom-6 -left-6 w-20 h-20 md:w-24 md:h-24 rounded-full bg-white/5" />
+                    <div className="absolute top-2 right-2">
+                      <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5 text-white/40" />
+                    </div>
+                    <div className="relative z-10 flex flex-col items-center text-center gap-2">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-white/10 flex items-center justify-center mb-1 transition-transform group-active:scale-90 md:group-hover:scale-110">
+                        <GameIcon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                      </div>
+                      <span className="font-bold text-sm md:text-base text-white">{game.name}</span>
+                      <span className="text-[10px] md:text-[11px] text-white/60">{game.description}</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Recently Played (if logged in) ─────────────────────────── */}
+        {isAuthenticated && recentlyPlayed.length > 0 && (
+          <section className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base md:text-lg font-bold text-white">Recently Played</h2>
+              <Link
+                href="/casino?filter=recent"
+                className="text-xs md:text-sm text-lime-500 hover:text-lime-400 transition-colors font-medium"
+              >
+                View All
+              </Link>
+            </div>
+
+            {/* Horizontal scroll on mobile, grid on larger screens */}
+            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:overflow-visible">
+              <div className="flex md:grid md:grid-cols-4 lg:grid-cols-6 gap-3 snap-x snap-mandatory md:snap-none">
+                {recentlyPlayed.map((game) => (
+                  <div key={game.id} className="snap-start shrink-0 w-[110px] md:w-auto">
+                    <GameCard game={game} onToggleFavorite={toggleFavorite} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Provider Filter ────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 mb-4">
+          <div ref={providerRef} className="relative">
+            <button
+              onClick={() => setShowProviderDropdown(!showProviderDropdown)}
+              className="flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1A1B1F] border border-white/[0.08] text-sm text-gray-300 hover:bg-[#252630] hover:text-white transition-colors active:scale-95"
+            >
+              <span className="text-xs md:text-sm">{activeProvider}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform ${
+                  showProviderDropdown ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            {showProviderDropdown && (
+              <div className="absolute left-0 top-full mt-1 w-56 bg-[#1E1F25] border border-white/[0.08] rounded-xl shadow-2xl py-1 z-50 max-h-80 overflow-y-auto">
+                {PROVIDERS.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => {
+                      setActiveProvider(p);
+                      setShowProviderDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                      activeProvider === p
+                        ? 'text-lime-400 bg-lime-500/10'
+                        : 'text-gray-300 hover:bg-white/[0.04] hover:text-white active:bg-white/[0.08]'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Active filter pills */}
+          {activeProvider !== 'All Providers' && (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-lime-500/15 text-lime-400 text-xs font-medium">
+              {activeProvider}
+              <button
+                onClick={() => setActiveProvider('All Providers')}
+                className="hover:text-lime-300 active:scale-90"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
           )}
         </div>
-        {/* Active filter pills */}
-        {activeProvider !== 'All Providers' && (
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/15 text-purple-400 text-[12px] font-medium">
-            {activeProvider}
-            <button onClick={() => setActiveProvider('All Providers')}>
-              <X className="w-3 h-3" />
-            </button>
-          </span>
-        )}
-      </div>
 
-      {/* ── Featured Game Banner ───────────────────────────────────── */}
-      <section className="mb-8">
-        <Link href="/casino/s3" className="block">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-800 p-6 sm:p-8 hover:shadow-xl hover:shadow-purple-900/20 transition-shadow">
-            {/* Background decorative elements */}
-            <div className="absolute -top-10 -right-10 w-60 h-60 rounded-full bg-purple-500/10 blur-2xl" />
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-indigo-500/10 blur-2xl" />
-            <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-              <span className="text-[10px] font-bold bg-gradient-to-r from-red-500 to-orange-500 text-white px-2 py-1 rounded-full flex items-center gap-1">
-                <Flame className="w-3 h-3" /> FEATURED
+        {/* ── Game Grid ──────────────────────────────────────────────── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base md:text-lg font-bold text-white">
+              {activeCategory === 'all' ? 'All Games' : CATEGORIES.find((c) => c.key === activeCategory)?.label || 'Games'}
+              <span className="text-xs md:text-sm text-gray-500 font-normal ml-2">
+                ({filteredGames.length})
               </span>
-            </div>
-            <div className="relative z-10 max-w-xl">
-              <p className="text-purple-300 text-[12px] font-semibold uppercase tracking-wider mb-1">
-                Pragmatic Play
-              </p>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                Gates of Olympus
-              </h2>
-              <p className="text-gray-300 text-[14px] leading-relaxed mb-4 max-w-md">
-                Unleash the power of Zeus with multipliers up to 500x. Tumbling reels, free spins, and massive win potential await.
-              </p>
-              <div className="flex items-center gap-3 mb-5">
-                <span className="text-[11px] bg-white/10 text-gray-300 px-2.5 py-1 rounded-lg font-mono">
-                  RTP 96.5%
-                </span>
-                <span className="text-[11px] bg-white/10 text-gray-300 px-2.5 py-1 rounded-lg">
-                  Max Win 5,000x
-                </span>
-                <span className="flex items-center gap-1 text-[11px] bg-yellow-500/15 text-yellow-400 px-2.5 py-1 rounded-lg">
-                  <Star className="w-3 h-3 fill-current" /> 4.8
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-[14px]">
-                  <Play className="w-4 h-4 fill-current" /> Play Now
-                </button>
-                <button className="bg-white/10 hover:bg-white/15 text-white/70 hover:text-white font-medium px-5 py-2.5 rounded-xl transition-colors text-[14px]">
-                  Try Demo
-                </button>
-              </div>
-            </div>
+            </h2>
           </div>
-        </Link>
-      </section>
 
-      {/* ── CryptoBet Originals Section ────────────────────────────── */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2.5 mb-4">
-          <ShieldCheck className="w-5 h-5 text-purple-400" />
-          <h2 className="text-lg font-bold text-white">CryptoBet Originals</h2>
-          <span className="inline-flex items-center gap-1 text-[10px] bg-purple-500/20 text-purple-400 px-2.5 py-0.5 rounded-full font-semibold">
-            <ShieldCheck className="w-3 h-3" />
-            Provably Fair
-          </span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {ORIGINALS.map((game) => {
-            const GameIcon = game.Icon;
-            return (
-              <Link
-                key={game.slug}
-                href={`/casino/${game.id}`}
-                className={`group relative overflow-hidden rounded-xl bg-gradient-to-br ${game.gradient} p-5 sm:p-6 hover:scale-[1.03] transition-all duration-300 hover:shadow-lg hover:shadow-black/30`}
+          {filteredGames.length === 0 ? (
+            <div className="text-center py-16 md:py-20">
+              <Gamepad2 className="w-12 h-12 md:w-14 md:h-14 text-gray-700 mx-auto mb-3" />
+              <p className="text-gray-400 text-sm md:text-base font-medium">No games found</p>
+              <p className="text-xs md:text-sm text-gray-500 mt-1">
+                Try a different search, category, or provider
+              </p>
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setActiveProvider('All Providers');
+                  setActiveCategory('all');
+                }}
+                className="mt-4 text-lime-500 text-sm hover:text-lime-400 transition-colors font-medium active:scale-95"
               >
-                <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/5" />
-                <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-white/5" />
-                <div className="absolute top-2 right-2">
-                  <ShieldCheck className="w-3.5 h-3.5 text-white/40" />
-                </div>
-                <div className="relative z-10 flex flex-col items-center text-center gap-2">
-                  <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                    <GameIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="font-bold text-[15px] text-white">{game.name}</span>
-                  <span className="text-[11px] text-white/60">{game.description}</span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+                Clear all filters
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
+                {displayedGames.map((game) => (
+                  <GameCard
+                    key={game.id}
+                    game={game}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                ))}
+              </div>
 
-      {/* ── Recently Played (if logged in) ─────────────────────────── */}
-      {isAuthenticated && (
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">Recently Played</h2>
-            <Link
-              href="/casino?filter=recent"
-              className="text-[13px] text-purple-400 hover:text-purple-300 transition-colors"
-            >
-              View All
-            </Link>
+              {/* Load More Button */}
+              {displayCount < filteredGames.length && (
+                <div className="flex justify-center mt-6">
+                  <button
+                    onClick={handleLoadMore}
+                    className="flex items-center gap-2 bg-[#1A1B1F] hover:bg-[#252630] active:bg-[#1A1B1F] border border-white/[0.08] text-white font-semibold px-6 py-3 rounded-lg transition-all active:scale-95"
+                  >
+                    Load More Games
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* ── Top Winners Section ────────────────────────────────────── */}
+        <section className="mt-8 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy className="w-4 h-4 md:w-5 md:h-5 text-yellow-500" />
+            <h2 className="text-base md:text-lg font-bold text-white">Top Winners</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {recentlyPlayed.map((game) => (
-              <GameCard key={game.id} game={game} onToggleFavorite={toggleFavorite} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
+            {TOP_WINNERS.map((win) => (
+              <div
+                key={win.id}
+                className="flex items-center gap-3 bg-[#1A1B1F] border border-white/[0.06] rounded-lg p-3 hover:border-white/[0.12] transition-colors"
+              >
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center shrink-0">
+                  <Trophy className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs md:text-sm font-semibold text-white truncate">
+                      {win.user}
+                    </span>
+                    <span className="text-[10px] md:text-[11px] text-gray-500 whitespace-nowrap">
+                      {win.timeAgo}
+                    </span>
+                  </div>
+                  <p className="text-[10px] md:text-[11px] text-gray-400 truncate">{win.game}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs md:text-sm font-bold text-emerald-400">
+                      {win.amount} {win.currency}
+                    </span>
+                    <span className="text-[9px] md:text-[10px] text-yellow-400/70 font-mono">
+                      {win.multiplier}
+                    </span>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </section>
-      )}
+      </div>
 
-      {/* ── Top Winners ────────────────────────────────────────────── */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2.5 mb-4">
-          <Trophy className="w-5 h-5 text-yellow-500" />
-          <h2 className="text-lg font-bold text-white">Top Winners</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {TOP_WINNERS.map((win) => (
-            <div
-              key={win.id}
-              className="flex items-center gap-3 bg-[#1A1B1F] border border-white/[0.06] rounded-xl p-3.5 hover:border-white/[0.12] transition-colors"
-            >
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center shrink-0">
-                <Trophy className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[13px] font-semibold text-white truncate">
-                    {win.user}
-                  </span>
-                  <span className="text-[11px] text-gray-500 whitespace-nowrap">
-                    {win.timeAgo}
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-400 truncate">{win.game}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[13px] font-bold text-emerald-400">
-                    {win.amount} {win.currency}
-                  </span>
-                  <span className="text-[10px] text-yellow-400/70 font-mono">
-                    {win.multiplier}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Game Grid ──────────────────────────────────────────────── */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">
-            {activeCategory === 'all' ? 'All Games' : CATEGORIES.find((c) => c.key === activeCategory)?.label || 'Games'}
-            <span className="text-[13px] text-gray-500 font-normal ml-2">
-              ({filteredGames.length})
-            </span>
-          </h2>
-        </div>
-
-        {filteredGames.length === 0 ? (
-          <div className="text-center py-20">
-            <Gamepad2 className="w-14 h-14 text-gray-700 mx-auto mb-4" />
-            <p className="text-gray-400 text-base font-medium">No games found</p>
-            <p className="text-[13px] text-gray-500 mt-1">
-              Try a different search, category, or provider
-            </p>
-            <button
-              onClick={() => {
-                setSearch('');
-                setActiveProvider('All Providers');
-                setActiveCategory('all');
-              }}
-              className="mt-4 text-purple-400 text-[13px] hover:text-purple-300 transition-colors"
-            >
-              Clear all filters
-            </button>
-          </div>
-        ) : (
-          <motion.div
-            layout
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredGames.map((game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  onToggleFavorite={toggleFavorite}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </section>
+      {/* Global styles for hiding scrollbars */}
+      <style jsx global>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }

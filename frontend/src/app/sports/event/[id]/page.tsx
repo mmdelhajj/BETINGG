@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { sportsApi } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { useBetSlipStore } from '@/stores/betSlipStore';
@@ -17,7 +16,8 @@ import {
   Clock,
   Zap,
   Star,
-  Layers,
+  Lock,
+  Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Event, Market, Selection } from '@/types';
@@ -26,14 +26,12 @@ import type { Event, Market, Selection } from '@/types';
 // Market category tabs
 // ──────────────────────────────────────────────────────────────────────
 
-type MarketCategory = 'all' | 'popular' | 'main' | 'goals' | 'halves' | 'player_props' | 'specials';
+type MarketCategory = 'main' | 'goals' | 'halves' | 'player_props' | 'specials';
 
 const CATEGORY_TABS: { key: MarketCategory; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'popular', label: 'Popular' },
   { key: 'main', label: 'Main' },
   { key: 'goals', label: 'Goals/Points' },
-  { key: 'halves', label: 'Halves/Quarters' },
+  { key: 'halves', label: 'Half/Period' },
   { key: 'player_props', label: 'Player Props' },
   { key: 'specials', label: 'Specials' },
 ];
@@ -81,7 +79,7 @@ type CategorizedMarket = Market & { _category: MarketCategory };
 
 function generateSoccerMarkets(home: string, away: string): CategorizedMarket[] {
   return [
-    // --- POPULAR / MAIN ---
+    // --- MAIN ---
     mkMarket('Full Time Result', '1X2', 'main', [
       { name: home, odds: 2.10 },
       { name: 'Draw', odds: 3.40 },
@@ -92,13 +90,31 @@ function generateSoccerMarkets(home: string, away: string): CategorizedMarket[] 
       { name: `${home} or ${away}`, odds: 1.25 },
       { name: `${away} or Draw`, odds: 1.55 },
     ]),
-    mkMarket('Both Teams to Score', 'BTTS', 'popular', [
+    mkMarket('Both Teams to Score', 'BTTS', 'main', [
       { name: 'Yes', odds: 1.72 },
       { name: 'No', odds: 2.05 },
     ]),
     mkMarket('Draw No Bet', 'DNB', 'main', [
       { name: home, odds: 1.65 },
       { name: away, odds: 2.15 },
+    ]),
+
+    // --- ASIAN HANDICAP ---
+    mkMarket('Asian Handicap -1.5', 'SPREAD', 'main', [
+      { name: `${home} -1.5`, odds: 3.10 },
+      { name: `${away} +1.5`, odds: 1.35 },
+    ]),
+    mkMarket('Asian Handicap -1.0', 'SPREAD', 'main', [
+      { name: `${home} -1`, odds: 2.60 },
+      { name: `${away} +1`, odds: 1.50 },
+    ]),
+    mkMarket('Asian Handicap -0.5', 'SPREAD', 'main', [
+      { name: `${home} -0.5`, odds: 2.10 },
+      { name: `${away} +0.5`, odds: 1.75 },
+    ]),
+    mkMarket('Asian Handicap 0', 'SPREAD', 'main', [
+      { name: `${home} 0`, odds: 1.85 },
+      { name: `${away} 0`, odds: 2.00 },
     ]),
 
     // --- GOALS ---
@@ -135,38 +151,8 @@ function generateSoccerMarkets(home: string, away: string): CategorizedMarket[] 
       { name: '5+ Goals', odds: 5.50 },
     ]),
 
-    // --- ASIAN HANDICAP ---
-    mkMarket('Asian Handicap -1.5', 'SPREAD', 'main', [
-      { name: `${home} -1.5`, odds: 3.10 },
-      { name: `${away} +1.5`, odds: 1.35 },
-    ]),
-    mkMarket('Asian Handicap -1.0', 'SPREAD', 'main', [
-      { name: `${home} -1`, odds: 2.60 },
-      { name: `${away} +1`, odds: 1.50 },
-    ]),
-    mkMarket('Asian Handicap -0.5', 'SPREAD', 'main', [
-      { name: `${home} -0.5`, odds: 2.10 },
-      { name: `${away} +0.5`, odds: 1.75 },
-    ]),
-    mkMarket('Asian Handicap 0', 'SPREAD', 'main', [
-      { name: `${home} 0`, odds: 1.85 },
-      { name: `${away} 0`, odds: 2.00 },
-    ]),
-    mkMarket('Asian Handicap +0.5', 'SPREAD', 'main', [
-      { name: `${home} +0.5`, odds: 1.55 },
-      { name: `${away} -0.5`, odds: 2.40 },
-    ]),
-    mkMarket('Asian Handicap +1.0', 'SPREAD', 'main', [
-      { name: `${home} +1`, odds: 1.35 },
-      { name: `${away} -1`, odds: 3.10 },
-    ]),
-    mkMarket('Asian Handicap +1.5', 'SPREAD', 'main', [
-      { name: `${home} +1.5`, odds: 1.22 },
-      { name: `${away} -1.5`, odds: 3.90 },
-    ]),
-
     // --- CORRECT SCORE ---
-    mkMarket('Correct Score', 'CORRECT_SCORE', 'popular', [
+    mkMarket('Correct Score', 'CORRECT_SCORE', 'main', [
       { name: '1-0', odds: 6.50 },
       { name: '2-0', odds: 9.00 },
       { name: '2-1', odds: 8.50 },
@@ -326,12 +312,12 @@ function generateBasketballMarkets(home: string, away: string): CategorizedMarke
       { name: 'Even', odds: 1.90 },
     ]),
 
-    // --- POPULAR ---
-    mkMarket(`${home} Total Points O/U 107.5`, 'TEAM_TOTAL', 'popular', [
+    // --- TEAM TOTALS ---
+    mkMarket(`${home} Total Points O/U 107.5`, 'TEAM_TOTAL', 'goals', [
       { name: 'Over 107.5', odds: 1.91 },
       { name: 'Under 107.5', odds: 1.91 },
     ]),
-    mkMarket(`${away} Total Points O/U 106.5`, 'TEAM_TOTAL', 'popular', [
+    mkMarket(`${away} Total Points O/U 106.5`, 'TEAM_TOTAL', 'goals', [
       { name: 'Over 106.5', odds: 1.91 },
       { name: 'Under 106.5', odds: 1.91 },
     ]),
@@ -633,12 +619,12 @@ function generateAmericanFootballMarkets(home: string, away: string): Categorize
       { name: 'Even', odds: 1.91 },
     ]),
 
-    // --- POPULAR ---
-    mkMarket(`${home} Total Points O/U 23.5`, 'TEAM_TOTAL', 'popular', [
+    // --- TEAM TOTALS ---
+    mkMarket(`${home} Total Points O/U 23.5`, 'TEAM_TOTAL', 'goals', [
       { name: 'Over 23.5', odds: 1.91 },
       { name: 'Under 23.5', odds: 1.91 },
     ]),
-    mkMarket(`${away} Total Points O/U 22.5`, 'TEAM_TOTAL', 'popular', [
+    mkMarket(`${away} Total Points O/U 22.5`, 'TEAM_TOTAL', 'goals', [
       { name: 'Over 22.5', odds: 1.91 },
       { name: 'Under 22.5', odds: 1.91 },
     ]),
@@ -748,7 +734,6 @@ function generateAmericanFootballMarkets(home: string, away: string): Categorize
   ];
 }
 
-/** Fallback generic markets for any sport */
 function generateGenericMarkets(home: string, away: string): CategorizedMarket[] {
   return [
     mkMarket('Match Winner', 'MONEYLINE', 'main', [
@@ -786,29 +771,11 @@ function generateMockMarkets(sportSlug: string, home: string, away: string): Cat
 }
 
 function filterByCategory(markets: CategorizedMarket[], cat: MarketCategory): CategorizedMarket[] {
-  if (cat === 'all') return markets;
-  if (cat === 'popular') {
-    // Popular = first few from main + BTTS + correct score + any explicit popular
-    const popular = markets.filter(
-      (m) =>
-        m._category === 'popular' ||
-        m.name === 'Full Time Result' ||
-        m.name === 'Money Line' ||
-        m.name === 'Match Winner' ||
-        m.name.startsWith('Point Spread') && m.name.includes('-3.5') ||
-        m.name.startsWith('Run Line') && m.name.includes('-1.5') ||
-        m.name.includes('Over/Under 2.5') ||
-        m.name === 'Total Points Over/Under 215.5' ||
-        m.name === 'Total Runs Over/Under 8.5' ||
-        m.name === 'Total Points Over/Under 45.5'
-    );
-    return popular.length > 0 ? popular : markets.slice(0, 6);
-  }
   return markets.filter((m) => m._category === cat);
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Animated Accordion Market Section
+// Animated Accordion Market Section (Mobile-First Cloudbet/bet365 Style)
 // ──────────────────────────────────────────────────────────────────────
 
 function MarketAccordion({
@@ -840,50 +807,64 @@ function MarketAccordion({
     [market, event, toggleSelection]
   );
 
-  const gridCols =
-    market.selections.length === 2
-      ? 'grid-cols-2'
-      : market.selections.length === 3
-        ? 'grid-cols-3'
-        : market.selections.length <= 6
-          ? 'grid-cols-3'
-          : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
+  // Determine grid layout based on selection count
+  const getGridCols = () => {
+    const count = market.selections.length;
+    if (count === 2) return 'grid-cols-2';
+    if (count === 3) return 'grid-cols-3';
+    // For many selections: 2-col mobile, 3-col tablet+
+    return 'grid-cols-2 md:grid-cols-3';
+  };
 
   return (
-    <div className="overflow-hidden border-b border-[#2a2b30]">
-      {/* Header */}
+    <div className="border-b border-gray-800/50 last:border-b-0">
+      {/* Market Header */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-[#1A1B1F] hover:bg-[#22232a] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1b1f] hover:bg-[#1f2025] active:bg-[#22232a] transition-colors"
+        aria-expanded={isOpen}
       >
-        <span className="text-sm font-semibold text-white">{market.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-white">{market.name}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              // Info modal would open here
+            }}
+            className="text-gray-500 hover:text-gray-300"
+            aria-label="Market info"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           {market.status === 'SUSPENDED' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-semibold">
-              SUSPENDED
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">
+              <Lock className="w-3 h-3 text-yellow-500" />
+              <span className="text-[10px] font-bold text-yellow-500 uppercase">Suspended</span>
             </span>
           )}
           <motion.div
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="w-4 h-4 text-gray-500" />
+            <ChevronDown className="w-4 h-4 text-gray-400" />
           </motion.div>
         </div>
       </button>
 
-      {/* Content */}
+      {/* Market Content */}
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="px-3 py-3 bg-[#13141a]">
-              <div className={cn('grid gap-2', gridCols)}>
+            <div className="px-4 py-3 bg-[#13141a]">
+              <div className={cn('grid gap-2', getGridCols())}>
                 {market.selections.map((sel) => {
                   const isSelected = hasSelection(sel.id);
                   const isDisabled = sel.status !== 'ACTIVE' || market.status !== 'OPEN';
@@ -894,29 +875,36 @@ function MarketAccordion({
                       onClick={() => handleSelect(sel)}
                       disabled={isDisabled}
                       className={cn(
-                        'flex items-center justify-between px-3 py-2.5 rounded-md transition-all duration-150 min-h-[44px]',
+                        'flex flex-col justify-center px-3 py-3 rounded-lg transition-all duration-150 min-h-[48px] relative',
                         isSelected
-                          ? 'bg-[rgba(141,82,218,0.15)] border border-[#8D52DA]'
-                          : 'bg-[rgba(255,255,255,0.05)] border border-transparent hover:bg-[rgba(255,255,255,0.08)]',
+                          ? 'bg-lime-500/20 border border-lime-500'
+                          : 'bg-[#1a1b1f] border border-gray-800/50 hover:border-gray-700 active:bg-[#1f2025]',
                         isDisabled && 'opacity-40 cursor-not-allowed'
                       )}
                     >
-                      <span
-                        className={cn(
-                          'text-sm truncate mr-2',
-                          isSelected ? 'text-[#b388f5] font-medium' : 'text-gray-300'
-                        )}
-                      >
-                        {sel.name}
-                      </span>
-                      <span
-                        className={cn(
-                          'font-mono font-bold text-sm shrink-0',
-                          isSelected ? 'text-[#8D52DA]' : 'text-white'
-                        )}
-                      >
-                        {formatOdds(sel.odds)}
-                      </span>
+                      {isDisabled && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Lock className="w-4 h-4 text-gray-600" />
+                        </div>
+                      )}
+                      <div className={cn('flex items-center justify-between', isDisabled && 'opacity-30')}>
+                        <span
+                          className={cn(
+                            'text-sm font-medium line-clamp-2 text-left mr-2',
+                            isSelected ? 'text-lime-400' : 'text-gray-200'
+                          )}
+                        >
+                          {sel.name}
+                        </span>
+                        <span
+                          className={cn(
+                            'font-mono font-bold text-sm shrink-0',
+                            isSelected ? 'text-lime-400' : 'text-white'
+                          )}
+                        >
+                          {formatOdds(sel.odds)}
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -925,29 +913,6 @@ function MarketAccordion({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Bet Builder Section
-// ──────────────────────────────────────────────────────────────────────
-
-function BetBuilderBanner() {
-  return (
-    <div className="rounded-lg border border-[#8D52DA]/30 bg-gradient-to-r from-[#8D52DA]/10 to-transparent overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-9 h-9 rounded-lg bg-[#8D52DA]/20 flex items-center justify-center shrink-0">
-          <Layers className="w-5 h-5 text-[#8D52DA]" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white">Bet Builder</p>
-          <p className="text-xs text-gray-400">Combine selections from this event into one bet</p>
-        </div>
-        <div className="px-3 py-1.5 rounded-md bg-[#8D52DA] text-white text-xs font-bold shrink-0 cursor-pointer hover:bg-[#9e63eb] transition-colors">
-          Build Your Bet
-        </div>
-      </div>
     </div>
   );
 }
@@ -994,7 +959,7 @@ function KickoffCountdown({ startTime }: { startTime: string }) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Basketball scoreboard
+// Basketball scoreboard (horizontal scrollable table)
 // ──────────────────────────────────────────────────────────────────────
 
 function BasketballScoreboard({ event }: { event: Event }) {
@@ -1023,36 +988,52 @@ function BasketballScoreboard({ event }: { event: Event }) {
   if (quarters.length === 0) return null;
 
   return (
-    <div className="mt-4 rounded-lg border border-[#2a2b30] overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-[#1A1B1F]">
-            <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 w-1/3">Team</th>
-            {quarters.map((q) => (
-              <th key={q.label} className="text-center px-2 py-2 text-xs font-medium text-gray-500">
-                {q.label}
+    <div className="mt-4 rounded-lg border border-gray-800/50 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[400px]">
+          <thead>
+            <tr className="bg-[#1a1b1f]">
+              <th className="text-left px-3 py-2 text-xs font-medium text-gray-400 sticky left-0 bg-[#1a1b1f]">
+                Team
               </th>
-            ))}
-            <th className="text-center px-3 py-2 text-xs font-bold text-gray-400">T</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="border-t border-[#2a2b30]">
-            <td className="px-3 py-2 font-medium text-white">{event.homeTeam}</td>
-            {quarters.map((q) => (
-              <td key={q.label} className="text-center px-2 py-2 font-mono text-gray-300">{q.home}</td>
-            ))}
-            <td className="text-center px-3 py-2 font-mono font-bold text-white">{event.homeScore ?? 0}</td>
-          </tr>
-          <tr className="border-t border-[#2a2b30]">
-            <td className="px-3 py-2 font-medium text-gray-300">{event.awayTeam}</td>
-            {quarters.map((q) => (
-              <td key={q.label} className="text-center px-2 py-2 font-mono text-gray-400">{q.away}</td>
-            ))}
-            <td className="text-center px-3 py-2 font-mono font-bold text-gray-300">{event.awayScore ?? 0}</td>
-          </tr>
-        </tbody>
-      </table>
+              {quarters.map((q) => (
+                <th key={q.label} className="text-center px-3 py-2 text-xs font-medium text-gray-400 min-w-[50px]">
+                  {q.label}
+                </th>
+              ))}
+              <th className="text-center px-3 py-2 text-xs font-bold text-gray-300">Total</th>
+            </tr>
+          </thead>
+          <tbody className="bg-[#13141a]">
+            <tr className="border-t border-gray-800/50">
+              <td className="px-3 py-2 font-medium text-white sticky left-0 bg-[#13141a]">
+                {event.homeTeam}
+              </td>
+              {quarters.map((q) => (
+                <td key={q.label} className="text-center px-3 py-2 font-mono text-gray-300">
+                  {q.home}
+                </td>
+              ))}
+              <td className="text-center px-3 py-2 font-mono font-bold text-lime-400">
+                {event.homeScore ?? 0}
+              </td>
+            </tr>
+            <tr className="border-t border-gray-800/50">
+              <td className="px-3 py-2 font-medium text-gray-300 sticky left-0 bg-[#13141a]">
+                {event.awayTeam}
+              </td>
+              {quarters.map((q) => (
+                <td key={q.label} className="text-center px-3 py-2 font-mono text-gray-400">
+                  {q.away}
+                </td>
+              ))}
+              <td className="text-center px-3 py-2 font-mono font-bold text-gray-300">
+                {event.awayScore ?? 0}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1063,30 +1044,32 @@ function BasketballScoreboard({ event }: { event: Event }) {
 
 function EventDetailSkeleton() {
   return (
-    <div className="max-w-5xl mx-auto space-y-4 animate-pulse">
-      <div className="h-4 w-64 bg-[#1A1B1F] rounded" />
-      <div className="rounded-xl bg-[#1A1B1F] border border-[#2a2b30] p-6">
-        <div className="h-6 w-48 bg-[#22232a] rounded mb-6" />
-        <div className="flex items-center justify-between">
-          <div className="space-y-2 flex-1">
-            <div className="h-6 w-32 bg-[#22232a] rounded" />
+    <div className="min-h-screen bg-[#0f1014] px-4 py-4 pb-24 animate-pulse">
+      <div className="h-4 w-32 bg-gray-800 rounded mb-4" />
+      <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 mb-4">
+        <div className="h-5 w-40 bg-gray-800 rounded mb-4" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 space-y-2">
+            <div className="h-12 w-12 bg-gray-800 rounded-full mx-auto" />
+            <div className="h-4 w-20 bg-gray-800 rounded mx-auto" />
           </div>
-          <div className="h-16 w-24 bg-[#22232a] rounded" />
-          <div className="space-y-2 flex-1 flex flex-col items-end">
-            <div className="h-6 w-32 bg-[#22232a] rounded" />
+          <div className="h-10 w-16 bg-gray-800 rounded" />
+          <div className="flex-1 space-y-2">
+            <div className="h-12 w-12 bg-gray-800 rounded-full mx-auto" />
+            <div className="h-4 w-20 bg-gray-800 rounded mx-auto" />
           </div>
         </div>
       </div>
-      <div className="h-10 w-full bg-[#1A1B1F] rounded-lg" />
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="h-20 bg-[#1A1B1F] rounded-lg" />
+      <div className="h-11 w-full bg-gray-900 rounded-lg mb-4" />
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="h-24 bg-gray-900 rounded-lg mb-2" />
       ))}
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Main Page Component
+// Main Page Component (Mobile-First Professional Design)
 // ──────────────────────────────────────────────────────────────────────
 
 export default function EventDetailPage() {
@@ -1095,8 +1078,9 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<MarketCategory>('all');
+  const [activeCategory, setActiveCategory] = useState<MarketCategory>('main');
   const tabsRef = useRef<HTMLDivElement>(null);
+  const marketsRef = useRef<HTMLDivElement>(null);
 
   // Reset mock ID generator on mount to keep IDs stable per render
   useEffect(() => {
@@ -1207,8 +1191,6 @@ export default function EventDetailPage() {
   // Count per category
   const categoryCounts = useMemo(() => {
     const counts: Record<MarketCategory, number> = {
-      all: allMarkets.length,
-      popular: filterByCategory(allMarkets, 'popular').length,
       main: filterByCategory(allMarkets, 'main').length,
       goals: filterByCategory(allMarkets, 'goals').length,
       halves: filterByCategory(allMarkets, 'halves').length,
@@ -1218,18 +1200,29 @@ export default function EventDetailPage() {
     return counts;
   }, [allMarkets]);
 
+  // Scroll to markets when tab is clicked
+  const handleTabClick = (category: MarketCategory) => {
+    setActiveCategory(category);
+    // Smooth scroll to markets section on mobile
+    if (marketsRef.current && window.innerWidth < 1024) {
+      setTimeout(() => {
+        marketsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  };
+
   // ─── Render states ─────────────────────────────────────────────────
 
   if (isLoading) return <EventDetailSkeleton />;
 
   if (error || !event) {
     return (
-      <div className="max-w-5xl mx-auto">
-        <div className="rounded-lg border border-[#2a2b30] bg-[#1A1B1F] text-center py-16">
+      <div className="min-h-screen bg-[#0f1014] px-4 py-4">
+        <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] text-center py-16">
           <p className="text-gray-400 text-lg mb-4">{error || 'Event not found'}</p>
           <button
             onClick={() => router.back()}
-            className="px-5 py-2.5 rounded-lg bg-[#8D52DA] text-white text-sm font-semibold hover:bg-[#9e63eb] transition-colors"
+            className="px-5 py-2.5 rounded-lg bg-lime-500 text-black text-sm font-semibold hover:bg-lime-400 active:bg-lime-600 transition-colors"
           >
             Go Back
           </button>
@@ -1244,53 +1237,35 @@ export default function EventDetailPage() {
   const away = event.awayTeam || 'TBD';
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4 pb-8">
+    <div className="min-h-screen bg-[#0f1014] px-4 py-4 pb-24">
       {/* ────────── Back button + breadcrumb ────────── */}
-      <div className="flex items-center gap-3">
+      <div className="mb-3">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors shrink-0"
+          className="flex items-center gap-1 text-sm text-gray-400 hover:text-white active:text-gray-300 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back
+          <span>Back</span>
         </button>
-        <nav className="flex items-center gap-1.5 text-xs text-gray-500 overflow-hidden">
-          <Link href="/sports" className="hover:text-[#8D52DA] transition-colors shrink-0">
-            Sports
-          </Link>
-          <span className="text-gray-700">/</span>
-          {event.competition?.sport?.slug ? (
-            <Link
-              href={`/sports/${event.competition.sport.slug}`}
-              className="hover:text-[#8D52DA] transition-colors shrink-0"
-            >
-              {sportName}
-            </Link>
-          ) : (
-            <span className="shrink-0">{sportName}</span>
-          )}
-          <span className="text-gray-700">/</span>
-          <span className="text-gray-400 truncate">{competitionName}</span>
-        </nav>
       </div>
 
-      {/* ────────── Event Header ────────── */}
-      <div className="rounded-xl border border-[#2a2b30] bg-gradient-to-b from-[#1A1B1F] to-[#13141a] overflow-hidden">
+      {/* ────────── Event Header (Mobile-First) ────────── */}
+      <div className="rounded-xl border border-gray-800/80 bg-gradient-to-b from-[#1a1b1f] to-[#13141a] overflow-hidden mb-4 shadow-lg">
         {/* Competition bar */}
-        <div className="flex items-center justify-between px-5 py-2.5 border-b border-[#2a2b30] bg-[#1A1B1F]/80">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-800/50 bg-[#1a1b1f]/80">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             {event.isLive && (
-              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30">
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 shrink-0">
                 <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                 <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">
                   Live
                 </span>
               </span>
             )}
-            <Trophy className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-xs text-gray-400">{competitionName}</span>
+            <Trophy className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+            <span className="text-xs text-gray-400 truncate">{competitionName}</span>
           </div>
-          <div>
+          <div className="shrink-0 ml-2">
             {event.isLive && event.metadata?.period ? (
               <span className="text-xs text-red-400 font-medium">
                 {event.metadata.period}
@@ -1302,36 +1277,37 @@ export default function EventDetailPage() {
           </div>
         </div>
 
-        {/* Teams + Score */}
-        <div className="px-5 py-6">
-          <div className="flex items-center justify-between">
+        {/* Teams + Score (Mobile optimized) */}
+        <div className="px-4 py-5">
+          <div className="flex items-center justify-between gap-4">
             {/* Home team */}
             <div className="flex-1 text-center">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-[#22232a] border border-[#2a2b30] flex items-center justify-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-[64px] md:h-[64px] mx-auto mb-2 rounded-full bg-[#22232a] border border-gray-800 flex items-center justify-center">
                 {event.homeTeamLogo ? (
                   <img
                     src={event.homeTeamLogo}
                     alt={home}
-                    className="w-10 h-10 object-contain"
+                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 object-contain"
                   />
                 ) : (
-                  <span className="text-2xl font-bold text-gray-400">{home.charAt(0)}</span>
+                  <span className="text-xl sm:text-2xl font-bold text-gray-400">{home.charAt(0)}</span>
                 )}
               </div>
-              <p className="font-bold text-lg text-white leading-tight">{home}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Home</p>
+              <p className="font-bold text-base sm:text-lg md:text-xl text-white leading-tight line-clamp-2">
+                {home}
+              </p>
             </div>
 
             {/* Score / VS */}
-            <div className="px-6 text-center shrink-0">
+            <div className="px-3 text-center shrink-0">
               {event.isLive ? (
                 <div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-5xl font-black font-mono text-white leading-none">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <span className="text-3xl sm:text-4xl md:text-5xl font-black font-mono text-white leading-none">
                       {event.homeScore ?? 0}
                     </span>
-                    <span className="text-xl text-gray-600 font-light">:</span>
-                    <span className="text-5xl font-black font-mono text-white leading-none">
+                    <span className="text-lg sm:text-xl text-gray-600 font-light">:</span>
+                    <span className="text-3xl sm:text-4xl md:text-5xl font-black font-mono text-white leading-none">
                       {event.awayScore ?? 0}
                     </span>
                   </div>
@@ -1346,15 +1322,15 @@ export default function EventDetailPage() {
                 </div>
               ) : (
                 <div>
-                  <span className="text-3xl font-bold text-gray-600">VS</span>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <span className="text-2xl sm:text-3xl font-bold text-gray-600">VS</span>
+                  <p className="text-[10px] sm:text-xs text-gray-500 mt-1.5">
                     {new Date(event.startTime).toLocaleDateString('en-US', {
                       weekday: 'short',
                       month: 'short',
                       day: 'numeric',
                     })}
                   </p>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-[10px] sm:text-xs text-gray-600">
                     {new Date(event.startTime).toLocaleTimeString('en-US', {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -1366,19 +1342,20 @@ export default function EventDetailPage() {
 
             {/* Away team */}
             <div className="flex-1 text-center">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-[#22232a] border border-[#2a2b30] flex items-center justify-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-[64px] md:h-[64px] mx-auto mb-2 rounded-full bg-[#22232a] border border-gray-800 flex items-center justify-center">
                 {event.awayTeamLogo ? (
                   <img
                     src={event.awayTeamLogo}
                     alt={away}
-                    className="w-10 h-10 object-contain"
+                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 object-contain"
                   />
                 ) : (
-                  <span className="text-2xl font-bold text-gray-400">{away.charAt(0)}</span>
+                  <span className="text-xl sm:text-2xl font-bold text-gray-400">{away.charAt(0)}</span>
                 )}
               </div>
-              <p className="font-bold text-lg text-white leading-tight">{away}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Away</p>
+              <p className="font-bold text-base sm:text-lg md:text-xl text-white leading-tight line-clamp-2">
+                {away}
+              </p>
             </div>
           </div>
 
@@ -1387,55 +1364,57 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      {/* ────────── Bet Builder ────────── */}
-      <BetBuilderBanner />
-
-      {/* ────────── Category Tabs (horizontal scroll) ────────── */}
-      <div
-        ref={tabsRef}
-        className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-hide bg-[#1A1B1F] rounded-lg border border-[#2a2b30] p-1"
-      >
-        {CATEGORY_TABS.map((tab) => {
-          const count = categoryCounts[tab.key];
-          const isActive = activeCategory === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveCategory(tab.key)}
-              className={cn(
-                'flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all',
-                isActive
-                  ? 'bg-[#8D52DA]/15 text-[#b388f5]'
-                  : count > 0
-                    ? 'text-gray-400 hover:text-white hover:bg-[#22232a]'
-                    : 'text-gray-600 cursor-default'
-              )}
-              disabled={count === 0}
-            >
-              {tab.key === 'popular' && <Star className="w-3.5 h-3.5" />}
-              {tab.key === 'specials' && <Zap className="w-3.5 h-3.5" />}
-              {tab.label}
-              {count > 0 && (
-                <span
-                  className={cn(
-                    'text-[10px] ml-0.5',
-                    isActive ? 'text-[#b388f5]/70' : 'text-gray-600'
-                  )}
-                >
-                  ({count})
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* ────────── Sticky Category Tabs (Horizontal Scroll, Snap) ────────── */}
+      <div className="sticky top-0 z-20 bg-[#0f1014] pb-2 -mx-4 px-4">
+        <div
+          ref={tabsRef}
+          className="flex items-center gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth"
+          style={{ scrollSnapType: 'x mandatory' }}
+        >
+          {CATEGORY_TABS.map((tab) => {
+            const count = categoryCounts[tab.key];
+            const isActive = activeCategory === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleTabClick(tab.key)}
+                disabled={count === 0}
+                className={cn(
+                  'flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all shrink-0 snap-start h-11',
+                  isActive
+                    ? 'bg-lime-500 text-black shadow-lg shadow-lime-500/20'
+                    : count > 0
+                      ? 'bg-[#1a1b1f] text-gray-300 border border-gray-800 hover:border-gray-700 active:bg-[#1f2025]'
+                      : 'bg-[#1a1b1f] text-gray-600 border border-gray-800/50 cursor-not-allowed opacity-50'
+                )}
+              >
+                {tab.key === 'specials' && <Zap className="w-4 h-4" />}
+                {tab.key === 'player_props' && <Star className="w-4 h-4" />}
+                <span>{tab.label}</span>
+                {count > 0 && (
+                  <span
+                    className={cn(
+                      'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                      isActive ? 'bg-black/20 text-black' : 'bg-gray-800 text-gray-400'
+                    )}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {/* Active indicator bar (lime bottom border effect) */}
+        <div className="h-0.5 bg-lime-500 mt-2 rounded-full" style={{ width: '40px' }} />
       </div>
 
-      {/* ────────── Markets ────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+      {/* ────────── Markets Grid (Desktop: 2-column with sidebar) ────────── */}
+      <div ref={marketsRef} className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 mt-4">
         {/* Left column: Markets list */}
         <div>
           {displayedMarkets.length === 0 ? (
-            <div className="rounded-lg border border-[#2a2b30] bg-[#1A1B1F] text-center py-12">
+            <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] text-center py-12">
               <svg
                 className="w-12 h-12 mx-auto text-gray-600 mb-3"
                 fill="none"
@@ -1449,51 +1428,49 @@ export default function EventDetailPage() {
                   d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                 />
               </svg>
-              <p className="text-gray-400 text-lg font-medium">No markets in this category</p>
-              <p className="text-gray-500 text-sm mt-1">
-                Try the &ldquo;All&rdquo; tab to browse all available markets.
-              </p>
+              <p className="text-gray-400 text-base font-medium">No markets in this category</p>
+              <p className="text-gray-500 text-sm mt-1">Try another category to see available markets.</p>
             </div>
           ) : (
-            <div className="rounded-lg border border-[#2a2b30] overflow-hidden">
+            <div className="rounded-lg border border-gray-800/80 overflow-hidden shadow-sm">
               {displayedMarkets.map((market, idx) => (
                 <MarketAccordion
                   key={market.id}
                   market={market}
                   event={event}
-                  defaultOpen={idx < 5}
+                  defaultOpen={idx < 3}
                 />
               ))}
             </div>
           )}
         </div>
 
-        {/* Right column: Match info sidebar */}
+        {/* Right column: Match info sidebar (desktop only) */}
         <div className="hidden lg:block">
-          <div className="sticky top-4 space-y-4">
+          <div className="sticky top-20 space-y-4">
             {/* Match Info Card */}
-            <div className="rounded-lg border border-[#2a2b30] bg-[#1A1B1F] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2a2b30] bg-[#22232a]/50">
+            <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-800 bg-[#16171b]">
                 <h3 className="text-sm font-semibold text-white">Match Info</h3>
               </div>
               <div className="p-4 space-y-3">
                 <div className="flex items-start gap-3">
                   <Trophy className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-gray-500">Competition</p>
                     <p className="text-sm text-white">{competitionName}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <BarChart3 className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-gray-500">Sport</p>
                     <p className="text-sm text-white">{sportName}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Calendar className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-gray-500">Date</p>
                     <p className="text-sm text-white">{formatDate(event.startTime)}</p>
                   </div>
@@ -1501,7 +1478,7 @@ export default function EventDetailPage() {
                 {Boolean((event.metadata as Record<string, unknown> | null)?.venue) && (
                   <div className="flex items-start gap-3">
                     <MapPin className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-gray-500">Venue</p>
                       <p className="text-sm text-white">
                         {(event.metadata as Record<string, unknown>).venue as string}
@@ -1509,76 +1486,38 @@ export default function EventDetailPage() {
                     </div>
                   </div>
                 )}
-                {event.isLive && (
-                  <div className="pt-2 border-t border-[#2a2b30]">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded bg-red-500/10 border border-red-500/20">
-                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-xs font-bold text-red-400 uppercase">Live Now</span>
-                      {event.metadata?.period && (
-                        <span className="text-xs text-gray-400 ml-auto">
-                          {event.metadata.period}
-                          {event.metadata.matchTime ? ` - ${event.metadata.matchTime}` : ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
             {/* Quick Stats */}
-            <div className="rounded-lg border border-[#2a2b30] bg-[#1A1B1F] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2a2b30] bg-[#22232a]/50">
-                <h3 className="text-sm font-semibold text-white">Quick Stats</h3>
+            <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-800 bg-[#16171b]">
+                <h3 className="text-sm font-semibold text-white">Statistics</h3>
               </div>
               <div className="p-4 grid grid-cols-2 gap-3">
-                <div className="bg-[#22232a] rounded-lg p-3 text-center">
+                <div className="bg-[#13141a] rounded-lg p-3 text-center border border-gray-800/50">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Status</p>
                   <p
                     className={cn(
                       'text-xs font-semibold',
-                      event.isLive ? 'text-green-400' : 'text-gray-300'
+                      event.isLive ? 'text-lime-400' : 'text-gray-300'
                     )}
                   >
-                    {event.isLive ? 'In Play' : 'Upcoming'}
+                    {event.isLive ? 'Live' : 'Upcoming'}
                   </p>
                 </div>
-                <div className="bg-[#22232a] rounded-lg p-3 text-center">
+                <div className="bg-[#13141a] rounded-lg p-3 text-center border border-gray-800/50">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Markets</p>
                   <p className="text-xs font-semibold text-white">{allMarkets.length}</p>
                 </div>
                 {event.isLive && (
-                  <div className="col-span-2 bg-[#22232a] rounded-lg p-3 text-center">
+                  <div className="col-span-2 bg-[#13141a] rounded-lg p-3 text-center border border-gray-800/50">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Score</p>
-                    <p className="text-lg font-bold font-mono text-white">
+                    <p className="text-lg font-bold font-mono text-lime-400">
                       {event.homeScore ?? 0} - {event.awayScore ?? 0}
                     </p>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Market depth summary */}
-            <div className="rounded-lg border border-[#2a2b30] bg-[#1A1B1F] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2a2b30] bg-[#22232a]/50">
-                <h3 className="text-sm font-semibold text-white">Market Depth</h3>
-              </div>
-              <div className="p-3 space-y-1">
-                {CATEGORY_TABS.filter((t) => t.key !== 'all').map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveCategory(tab.key)}
-                    className={cn(
-                      'w-full flex items-center justify-between px-3 py-2 rounded text-xs transition-colors',
-                      activeCategory === tab.key
-                        ? 'bg-[#8D52DA]/15 text-[#b388f5]'
-                        : 'text-gray-400 hover:text-white hover:bg-[#22232a]'
-                    )}
-                  >
-                    <span>{tab.label}</span>
-                    <span className="font-mono">{categoryCounts[tab.key]}</span>
-                  </button>
-                ))}
               </div>
             </div>
           </div>
@@ -1586,22 +1525,22 @@ export default function EventDetailPage() {
       </div>
 
       {/* Mobile-only match info (below markets) */}
-      <div className="lg:hidden space-y-4">
-        <div className="rounded-lg border border-[#2a2b30] bg-[#1A1B1F] overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#2a2b30] bg-[#22232a]/50">
+      <div className="lg:hidden mt-4 space-y-4">
+        <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-800 bg-[#16171b]">
             <h3 className="text-sm font-semibold text-white">Match Info</h3>
           </div>
           <div className="p-4 space-y-3">
             <div className="flex items-start gap-3">
               <Trophy className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-gray-500">Competition</p>
                 <p className="text-sm text-white">{competitionName}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Calendar className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-gray-500">Date</p>
                 <p className="text-sm text-white">{formatDate(event.startTime)}</p>
               </div>

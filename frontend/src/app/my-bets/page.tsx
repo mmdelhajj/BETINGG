@@ -578,7 +578,7 @@ function LegRow({ leg }: { leg: BetLegData }) {
             {leg.eventName}
           </span>
           {leg.isLive && (
-            <span className="ml-1 inline-flex items-center gap-1 rounded bg-[rgba(48,224,0,0.12)] px-1.5 py-px text-[10px] font-bold text-[#30E000]">
+            <span className="ml-1 inline-flex items-center gap-1 rounded bg-[rgba(48,224,0,0.12)] px-1.5 py-px text-[11px] font-bold text-[#30E000]">
               <Zap className="h-2.5 w-2.5" />
               LIVE
             </span>
@@ -642,7 +642,7 @@ function BetCard({ bet }: { bet: BetData }) {
       }}
     >
       {/* Top row: type badge, status badge, date */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <BetTypeBadge type={bet.type} />
           <StatusBadge status={bet.status} />
@@ -652,24 +652,24 @@ function BetCard({ bet }: { bet: BetData }) {
         </span>
       </div>
 
-      {/* Stake / Potential / Win */}
-      <div className="flex items-center gap-4 mt-2 mb-1 text-sm">
-        <div>
+      {/* Stake / Potential / Win - Stack vertically on mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3 mb-2">
+        <div className="text-sm">
           <span className="text-gray-500">Stake </span>
           <span className="font-mono font-medium text-white">
             {formatAmount(bet.stake, bet.currency)}
           </span>
         </div>
-        <div className="h-3 w-px bg-[rgba(255,255,255,0.08)]" />
+        <div className="hidden sm:block h-3 w-px bg-[rgba(255,255,255,0.08)]" />
         {bet.status === 'LOST' ? (
-          <div>
+          <div className="text-sm">
             <span className="text-gray-500">Potential Win </span>
             <span className="font-mono text-gray-600 line-through">
               {formatAmount(bet.potentialWin, bet.currency)}
             </span>
           </div>
         ) : settledAmount !== undefined ? (
-          <div>
+          <div className="text-sm">
             <span className="text-gray-500">
               {bet.status === 'CASHED_OUT' ? 'Cashed Out ' : 'Won '}
             </span>
@@ -685,7 +685,7 @@ function BetCard({ bet }: { bet: BetData }) {
             </span>
           </div>
         ) : (
-          <div>
+          <div className="text-sm">
             <span className="text-gray-500">Potential Win </span>
             <span className="font-mono font-medium text-[#30E000]">
               {formatAmount(bet.potentialWin, bet.currency)}
@@ -695,7 +695,7 @@ function BetCard({ bet }: { bet: BetData }) {
       </div>
 
       {/* Divider */}
-      <div className="my-2 h-px w-full bg-[rgba(255,255,255,0.06)]" />
+      <div className="my-3 h-px w-full bg-[rgba(255,255,255,0.06)]" />
 
       {/* Primary leg(s) always visible */}
       {primaryLegs.map((leg) => (
@@ -725,7 +725,7 @@ function BetCard({ bet }: { bet: BetData }) {
           </AnimatePresence>
           <button
             onClick={() => setExpanded((p) => !p)}
-            className="mt-1 flex w-full items-center justify-center gap-1 rounded py-1 text-xs text-gray-500 transition-colors hover:text-gray-300"
+            className="mt-2 flex w-full items-center justify-center gap-1 rounded py-2 text-xs text-gray-500 transition-colors hover:text-gray-300 min-h-[44px]"
           >
             {expanded ? (
               <>
@@ -742,11 +742,11 @@ function BetCard({ bet }: { bet: BetData }) {
         </>
       )}
 
-      {/* Cash Out button */}
+      {/* Cash Out button - max-width constraint on mobile */}
       {showCashOut && (
-        <div className="mt-3">
+        <div className="mt-4">
           <button
-            className="flex w-full items-center justify-center gap-2 rounded bg-[#30E000] px-4 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+            className="flex w-full max-w-md mx-auto items-center justify-center gap-2 rounded bg-[#30E000] px-4 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 min-h-[44px]"
           >
             <CircleDollarSign className="h-4 w-4" />
             Cash Out{' '}
@@ -782,7 +782,7 @@ function EmptyState() {
       </p>
       <a
         href="/sports"
-        className="mt-5 inline-flex items-center gap-2 rounded bg-[#30E000] px-6 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+        className="mt-5 inline-flex items-center gap-2 rounded bg-[#30E000] px-6 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 min-h-[44px]"
       >
         <Trophy className="h-4 w-4" />
         Place your first bet
@@ -808,7 +808,7 @@ function Pill({
     <button
       onClick={onClick}
       className={cn(
-        'rounded-full px-3.5 py-1 text-xs font-medium transition-colors whitespace-nowrap',
+        'rounded-full px-3.5 py-2 text-xs font-medium transition-colors whitespace-nowrap min-h-[44px]',
         active
           ? 'bg-white text-black'
           : 'bg-[rgba(255,255,255,0.06)] text-gray-400 hover:text-gray-200',
@@ -864,12 +864,12 @@ export default function MyBetsPage() {
   }, [filterTab, timeFilter, typeFilter]);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
+    <div className="mx-auto max-w-3xl px-4 py-6 pb-24">
       {/* Header */}
-      <h1 className="text-2xl font-bold text-white">My Bets</h1>
+      <h1 className="text-2xl font-bold text-white mb-5">My Bets</h1>
 
-      {/* Primary filter tabs */}
-      <div className="mt-5 flex border-b border-[rgba(255,255,255,0.08)]">
+      {/* Primary filter tabs - 44px height */}
+      <div className="flex border-b border-[rgba(255,255,255,0.08)]">
         {(
           [
             { key: 'open', label: 'Open' },
@@ -881,7 +881,7 @@ export default function MyBetsPage() {
             key={tab.key}
             onClick={() => setFilterTab(tab.key)}
             className={cn(
-              'relative px-5 py-2.5 text-sm font-medium transition-colors',
+              'relative px-5 h-[44px] text-sm font-medium transition-colors',
               filterTab === tab.key
                 ? 'text-white'
                 : 'text-gray-500 hover:text-gray-300',
@@ -899,10 +899,10 @@ export default function MyBetsPage() {
         ))}
       </div>
 
-      {/* Secondary filters */}
-      <div className="mt-4 flex flex-wrap items-center gap-4">
-        {/* Time filter */}
-        <div className="flex items-center gap-1.5">
+      {/* Secondary filters - horizontal scroll */}
+      <div className="mt-4 overflow-x-auto scrollbar-hide -mx-4 px-4">
+        <div className="flex items-center gap-2 min-w-max pb-1">
+          {/* Time filter */}
           {(
             [
               { key: 'today', label: 'Today' },
@@ -919,12 +919,10 @@ export default function MyBetsPage() {
               {t.label}
             </Pill>
           ))}
-        </div>
 
-        <div className="h-4 w-px bg-[rgba(255,255,255,0.08)] hidden sm:block" />
+          <div className="h-6 w-px bg-[rgba(255,255,255,0.08)] mx-1" />
 
-        {/* Bet type filter */}
-        <div className="flex items-center gap-1.5">
+          {/* Bet type filter */}
           {(
             [
               { key: 'all', label: 'All' },
