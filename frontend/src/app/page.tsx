@@ -1,22 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronRight,
-  Trophy,
-  Flame,
-  Star,
-  Clock,
-  Gamepad2,
-  Swords,
-  CircleDot,
-  Dribbble,
-  Dumbbell,
-  Target,
-  Disc,
-} from 'lucide-react';
+import { Flame, Dice6 } from 'lucide-react';
 import { EventCard } from '@/components/sports/EventCard';
 import { cn } from '@/lib/utils';
 import type { Event } from '@/types';
@@ -25,49 +10,6 @@ import type { Event } from '@/types';
 // MOCK DATA
 // ============================================================
 
-const HERO_BANNERS = [
-  {
-    id: 1,
-    title: 'Welcome Bonus',
-    subtitle: 'Get up to 5 BTC on your first deposit',
-    cta: 'Claim Now',
-    href: '/promotions/welcome',
-    gradient: 'from-purple-700 via-brand-600 to-indigo-800',
-    accent: 'bg-purple-500/20',
-  },
-  {
-    id: 2,
-    title: 'Live Casino',
-    subtitle: 'Real dealers. Real cards. Real-time crypto payouts.',
-    cta: 'Play Now',
-    href: '/casino/live',
-    gradient: 'from-emerald-700 via-teal-600 to-cyan-800',
-    accent: 'bg-emerald-500/20',
-  },
-  {
-    id: 3,
-    title: 'Sports Promo',
-    subtitle: 'Boosted odds on Champions League matches this week',
-    cta: 'Bet Now',
-    href: '/sports/football',
-    gradient: 'from-orange-700 via-red-600 to-rose-800',
-    accent: 'bg-orange-500/20',
-  },
-];
-
-const SPORT_CATEGORIES = [
-  { label: 'Soccer', slug: 'football', icon: CircleDot },
-  { label: 'Basketball', slug: 'basketball', icon: Dribbble },
-  { label: 'Tennis', slug: 'tennis', icon: Disc },
-  { label: 'American Football', slug: 'american-football', icon: Swords },
-  { label: 'Baseball', slug: 'baseball', icon: Target },
-  { label: 'Ice Hockey', slug: 'ice-hockey', icon: Gamepad2 },
-  { label: 'Cricket', slug: 'cricket', icon: Trophy },
-  { label: 'MMA', slug: 'mma', icon: Dumbbell },
-  { label: 'Esports', slug: 'esports', icon: Gamepad2 },
-];
-
-// Helper to create mock events
 function mockEvent(overrides: Partial<Event> & { id: string; name: string }): Event {
   return {
     slug: overrides.id,
@@ -97,10 +39,20 @@ const MOCK_LIVE_EVENTS: Event[] = [
     isLive: true,
     status: 'LIVE',
     metadata: { matchTime: "67'", period: '2nd Half' },
-    competition: { id: 'c1', name: 'Premier League', slug: 'premier-league', country: 'England', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    competition: {
+      id: 'c1',
+      name: 'Premier League',
+      slug: 'premier-league',
+      country: 'England',
+      sportId: 's1',
+      sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 },
+    },
     markets: [
       {
-        id: 'm1', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        id: 'm1',
+        name: 'Match Winner',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
           { id: 'sel-1', name: 'Manchester City', outcome: 'home', odds: '1.65', status: 'ACTIVE', marketId: 'm1' },
           { id: 'sel-2', name: 'Draw', outcome: 'draw', odds: '4.20', status: 'ACTIVE', marketId: 'm1' },
@@ -119,10 +71,20 @@ const MOCK_LIVE_EVENTS: Event[] = [
     isLive: true,
     status: 'LIVE',
     metadata: { matchTime: "34'", period: '1st Half' },
-    competition: { id: 'c2', name: 'La Liga', slug: 'la-liga', country: 'Spain', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    competition: {
+      id: 'c2',
+      name: 'La Liga',
+      slug: 'la-liga',
+      country: 'Spain',
+      sportId: 's1',
+      sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 },
+    },
     markets: [
       {
-        id: 'm2', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        id: 'm2',
+        name: 'Match Winner',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
           { id: 'sel-4', name: 'Real Madrid', outcome: 'home', odds: '2.10', status: 'ACTIVE', marketId: 'm2' },
           { id: 'sel-5', name: 'Draw', outcome: 'draw', odds: '3.40', status: 'ACTIVE', marketId: 'm2' },
@@ -141,10 +103,20 @@ const MOCK_LIVE_EVENTS: Event[] = [
     isLive: true,
     status: 'LIVE',
     metadata: { matchTime: 'Q3 4:22', period: 'Q3' },
-    competition: { id: 'c3', name: 'NBA', slug: 'nba', country: 'USA', sportId: 's2', sport: { id: 's2', name: 'Basketball', slug: 'basketball', icon: null, isActive: true, sortOrder: 2 } },
+    competition: {
+      id: 'c3',
+      name: 'NBA',
+      slug: 'nba',
+      country: 'USA',
+      sportId: 's2',
+      sport: { id: 's2', name: 'Basketball', slug: 'basketball', icon: null, isActive: true, sortOrder: 2 },
+    },
     markets: [
       {
-        id: 'm3', name: 'Moneyline', type: 'MONEYLINE', status: 'OPEN',
+        id: 'm3',
+        name: 'Moneyline',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
           { id: 'sel-7', name: 'LA Lakers', outcome: 'home', odds: '2.40', status: 'ACTIVE', marketId: 'm3' },
           { id: 'sel-8', name: 'Boston Celtics', outcome: 'away', odds: '1.55', status: 'ACTIVE', marketId: 'm3' },
@@ -154,27 +126,6 @@ const MOCK_LIVE_EVENTS: Event[] = [
   }),
   mockEvent({
     id: 'live-4',
-    name: 'Djokovic vs Alcaraz',
-    homeTeam: 'N. Djokovic',
-    awayTeam: 'C. Alcaraz',
-    homeScore: 6,
-    awayScore: 4,
-    isLive: true,
-    status: 'LIVE',
-    metadata: { matchTime: '2nd Set', period: 'Set 2' },
-    competition: { id: 'c4', name: 'Australian Open', slug: 'australian-open', country: 'Australia', sportId: 's3', sport: { id: 's3', name: 'Tennis', slug: 'tennis', icon: null, isActive: true, sortOrder: 3 } },
-    markets: [
-      {
-        id: 'm4', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
-        selections: [
-          { id: 'sel-9', name: 'N. Djokovic', outcome: 'home', odds: '1.80', status: 'ACTIVE', marketId: 'm4' },
-          { id: 'sel-10', name: 'C. Alcaraz', outcome: 'away', odds: '2.00', status: 'ACTIVE', marketId: 'm4' },
-        ],
-      },
-    ],
-  }),
-  mockEvent({
-    id: 'live-5',
     name: 'Bayern Munich vs Dortmund',
     homeTeam: 'Bayern Munich',
     awayTeam: 'Borussia Dortmund',
@@ -183,10 +134,20 @@ const MOCK_LIVE_EVENTS: Event[] = [
     isLive: true,
     status: 'LIVE',
     metadata: { matchTime: "72'", period: '2nd Half' },
-    competition: { id: 'c5', name: 'Bundesliga', slug: 'bundesliga', country: 'Germany', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    competition: {
+      id: 'c5',
+      name: 'Bundesliga',
+      slug: 'bundesliga',
+      country: 'Germany',
+      sportId: 's1',
+      sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 },
+    },
     markets: [
       {
-        id: 'm5', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        id: 'm5',
+        name: 'Match Winner',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
           { id: 'sel-11', name: 'Bayern Munich', outcome: 'home', odds: '1.05', status: 'ACTIVE', marketId: 'm5' },
           { id: 'sel-12', name: 'Draw', outcome: 'draw', odds: '12.00', status: 'ACTIVE', marketId: 'm5' },
@@ -197,139 +158,179 @@ const MOCK_LIVE_EVENTS: Event[] = [
   }),
 ];
 
-const MOCK_FEATURED_EVENTS: Event[] = [
+const MOCK_POPULAR_EVENTS: Event[] = [
   mockEvent({
-    id: 'feat-1',
+    id: 'pop-1',
     name: 'Liverpool vs Chelsea',
     homeTeam: 'Liverpool',
     awayTeam: 'Chelsea',
     isFeatured: true,
     startTime: new Date(Date.now() + 7200000).toISOString(),
-    competition: { id: 'c1', name: 'Premier League', slug: 'premier-league', country: 'England', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    competition: {
+      id: 'c1',
+      name: 'Premier League',
+      slug: 'premier-league',
+      country: 'England',
+      sportId: 's1',
+      sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 },
+    },
     markets: [
       {
-        id: 'mf1', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        id: 'mp1',
+        name: 'Match Winner',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
-          { id: 'sf-1', name: 'Liverpool', outcome: 'home', odds: '1.90', status: 'ACTIVE', marketId: 'mf1' },
-          { id: 'sf-2', name: 'Draw', outcome: 'draw', odds: '3.50', status: 'ACTIVE', marketId: 'mf1' },
-          { id: 'sf-3', name: 'Chelsea', outcome: 'away', odds: '3.80', status: 'ACTIVE', marketId: 'mf1' },
+          { id: 'sp-1', name: 'Liverpool', outcome: 'home', odds: '1.90', status: 'ACTIVE', marketId: 'mp1' },
+          { id: 'sp-2', name: 'Draw', outcome: 'draw', odds: '3.50', status: 'ACTIVE', marketId: 'mp1' },
+          { id: 'sp-3', name: 'Chelsea', outcome: 'away', odds: '3.80', status: 'ACTIVE', marketId: 'mp1' },
         ],
       },
     ],
   }),
   mockEvent({
-    id: 'feat-2',
+    id: 'pop-2',
     name: 'PSG vs Juventus',
     homeTeam: 'Paris Saint-Germain',
     awayTeam: 'Juventus',
     isFeatured: true,
     startTime: new Date(Date.now() + 10800000).toISOString(),
-    competition: { id: 'c6', name: 'Champions League', slug: 'champions-league', country: null, sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    competition: {
+      id: 'c6',
+      name: 'Champions League',
+      slug: 'champions-league',
+      country: null,
+      sportId: 's1',
+      sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 },
+    },
     markets: [
       {
-        id: 'mf2', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        id: 'mp2',
+        name: 'Match Winner',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
-          { id: 'sf-4', name: 'PSG', outcome: 'home', odds: '1.75', status: 'ACTIVE', marketId: 'mf2' },
-          { id: 'sf-5', name: 'Draw', outcome: 'draw', odds: '3.80', status: 'ACTIVE', marketId: 'mf2' },
-          { id: 'sf-6', name: 'Juventus', outcome: 'away', odds: '4.50', status: 'ACTIVE', marketId: 'mf2' },
+          { id: 'sp-4', name: 'PSG', outcome: 'home', odds: '1.75', status: 'ACTIVE', marketId: 'mp2' },
+          { id: 'sp-5', name: 'Draw', outcome: 'draw', odds: '3.80', status: 'ACTIVE', marketId: 'mp2' },
+          { id: 'sp-6', name: 'Juventus', outcome: 'away', odds: '4.50', status: 'ACTIVE', marketId: 'mp2' },
         ],
       },
     ],
   }),
   mockEvent({
-    id: 'feat-3',
+    id: 'pop-3',
     name: 'Warriors vs Bucks',
     homeTeam: 'Golden State Warriors',
     awayTeam: 'Milwaukee Bucks',
     isFeatured: true,
     startTime: new Date(Date.now() + 14400000).toISOString(),
-    competition: { id: 'c3', name: 'NBA', slug: 'nba', country: 'USA', sportId: 's2', sport: { id: 's2', name: 'Basketball', slug: 'basketball', icon: null, isActive: true, sortOrder: 2 } },
+    competition: {
+      id: 'c3',
+      name: 'NBA',
+      slug: 'nba',
+      country: 'USA',
+      sportId: 's2',
+      sport: { id: 's2', name: 'Basketball', slug: 'basketball', icon: null, isActive: true, sortOrder: 2 },
+    },
     markets: [
       {
-        id: 'mf3', name: 'Moneyline', type: 'MONEYLINE', status: 'OPEN',
+        id: 'mp3',
+        name: 'Moneyline',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
-          { id: 'sf-7', name: 'Warriors', outcome: 'home', odds: '2.15', status: 'ACTIVE', marketId: 'mf3' },
-          { id: 'sf-8', name: 'Bucks', outcome: 'away', odds: '1.70', status: 'ACTIVE', marketId: 'mf3' },
+          { id: 'sp-7', name: 'Warriors', outcome: 'home', odds: '2.15', status: 'ACTIVE', marketId: 'mp3' },
+          { id: 'sp-8', name: 'Bucks', outcome: 'away', odds: '1.70', status: 'ACTIVE', marketId: 'mp3' },
         ],
       },
     ],
   }),
   mockEvent({
-    id: 'feat-4',
-    name: 'Nadal vs Sinner',
-    homeTeam: 'R. Nadal',
-    awayTeam: 'J. Sinner',
-    isFeatured: true,
-    startTime: new Date(Date.now() + 18000000).toISOString(),
-    competition: { id: 'c4', name: 'Australian Open', slug: 'australian-open', country: 'Australia', sportId: 's3', sport: { id: 's3', name: 'Tennis', slug: 'tennis', icon: null, isActive: true, sortOrder: 3 } },
-    markets: [
-      {
-        id: 'mf4', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
-        selections: [
-          { id: 'sf-9', name: 'R. Nadal', outcome: 'home', odds: '3.20', status: 'ACTIVE', marketId: 'mf4' },
-          { id: 'sf-10', name: 'J. Sinner', outcome: 'away', odds: '1.35', status: 'ACTIVE', marketId: 'mf4' },
-        ],
-      },
-    ],
-  }),
-  mockEvent({
-    id: 'feat-5',
+    id: 'pop-4',
     name: 'Inter Milan vs Napoli',
     homeTeam: 'Inter Milan',
     awayTeam: 'Napoli',
     isFeatured: true,
     startTime: new Date(Date.now() + 21600000).toISOString(),
-    competition: { id: 'c7', name: 'Serie A', slug: 'serie-a', country: 'Italy', sportId: 's1', sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 } },
+    competition: {
+      id: 'c7',
+      name: 'Serie A',
+      slug: 'serie-a',
+      country: 'Italy',
+      sportId: 's1',
+      sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 },
+    },
     markets: [
       {
-        id: 'mf5', name: 'Match Winner', type: 'MONEYLINE', status: 'OPEN',
+        id: 'mp5',
+        name: 'Match Winner',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
-          { id: 'sf-11', name: 'Inter Milan', outcome: 'home', odds: '2.00', status: 'ACTIVE', marketId: 'mf5' },
-          { id: 'sf-12', name: 'Draw', outcome: 'draw', odds: '3.30', status: 'ACTIVE', marketId: 'mf5' },
-          { id: 'sf-13', name: 'Napoli', outcome: 'away', odds: '3.60', status: 'ACTIVE', marketId: 'mf5' },
+          { id: 'sp-11', name: 'Inter Milan', outcome: 'home', odds: '2.00', status: 'ACTIVE', marketId: 'mp5' },
+          { id: 'sp-12', name: 'Draw', outcome: 'draw', odds: '3.30', status: 'ACTIVE', marketId: 'mp5' },
+          { id: 'sp-13', name: 'Napoli', outcome: 'away', odds: '3.60', status: 'ACTIVE', marketId: 'mp5' },
         ],
       },
     ],
   }),
   mockEvent({
-    id: 'feat-6',
+    id: 'pop-5',
     name: 'Chiefs vs 49ers',
     homeTeam: 'Kansas City Chiefs',
     awayTeam: 'San Francisco 49ers',
     isFeatured: true,
     startTime: new Date(Date.now() + 25200000).toISOString(),
-    competition: { id: 'c8', name: 'NFL', slug: 'nfl', country: 'USA', sportId: 's4', sport: { id: 's4', name: 'American Football', slug: 'american-football', icon: null, isActive: true, sortOrder: 4 } },
+    competition: {
+      id: 'c8',
+      name: 'NFL',
+      slug: 'nfl',
+      country: 'USA',
+      sportId: 's4',
+      sport: { id: 's4', name: 'American Football', slug: 'american-football', icon: null, isActive: true, sortOrder: 4 },
+    },
     markets: [
       {
-        id: 'mf6', name: 'Moneyline', type: 'MONEYLINE', status: 'OPEN',
+        id: 'mp6',
+        name: 'Moneyline',
+        type: 'MONEYLINE',
+        status: 'OPEN',
         selections: [
-          { id: 'sf-14', name: 'Chiefs', outcome: 'home', odds: '1.85', status: 'ACTIVE', marketId: 'mf6' },
-          { id: 'sf-15', name: '49ers', outcome: 'away', odds: '1.95', status: 'ACTIVE', marketId: 'mf6' },
+          { id: 'sp-14', name: 'Chiefs', outcome: 'home', odds: '1.85', status: 'ACTIVE', marketId: 'mp6' },
+          { id: 'sp-15', name: '49ers', outcome: 'away', odds: '1.95', status: 'ACTIVE', marketId: 'mp6' },
         ],
       },
     ],
   }),
-];
-
-const MOCK_CASINO_GAMES = [
-  { slug: 'crash', name: 'Crash', provider: 'CryptoBet Originals', gradient: 'from-orange-600 to-red-600' },
-  { slug: 'plinko', name: 'Plinko', provider: 'CryptoBet Originals', gradient: 'from-purple-600 to-pink-600' },
-  { slug: 'dice', name: 'Dice', provider: 'CryptoBet Originals', gradient: 'from-blue-600 to-cyan-600' },
-  { slug: 'blackjack', name: 'Blackjack', provider: 'Evolution Gaming', gradient: 'from-emerald-700 to-teal-600' },
-  { slug: 'roulette', name: 'Roulette', provider: 'Evolution Gaming', gradient: 'from-red-700 to-rose-600' },
-  { slug: 'mines', name: 'Mines', provider: 'CryptoBet Originals', gradient: 'from-yellow-600 to-amber-600' },
-  { slug: 'baccarat', name: 'Baccarat', provider: 'Pragmatic Play', gradient: 'from-indigo-700 to-violet-600' },
-  { slug: 'hilo', name: 'HiLo', provider: 'CryptoBet Originals', gradient: 'from-sky-600 to-blue-700' },
-  { slug: 'keno', name: 'Keno', provider: 'CryptoBet Originals', gradient: 'from-fuchsia-600 to-purple-700' },
-  { slug: 'video-poker', name: 'Video Poker', provider: 'NetEnt', gradient: 'from-lime-600 to-green-700' },
-];
-
-const MOCK_RECENT_GAMES = [
-  { slug: 'crash', name: 'Crash', provider: 'CryptoBet Originals', gradient: 'from-orange-600 to-red-600' },
-  { slug: 'blackjack', name: 'Blackjack', provider: 'Evolution Gaming', gradient: 'from-emerald-700 to-teal-600' },
-  { slug: 'dice', name: 'Dice', provider: 'CryptoBet Originals', gradient: 'from-blue-600 to-cyan-600' },
-  { slug: 'roulette', name: 'Roulette', provider: 'Evolution Gaming', gradient: 'from-red-700 to-rose-600' },
-  { slug: 'mines', name: 'Mines', provider: 'CryptoBet Originals', gradient: 'from-yellow-600 to-amber-600' },
+  mockEvent({
+    id: 'pop-6',
+    name: 'Atletico Madrid vs Sevilla',
+    homeTeam: 'Atletico Madrid',
+    awayTeam: 'Sevilla',
+    isFeatured: true,
+    startTime: new Date(Date.now() + 28800000).toISOString(),
+    competition: {
+      id: 'c2',
+      name: 'La Liga',
+      slug: 'la-liga',
+      country: 'Spain',
+      sportId: 's1',
+      sport: { id: 's1', name: 'Football', slug: 'football', icon: null, isActive: true, sortOrder: 1 },
+    },
+    markets: [
+      {
+        id: 'mp7',
+        name: 'Match Winner',
+        type: 'MONEYLINE',
+        status: 'OPEN',
+        selections: [
+          { id: 'sp-16', name: 'Atletico Madrid', outcome: 'home', odds: '1.60', status: 'ACTIVE', marketId: 'mp7' },
+          { id: 'sp-17', name: 'Draw', outcome: 'draw', odds: '3.90', status: 'ACTIVE', marketId: 'mp7' },
+          { id: 'sp-18', name: 'Sevilla', outcome: 'away', odds: '5.20', status: 'ACTIVE', marketId: 'mp7' },
+        ],
+      },
+    ],
+  }),
 ];
 
 const TOP_LEAGUES = [
@@ -342,437 +343,102 @@ const TOP_LEAGUES = [
   { name: 'NBA', slug: 'basketball', competition: 'nba', flag: 'US' },
   { name: 'NFL', slug: 'american-football', competition: 'nfl', flag: 'US' },
   { name: 'NHL', slug: 'ice-hockey', competition: 'nhl', flag: 'US' },
-  { name: 'MLB', slug: 'baseball', competition: 'mlb', flag: 'US' },
-  { name: 'ATP Tour', slug: 'tennis', competition: 'atp', flag: 'GL' },
-  { name: 'IPL', slug: 'cricket', competition: 'ipl', flag: 'IN' },
+];
+
+const MOCK_CASINO_GAMES = [
+  { slug: 'crash', name: 'Crash', gradient: 'from-orange-600 to-red-600' },
+  { slug: 'plinko', name: 'Plinko', gradient: 'from-purple-600 to-pink-600' },
+  { slug: 'dice', name: 'Dice', gradient: 'from-blue-600 to-cyan-600' },
+  { slug: 'blackjack', name: 'Blackjack', gradient: 'from-emerald-700 to-teal-600' },
+  { slug: 'roulette', name: 'Roulette', gradient: 'from-red-700 to-rose-600' },
+  { slug: 'mines', name: 'Mines', gradient: 'from-yellow-600 to-amber-600' },
+  { slug: 'baccarat', name: 'Baccarat', gradient: 'from-indigo-700 to-violet-600' },
+  { slug: 'hilo', name: 'HiLo', gradient: 'from-sky-600 to-blue-700' },
 ];
 
 // ============================================================
-// SUB-COMPONENTS
+// COMPONENTS
 // ============================================================
 
-/** Section header with title and "View all" link */
 function SectionHeader({
   title,
   icon,
   href,
-  linkText = 'View all',
-  liveCount,
 }: {
   title: string;
   icon?: React.ReactNode;
   href?: string;
-  linkText?: string;
-  liveCount?: number;
 }) {
   return (
     <div className="flex items-center justify-between mb-4">
-      <h2
-        className="font-semibold text-white flex items-center gap-2"
-        style={{ fontSize: 'clamp(1rem, 3vw, 1.125rem)' }}
-      >
+      <h2 className="text-base font-bold text-white flex items-center gap-2">
         {icon}
         {title}
-        {liveCount !== undefined && liveCount > 0 && (
-          <span
-            className="font-bold bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full"
-            style={{ fontSize: 'clamp(0.6875rem, 2vw, 0.75rem)' }}
-          >
-            {liveCount}
-          </span>
-        )}
       </h2>
       {href && (
         <Link
           href={href}
-          className="text-lime-400 hover:text-lime-300 flex items-center gap-1 transition-colors font-medium"
-          style={{ fontSize: 'clamp(0.8125rem, 2.5vw, 0.875rem)' }}
+          className="text-[13px] text-[#8D52DA] hover:underline transition-all"
         >
-          {linkText}
-          <ChevronRight className="w-4 h-4" />
+          View All
         </Link>
       )}
     </div>
   );
 }
 
-/** Horizontal scroll container with fade gradients and scroll snap */
-function HScrollContainer({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showLeftGradient, setShowLeftGradient] = useState(false);
-  const [showRightGradient, setShowRightGradient] = useState(true);
-
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    setShowLeftGradient(el.scrollLeft > 10);
-    setShowRightGradient(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    handleScroll();
-    el.addEventListener('scroll', handleScroll);
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
-
-  return (
-    <div className="relative">
-      {/* Left fade gradient */}
-      {showLeftGradient && (
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#0F0F11] to-transparent z-10 pointer-events-none" />
-      )}
-
-      {/* Right fade gradient */}
-      {showRightGradient && (
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0F0F11] to-transparent z-10 pointer-events-none" />
-      )}
-
-      <div
-        ref={scrollRef}
-        className={cn(
-          'flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-4 scroll-smooth',
-          className,
-        )}
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          scrollSnapType: 'x mandatory',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/** Hero Banner Carousel with proper aspect ratios */
-function HeroBannerCarousel() {
-  const [active, setActive] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setActive((prev) => (prev + 1) % HERO_BANNERS.length);
-    }, 5000);
-  }, []);
-
-  useEffect(() => {
-    startTimer();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [startTimer]);
-
-  const goTo = (index: number) => {
-    setActive(index);
-    startTimer();
-  };
-
-  return (
-    <div
-      className="relative w-full overflow-hidden rounded-xl md:rounded-2xl"
-      style={{
-        aspectRatio: 'var(--hero-aspect)',
-      }}
-    >
-      <style jsx>{`
-        div {
-          --hero-aspect: 16 / 9;
-        }
-        @media (min-width: 768px) {
-          div {
-            --hero-aspect: 16 / 6;
-          }
-        }
-      `}</style>
-
-      <AnimatePresence mode="wait">
-        {HERO_BANNERS.map(
-          (banner, idx) =>
-            idx === active && (
-              <motion.div
-                key={banner.id}
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0"
-              >
-                <Link href={banner.href} className="block h-full">
-                  <div
-                    className={cn(
-                      'h-full w-full bg-gradient-to-r rounded-xl md:rounded-2xl relative overflow-hidden',
-                      banner.gradient,
-                    )}
-                  >
-                    {/* Decorative elements */}
-                    <div className="absolute top-0 right-0 w-1/2 h-full opacity-20">
-                      <div className="absolute top-1/4 right-10 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
-                      <div className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full bg-white/5 blur-3xl" />
-                    </div>
-
-                    {/* Content */}
-                    <div className="relative z-10 h-full flex flex-col justify-center px-4 sm:px-6 md:px-10">
-                      <h2
-                        className="font-bold text-white mb-2 leading-tight"
-                        style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)' }}
-                      >
-                        {banner.title}
-                      </h2>
-                      <p
-                        className="text-white/80 mb-4 max-w-md"
-                        style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
-                      >
-                        {banner.subtitle}
-                      </p>
-                      <div>
-                        <span
-                          className="inline-flex items-center justify-center rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white font-semibold transition-colors border border-white/10 cursor-pointer"
-                          style={{
-                            minHeight: '44px',
-                            minWidth: '120px',
-                            padding: '0 1.25rem',
-                            fontSize: 'clamp(0.875rem, 2.5vw, 0.9375rem)',
-                          }}
-                        >
-                          {banner.cta}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Bottom gradient overlay */}
-                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/30 to-transparent" />
-                  </div>
-                </Link>
-              </motion.div>
-            ),
-        )}
-      </AnimatePresence>
-
-      {/* Dot indicators */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 flex gap-2 z-20"
-        style={{
-          bottom: 'clamp(0.75rem, 2vw, 1rem)',
-          minHeight: '44px',
-          alignItems: 'center',
-        }}
-      >
-        {HERO_BANNERS.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => goTo(idx)}
-            className={cn(
-              'rounded-full transition-all duration-300',
-              idx === active
-                ? 'w-6 h-2 bg-white'
-                : 'w-2 h-2 bg-white/40 hover:bg-white/60',
-            )}
-            style={{ minWidth: idx === active ? '24px' : '8px', minHeight: '8px' }}
-            aria-label={`Go to slide ${idx + 1}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Casino game thumbnail card */
-function CasinoGameCard({
-  game,
-  aspect = '3/4',
-}: {
-  game: { slug: string; name: string; provider: string; gradient: string };
-  aspect?: string;
-}) {
-  return (
-    <Link
-      href={`/casino/${game.slug}`}
-      className="shrink-0 group"
-      style={{
-        width: 'clamp(140px, 45vw, 160px)',
-        scrollSnapAlign: 'start',
-      }}
-    >
-      <div
-        className={cn(
-          'relative rounded-xl overflow-hidden border border-white/5 group-hover:border-lime-500/40 transition-all duration-200 group-hover:scale-[1.03]',
-          `bg-gradient-to-br ${game.gradient}`,
-        )}
-        style={{ aspectRatio: aspect }}
-      >
-        {/* Placeholder visual */}
-        <div className="flex items-center justify-center h-full">
-          <span className="text-4xl font-black text-white/20">
-            {game.name.charAt(0)}
-          </span>
-        </div>
-
-        {/* Bottom overlay */}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2.5 pt-8">
-          <p
-            className="font-semibold text-white truncate"
-            style={{ fontSize: 'clamp(0.75rem, 2vw, 0.8125rem)' }}
-          >
-            {game.name}
-          </p>
-          <p
-            className="text-gray-400 truncate"
-            style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
-          >
-            {game.provider}
-          </p>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-/** Live Event Card with prominent scores and time */
-function LiveEventCardCompact({ event }: { event: Event }) {
+function LiveEventCard({ event }: { event: Event }) {
   const matchTime = event.metadata?.matchTime || '';
-  const homeOdds = event.markets?.[0]?.selections?.find(s => s.outcome === 'home')?.odds || '';
-  const drawOdds = event.markets?.[0]?.selections?.find(s => s.outcome === 'draw')?.odds || '';
-  const awayOdds = event.markets?.[0]?.selections?.find(s => s.outcome === 'away')?.odds || '';
+  const homeOdds = event.markets?.[0]?.selections?.find((s) => s.outcome === 'home')?.odds || '';
+  const drawOdds = event.markets?.[0]?.selections?.find((s) => s.outcome === 'draw')?.odds || '';
+  const awayOdds = event.markets?.[0]?.selections?.find((s) => s.outcome === 'away')?.odds || '';
 
   return (
     <Link
       href={`/sports/${event.competition?.sport?.slug || 'football'}/${event.slug}`}
-      className="block shrink-0 group"
-      style={{
-        minWidth: 'clamp(280px, 85vw, 320px)',
-        scrollSnapAlign: 'start',
-      }}
+      className="block min-w-[280px] shrink-0"
     >
-      <div className="bg-[#1A1B1F] border border-white/5 rounded-xl p-4 hover:border-lime-500/30 transition-all">
-        {/* Live indicator and time */}
+      <div className="bg-[#1A1B1F] border-l-2 border-l-green-500 border border-white/[0.06] rounded-lg p-4 hover:border-white/10 transition-all duration-150">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
             </span>
-            <span
-              className="text-red-400 font-semibold uppercase"
-              style={{ fontSize: 'clamp(0.6875rem, 2vw, 0.75rem)' }}
-            >
-              Live
-            </span>
-            <span
-              className="text-lime-400 font-bold"
-              style={{ fontSize: 'clamp(0.75rem, 2vw, 0.8125rem)' }}
-            >
-              {matchTime}
-            </span>
+            <span className="text-xs text-green-400 font-semibold">{matchTime}</span>
           </div>
-          <span
-            className="text-gray-500"
-            style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
-          >
-            {event.competition?.name}
-          </span>
+          <span className="text-xs text-gray-500">{event.competition?.name}</span>
         </div>
 
-        {/* Teams and scores */}
-        <div className="space-y-2 mb-4">
+        <div className="space-y-2 mb-3">
           <div className="flex items-center justify-between">
-            <span
-              className="text-white font-medium truncate flex-1"
-              style={{ fontSize: 'clamp(0.875rem, 2.5vw, 0.9375rem)' }}
-            >
-              {event.homeTeam}
-            </span>
-            <span
-              className="text-white font-bold ml-3"
-              style={{ fontSize: 'clamp(1.25rem, 3vw, 1.5rem)' }}
-            >
-              {event.homeScore}
-            </span>
+            <span className="text-sm text-white font-medium truncate">{event.homeTeam}</span>
+            <span className="text-lg text-white font-bold ml-3">{event.homeScore}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span
-              className="text-white font-medium truncate flex-1"
-              style={{ fontSize: 'clamp(0.875rem, 2.5vw, 0.9375rem)' }}
-            >
-              {event.awayTeam}
-            </span>
-            <span
-              className="text-white font-bold ml-3"
-              style={{ fontSize: 'clamp(1.25rem, 3vw, 1.5rem)' }}
-            >
-              {event.awayScore}
-            </span>
+            <span className="text-sm text-white font-medium truncate">{event.awayTeam}</span>
+            <span className="text-lg text-white font-bold ml-3">{event.awayScore}</span>
           </div>
         </div>
 
-        {/* Odds */}
         {event.markets && event.markets.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {homeOdds && (
-              <button
-                className="bg-white/5 hover:bg-lime-600/20 border border-white/5 hover:border-lime-500/40 rounded-lg py-2 transition-all"
-                style={{ minHeight: '44px' }}
-              >
-                <div
-                  className="text-gray-400"
-                  style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
-                >
-                  Home
-                </div>
-                <div
-                  className="text-white font-semibold"
-                  style={{ fontSize: 'clamp(0.875rem, 2vw, 0.9375rem)' }}
-                >
-                  {homeOdds}
-                </div>
+              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded py-1.5 transition-all duration-150">
+                <div className="text-[11px] text-gray-400">1</div>
+                <div className="text-sm text-white font-semibold">{homeOdds}</div>
               </button>
             )}
             {drawOdds && (
-              <button
-                className="bg-white/5 hover:bg-lime-600/20 border border-white/5 hover:border-lime-500/40 rounded-lg py-2 transition-all"
-                style={{ minHeight: '44px' }}
-              >
-                <div
-                  className="text-gray-400"
-                  style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
-                >
-                  Draw
-                </div>
-                <div
-                  className="text-white font-semibold"
-                  style={{ fontSize: 'clamp(0.875rem, 2vw, 0.9375rem)' }}
-                >
-                  {drawOdds}
-                </div>
+              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded py-1.5 transition-all duration-150">
+                <div className="text-[11px] text-gray-400">X</div>
+                <div className="text-sm text-white font-semibold">{drawOdds}</div>
               </button>
             )}
             {awayOdds && (
-              <button
-                className="bg-white/5 hover:bg-lime-600/20 border border-white/5 hover:border-lime-500/40 rounded-lg py-2 transition-all"
-                style={{ minHeight: '44px' }}
-              >
-                <div
-                  className="text-gray-400"
-                  style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
-                >
-                  Away
-                </div>
-                <div
-                  className="text-white font-semibold"
-                  style={{ fontSize: 'clamp(0.875rem, 2vw, 0.9375rem)' }}
-                >
-                  {awayOdds}
-                </div>
+              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded py-1.5 transition-all duration-150">
+                <div className="text-[11px] text-gray-400">2</div>
+                <div className="text-sm text-white font-semibold">{awayOdds}</div>
               </button>
             )}
           </div>
@@ -782,165 +448,156 @@ function LiveEventCardCompact({ event }: { event: Event }) {
   );
 }
 
+function CasinoGameCard({ game }: { game: { slug: string; name: string; gradient: string } }) {
+  return (
+    <Link
+      href={`/casino/${game.slug}`}
+      className="block w-[140px] shrink-0 group"
+    >
+      <div
+        className={cn(
+          'relative rounded-xl overflow-hidden border border-white/[0.06] hover:border-[#8D52DA] transition-all duration-150 hover:scale-[1.02]',
+          `bg-gradient-to-br ${game.gradient}`,
+        )}
+        style={{ aspectRatio: '3/4' }}
+      >
+        <div className="flex items-center justify-center h-full">
+          <span className="text-4xl font-black text-white/20">{game.name.charAt(0)}</span>
+        </div>
+      </div>
+      <p className="text-xs text-white font-medium mt-2 truncate">{game.name}</p>
+    </Link>
+  );
+}
+
 // ============================================================
-// MAIN HOME PAGE
+// MAIN PAGE
 // ============================================================
 
 export default function HomePage() {
-  const [activeCategory, setActiveCategory] = useState('football');
-
   return (
     <div className="pb-24 lg:pb-8">
-      {/* Hero Banner - Full width */}
-      <section className="mb-6 md:mb-8">
-        <div className="w-full">
-          <HeroBannerCarousel />
+      {/* Hero Section - Full width, no container */}
+      <section className="w-full mb-8 h-[200px] md:h-[280px]">
+        <div className="relative h-full bg-gradient-to-br from-[#1A1B1F] via-[#2D1B4E] to-[#1A1B1F] overflow-hidden">
+          {/* Subtle background decoration */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-10 right-20 w-64 h-64 rounded-full bg-purple-500 blur-3xl" />
+            <div className="absolute bottom-10 left-20 w-64 h-64 rounded-full bg-purple-600 blur-3xl" />
+          </div>
+
+          {/* Hero Content */}
+          <div className="relative z-10 h-full flex flex-col justify-center px-4 md:px-6 max-w-7xl mx-auto">
+            <h1 className="text-white text-3xl md:text-5xl font-bold mb-2">
+              Welcome to CryptoBet
+            </h1>
+            <p className="text-white/90 text-lg md:text-2xl font-semibold mb-6">
+              Get Your $2,500 Welcome Package
+            </p>
+            <div>
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center bg-[#8D52DA] hover:bg-[#7A3FC7] text-white font-semibold px-8 py-3 rounded transition-all duration-150"
+              >
+                Join Now
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Container for all other sections */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 space-y-6 md:space-y-8">
-        {/* ────────────────────────────────────────────────────────
-            SPORT CATEGORY FILTER PILLS
-        ──────────────────────────────────────────────────────── */}
-        <section>
-          <HScrollContainer>
-            {SPORT_CATEGORIES.map((cat) => {
-              const isActive = activeCategory === cat.slug;
-              const Icon = cat.icon;
-              return (
-                <button
-                  key={cat.slug}
-                  onClick={() => setActiveCategory(cat.slug)}
-                  className={cn(
-                    'shrink-0 flex items-center gap-2 px-4 rounded-full font-medium transition-all duration-200 whitespace-nowrap border',
-                    isActive
-                      ? 'bg-lime-600 border-lime-500 text-white shadow-[0_0_16px_rgba(132,204,22,0.3)]'
-                      : 'bg-[#1A1B1F] border-white/5 text-gray-400 hover:bg-[#22232A] hover:text-white hover:border-white/10',
-                  )}
-                  style={{
-                    height: '44px',
-                    fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)',
-                    scrollSnapAlign: 'start',
-                  }}
-                >
-                  <Icon className="w-4 h-4" />
-                  {cat.label}
-                </button>
-              );
-            })}
-          </HScrollContainer>
-        </section>
-
-        {/* ────────────────────────────────────────────────────────
-            LIVE NOW SECTION
-        ──────────────────────────────────────────────────────── */}
-        <section>
+      {/* All sections below hero have consistent padding */}
+      <div className="space-y-8">
+        {/* Live Now Section */}
+        <section className="px-4 md:px-6 max-w-7xl mx-auto">
           <SectionHeader
             title="Live Now"
             icon={
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
               </span>
             }
             href="/sports/live"
-            linkText="View all"
-            liveCount={MOCK_LIVE_EVENTS.length}
           />
-          <HScrollContainer>
-            {MOCK_LIVE_EVENTS.map((event) => (
-              <LiveEventCardCompact key={event.id} event={event} />
-            ))}
-          </HScrollContainer>
+          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-3 pb-2">
+              {MOCK_LIVE_EVENTS.map((event) => (
+                <LiveEventCard key={event.id} event={event} />
+              ))}
+            </div>
+          </div>
         </section>
 
-        {/* ────────────────────────────────────────────────────────
-            POPULAR EVENTS SECTION (Featured Events)
-        ──────────────────────────────────────────────────────── */}
-        <section>
+        {/* Popular Events Section */}
+        <section className="px-4 md:px-6 max-w-7xl mx-auto">
           <SectionHeader
-            title="Popular Events"
-            icon={<Star className="w-5 h-5 text-yellow-400" />}
+            title="Popular"
+            icon={<Flame className="w-5 h-5 text-orange-400" />}
             href="/sports"
-            linkText="View all"
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {MOCK_FEATURED_EVENTS.map((event) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {MOCK_POPULAR_EVENTS.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
         </section>
 
-        {/* ────────────────────────────────────────────────────────
-            CASINO SECTION
-        ──────────────────────────────────────────────────────── */}
-        <section>
-          <SectionHeader
-            title="Popular Games"
-            icon={<Flame className="w-5 h-5 text-orange-400" />}
-            href="/casino"
-            linkText="View all"
-          />
-          <HScrollContainer>
-            {MOCK_CASINO_GAMES.map((game) => (
-              <CasinoGameCard key={game.slug} game={game} aspect="3/4" />
-            ))}
-          </HScrollContainer>
+        {/* Top Leagues Section */}
+        <section className="px-4 md:px-6 max-w-7xl mx-auto">
+          <SectionHeader title="Top Leagues" href="/sports" />
+          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-3 pb-2">
+              {TOP_LEAGUES.map((league) => (
+                <Link
+                  key={league.competition}
+                  href={`/sports/${league.slug}/${league.competition}`}
+                  className="flex items-center gap-2.5 px-4 h-12 rounded bg-[#1A1B1F] border border-white/[0.06] hover:border-white/10 transition-all duration-150 shrink-0"
+                >
+                  <span className="w-6 h-6 rounded bg-white/5 flex items-center justify-center text-[11px] font-bold text-gray-400">
+                    {league.flag}
+                  </span>
+                  <span className="text-sm font-medium text-gray-300 whitespace-nowrap">
+                    {league.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </section>
 
-        {/* ────────────────────────────────────────────────────────
-            JUMP BACK IN (Recently Played)
-        ──────────────────────────────────────────────────────── */}
-        <section>
+        {/* Casino Picks Section */}
+        <section className="px-4 md:px-6 max-w-7xl mx-auto">
           <SectionHeader
-            title="Jump back in"
-            icon={<Clock className="w-5 h-5 text-purple-400" />}
+            title="Casino"
+            icon={<Dice6 className="w-5 h-5 text-purple-400" />}
             href="/casino"
-            linkText="View all"
           />
-          <HScrollContainer>
-            {MOCK_RECENT_GAMES.map((game) => (
-              <CasinoGameCard key={`recent-${game.slug}`} game={game} aspect="1/1" />
-            ))}
-          </HScrollContainer>
+          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-3 pb-2">
+              {MOCK_CASINO_GAMES.map((game) => (
+                <CasinoGameCard key={game.slug} game={game} />
+              ))}
+            </div>
+          </div>
         </section>
 
-        {/* ────────────────────────────────────────────────────────
-            TOP LEAGUES SECTION
-        ──────────────────────────────────────────────────────── */}
-        <section>
-          <SectionHeader
-            title="Top Leagues"
-            icon={<Trophy className="w-5 h-5 text-amber-400" />}
-            href="/sports"
-            linkText="All sports"
-          />
-          <HScrollContainer>
-            {TOP_LEAGUES.map((league) => (
-              <Link
-                key={league.competition}
-                href={`/sports/${league.slug}/${league.competition}`}
-                className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-[#1A1B1F] border border-white/5 hover:border-lime-500/30 hover:bg-[#1F2028] transition-all group shrink-0"
-                style={{
-                  minHeight: '56px',
-                  scrollSnapAlign: 'start',
-                }}
-              >
-                <span className="shrink-0 w-8 h-8 rounded-md bg-white/5 flex items-center justify-center font-bold text-gray-400 group-hover:text-white transition-colors"
-                  style={{ fontSize: 'clamp(0.6875rem, 1.5vw, 0.75rem)' }}
-                >
-                  {league.flag}
-                </span>
-                <span
-                  className="font-medium text-gray-300 group-hover:text-white transition-colors whitespace-nowrap"
-                  style={{ fontSize: 'clamp(0.8125rem, 2vw, 0.875rem)' }}
-                >
-                  {league.name}
-                </span>
-              </Link>
-            ))}
-          </HScrollContainer>
+        {/* Promotions Banner */}
+        <section className="px-4 md:px-6 max-w-7xl mx-auto">
+          <Link
+            href="/promotions"
+            className="block w-full bg-gradient-to-r from-[#8D52DA] to-[#5E2A9E] rounded-lg p-6 md:p-8 hover:from-[#7A3FC7] hover:to-[#4E1A8E] transition-all duration-150"
+          >
+            <h3 className="text-white text-xl md:text-2xl font-bold mb-2">
+              Get Your $2,500 Welcome Package
+            </h3>
+            <p className="text-white/80 text-sm md:text-base mb-4">
+              Join today and claim your exclusive welcome bonus
+            </p>
+            <span className="inline-flex items-center justify-center bg-white text-[#8D52DA] font-semibold px-6 py-2 rounded transition-all duration-150 hover:bg-gray-100">
+              Claim Bonus
+            </span>
+          </Link>
         </section>
       </div>
     </div>

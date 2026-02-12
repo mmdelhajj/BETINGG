@@ -9,15 +9,9 @@ import { cn, formatOdds, formatDate } from '@/lib/utils';
 import {
   ChevronDown,
   ChevronLeft,
-  MapPin,
   Calendar,
   Trophy,
   BarChart3,
-  Clock,
-  Zap,
-  Star,
-  Lock,
-  Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Event, Market, Selection } from '@/types';
@@ -775,7 +769,7 @@ function filterByCategory(markets: CategorizedMarket[], cat: MarketCategory): Ca
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Animated Accordion Market Section (Mobile-First Cloudbet/bet365 Style)
+// Cloudbet-style Market Accordion
 // ──────────────────────────────────────────────────────────────────────
 
 function MarketAccordion({
@@ -807,48 +801,36 @@ function MarketAccordion({
     [market, event, toggleSelection]
   );
 
-  // Determine grid layout based on selection count
+  // Determine grid layout
   const getGridCols = () => {
     const count = market.selections.length;
     if (count === 2) return 'grid-cols-2';
     if (count === 3) return 'grid-cols-3';
-    // For many selections: 2-col mobile, 3-col tablet+
-    return 'grid-cols-2 md:grid-cols-3';
+    return 'grid-cols-2';
   };
 
+  const isSuspended = market.status === 'SUSPENDED';
+
   return (
-    <div className="border-b border-gray-800/50 last:border-b-0">
+    <div className="mb-2">
       {/* Market Header */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1b1f] hover:bg-[#1f2025] active:bg-[#22232a] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-transparent hover:bg-white/[0.02] transition-colors rounded-lg"
         aria-expanded={isOpen}
       >
+        <span className="text-sm font-bold text-white">{market.name}</span>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-white">{market.name}</span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // Info modal would open here
-            }}
-            className="text-gray-500 hover:text-gray-300"
-            aria-label="Market info"
-          >
-            <Info className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          {market.status === 'SUSPENDED' && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">
-              <Lock className="w-3 h-3 text-yellow-500" />
-              <span className="text-[10px] font-bold text-yellow-500 uppercase">Suspended</span>
+          {isSuspended && (
+            <span className="px-2 py-0.5 text-[10px] font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded uppercase tracking-wide">
+              SUSPENDED
             </span>
           )}
           <motion.div
-            animate={{ rotate: isOpen ? 180 : 0 }}
+            animate={{ rotate: isOpen ? 90 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            <ChevronDown className="w-4 h-4 text-gray-400 rotate-[-90deg]" />
           </motion.div>
         </div>
       </button>
@@ -863,7 +845,7 @@ function MarketAccordion({
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="px-4 py-3 bg-[#13141a]">
+            <div className="px-4 pb-4">
               <div className={cn('grid gap-2', getGridCols())}>
                 {market.selections.map((sel) => {
                   const isSelected = hasSelection(sel.id);
@@ -875,36 +857,25 @@ function MarketAccordion({
                       onClick={() => handleSelect(sel)}
                       disabled={isDisabled}
                       className={cn(
-                        'flex flex-col justify-center px-3 py-3 rounded-lg transition-all duration-150 min-h-[48px] relative',
+                        'h-10 px-3 rounded flex items-center justify-between border transition-all',
                         isSelected
-                          ? 'bg-lime-500/20 border border-lime-500'
-                          : 'bg-[#1a1b1f] border border-gray-800/50 hover:border-gray-700 active:bg-[#1f2025]',
+                          ? 'bg-[#8D52DA]/15 border-[#8D52DA]'
+                          : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06]',
                         isDisabled && 'opacity-40 cursor-not-allowed'
                       )}
                     >
-                      {isDisabled && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Lock className="w-4 h-4 text-gray-600" />
-                        </div>
-                      )}
-                      <div className={cn('flex items-center justify-between', isDisabled && 'opacity-30')}>
-                        <span
-                          className={cn(
-                            'text-sm font-medium line-clamp-2 text-left mr-2',
-                            isSelected ? 'text-lime-400' : 'text-gray-200'
-                          )}
-                        >
-                          {sel.name}
-                        </span>
-                        <span
-                          className={cn(
-                            'font-mono font-bold text-sm shrink-0',
-                            isSelected ? 'text-lime-400' : 'text-white'
-                          )}
-                        >
-                          {formatOdds(sel.odds)}
-                        </span>
-                      </div>
+                      <span className={cn(
+                        'text-[13px] truncate',
+                        isSelected ? 'text-white' : 'text-white/60'
+                      )}>
+                        {sel.name}
+                      </span>
+                      <span className={cn(
+                        'text-sm font-bold font-mono ml-2',
+                        isSelected ? 'text-white' : 'text-white'
+                      )}>
+                        {formatOdds(sel.odds)}
+                      </span>
                     </button>
                   );
                 })}
@@ -918,48 +889,7 @@ function MarketAccordion({
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Countdown for upcoming events
-// ──────────────────────────────────────────────────────────────────────
-
-function KickoffCountdown({ startTime }: { startTime: string }) {
-  const [remaining, setRemaining] = useState('');
-
-  useEffect(() => {
-    function update() {
-      const diff = new Date(startTime).getTime() - Date.now();
-      if (diff <= 0) {
-        setRemaining('Starting soon');
-        return;
-      }
-      const days = Math.floor(diff / 86400000);
-      const hours = Math.floor((diff % 86400000) / 3600000);
-      const minutes = Math.floor((diff % 3600000) / 60000);
-      const seconds = Math.floor((diff % 60000) / 1000);
-
-      if (days > 0) {
-        setRemaining(`${days}d ${hours}h ${minutes}m`);
-      } else if (hours > 0) {
-        setRemaining(`${hours}h ${minutes}m ${seconds}s`);
-      } else {
-        setRemaining(`${minutes}m ${seconds}s`);
-      }
-    }
-
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [startTime]);
-
-  return (
-    <div className="flex items-center gap-1.5 text-xs text-gray-400">
-      <Clock className="w-3.5 h-3.5" />
-      <span>{remaining}</span>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Basketball scoreboard (horizontal scrollable table)
+// Basketball Scoreboard
 // ──────────────────────────────────────────────────────────────────────
 
 function BasketballScoreboard({ event }: { event: Event }) {
@@ -988,52 +918,44 @@ function BasketballScoreboard({ event }: { event: Event }) {
   if (quarters.length === 0) return null;
 
   return (
-    <div className="mt-4 rounded-lg border border-gray-800/50 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[400px]">
-          <thead>
-            <tr className="bg-[#1a1b1f]">
-              <th className="text-left px-3 py-2 text-xs font-medium text-gray-400 sticky left-0 bg-[#1a1b1f]">
-                Team
+    <div className="mt-4 overflow-x-auto rounded border border-white/[0.06]">
+      <table className="w-full text-[13px] min-w-[400px]">
+        <thead className="bg-[#1A1B1F]">
+          <tr>
+            <th className="text-left px-3 py-2 text-xs font-medium text-gray-400">Team</th>
+            {quarters.map((q) => (
+              <th key={q.label} className="text-center px-3 py-2 text-xs font-medium text-gray-400">
+                {q.label}
               </th>
-              {quarters.map((q) => (
-                <th key={q.label} className="text-center px-3 py-2 text-xs font-medium text-gray-400 min-w-[50px]">
-                  {q.label}
-                </th>
-              ))}
-              <th className="text-center px-3 py-2 text-xs font-bold text-gray-300">Total</th>
-            </tr>
-          </thead>
-          <tbody className="bg-[#13141a]">
-            <tr className="border-t border-gray-800/50">
-              <td className="px-3 py-2 font-medium text-white sticky left-0 bg-[#13141a]">
-                {event.homeTeam}
+            ))}
+            <th className="text-center px-3 py-2 text-xs font-bold text-white">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="border-t border-white/[0.06]">
+            <td className="px-3 py-2 font-medium text-white">{event.homeTeam}</td>
+            {quarters.map((q) => (
+              <td key={q.label} className="text-center px-3 py-2 font-mono text-[13px] text-gray-300">
+                {q.home}
               </td>
-              {quarters.map((q) => (
-                <td key={q.label} className="text-center px-3 py-2 font-mono text-gray-300">
-                  {q.home}
-                </td>
-              ))}
-              <td className="text-center px-3 py-2 font-mono font-bold text-lime-400">
-                {event.homeScore ?? 0}
+            ))}
+            <td className="text-center px-3 py-2 font-mono font-bold text-white">
+              {event.homeScore ?? 0}
+            </td>
+          </tr>
+          <tr className="border-t border-white/[0.06]">
+            <td className="px-3 py-2 font-medium text-white">{event.awayTeam}</td>
+            {quarters.map((q) => (
+              <td key={q.label} className="text-center px-3 py-2 font-mono text-[13px] text-gray-300">
+                {q.away}
               </td>
-            </tr>
-            <tr className="border-t border-gray-800/50">
-              <td className="px-3 py-2 font-medium text-gray-300 sticky left-0 bg-[#13141a]">
-                {event.awayTeam}
-              </td>
-              {quarters.map((q) => (
-                <td key={q.label} className="text-center px-3 py-2 font-mono text-gray-400">
-                  {q.away}
-                </td>
-              ))}
-              <td className="text-center px-3 py-2 font-mono font-bold text-gray-300">
-                {event.awayScore ?? 0}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            ))}
+            <td className="text-center px-3 py-2 font-mono font-bold text-white">
+              {event.awayScore ?? 0}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -1044,32 +966,32 @@ function BasketballScoreboard({ event }: { event: Event }) {
 
 function EventDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-[#0f1014] px-4 py-4 pb-24 animate-pulse">
+    <div className="min-h-screen bg-[#0F0F12] px-4 py-4 pb-24 animate-pulse">
       <div className="h-4 w-32 bg-gray-800 rounded mb-4" />
-      <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 mb-4">
+      <div className="rounded-lg bg-[#1A1B1F] p-5 mb-4">
         <div className="h-5 w-40 bg-gray-800 rounded mb-4" />
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 space-y-2">
-            <div className="h-12 w-12 bg-gray-800 rounded-full mx-auto" />
+            <div className="h-16 w-16 bg-gray-800 rounded-full mx-auto" />
             <div className="h-4 w-20 bg-gray-800 rounded mx-auto" />
           </div>
           <div className="h-10 w-16 bg-gray-800 rounded" />
           <div className="flex-1 space-y-2">
-            <div className="h-12 w-12 bg-gray-800 rounded-full mx-auto" />
+            <div className="h-16 w-16 bg-gray-800 rounded-full mx-auto" />
             <div className="h-4 w-20 bg-gray-800 rounded mx-auto" />
           </div>
         </div>
       </div>
-      <div className="h-11 w-full bg-gray-900 rounded-lg mb-4" />
+      <div className="h-9 w-full bg-[#1A1B1F] rounded mb-4" />
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="h-24 bg-gray-900 rounded-lg mb-2" />
+        <div key={i} className="h-24 bg-[#1A1B1F] rounded-lg mb-2" />
       ))}
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Main Page Component (Mobile-First Professional Design)
+// Main Page Component - Cloudbet Design
 // ──────────────────────────────────────────────────────────────────────
 
 export default function EventDetailPage() {
@@ -1080,9 +1002,8 @@ export default function EventDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<MarketCategory>('main');
   const tabsRef = useRef<HTMLDivElement>(null);
-  const marketsRef = useRef<HTMLDivElement>(null);
 
-  // Reset mock ID generator on mount to keep IDs stable per render
+  // Reset mock ID generator on mount
   useEffect(() => {
     _mockId = 1000;
   }, []);
@@ -1157,22 +1078,19 @@ export default function EventDetailPage() {
   const sportSlug = event?.competition?.sport?.slug || '';
   const isBasketball = sportSlug === 'basketball';
 
-  // Build comprehensive market list: API markets + mock depth
+  // Build comprehensive market list
   const allMarkets: CategorizedMarket[] = useMemo(() => {
     if (!event) return [];
     const home = event.homeTeam || 'Home';
     const away = event.awayTeam || 'Away';
 
-    // Start with API-provided markets, tagged as 'main'
     const apiMarkets: CategorizedMarket[] = (event.markets || []).map((m) => ({
       ...m,
       _category: 'main' as MarketCategory,
     }));
 
-    // Generate sport-specific mock markets for full depth
     const mockMarkets = generateMockMarkets(sportSlug, home, away);
 
-    // Deduplicate by name: prefer API markets, then add mocks that don't overlap
     const apiNames = new Set(apiMarkets.map((m) => m.name));
     const combined = [
       ...apiMarkets,
@@ -1200,29 +1118,18 @@ export default function EventDetailPage() {
     return counts;
   }, [allMarkets]);
 
-  // Scroll to markets when tab is clicked
-  const handleTabClick = (category: MarketCategory) => {
-    setActiveCategory(category);
-    // Smooth scroll to markets section on mobile
-    if (marketsRef.current && window.innerWidth < 1024) {
-      setTimeout(() => {
-        marketsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-  };
-
   // ─── Render states ─────────────────────────────────────────────────
 
   if (isLoading) return <EventDetailSkeleton />;
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-[#0f1014] px-4 py-4">
-        <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] text-center py-16">
+      <div className="min-h-screen bg-[#0F0F12] px-4 py-4">
+        <div className="rounded-lg border border-gray-800 bg-[#1A1B1F] text-center py-16">
           <p className="text-gray-400 text-lg mb-4">{error || 'Event not found'}</p>
           <button
             onClick={() => router.back()}
-            className="px-5 py-2.5 rounded-lg bg-lime-500 text-black text-sm font-semibold hover:bg-lime-400 active:bg-lime-600 transition-colors"
+            className="px-5 py-2.5 rounded-lg bg-[#8D52DA] text-white text-sm font-semibold hover:bg-[#7A45C0] transition-colors"
           >
             Go Back
           </button>
@@ -1237,100 +1144,76 @@ export default function EventDetailPage() {
   const away = event.awayTeam || 'TBD';
 
   return (
-    <div className="min-h-screen bg-[#0f1014] px-4 py-4 pb-24">
-      {/* ────────── Back button + breadcrumb ────────── */}
-      <div className="mb-3">
+    <div className="min-h-screen bg-[#0F0F12] pb-24">
+      <div className="max-w-[1400px] mx-auto px-4 py-4">
+        {/* ────────── Back Navigation ────────── */}
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-1 text-sm text-gray-400 hover:text-white active:text-gray-300 transition-colors"
+          className="flex items-center gap-1 text-[13px] text-gray-400 hover:text-white transition-colors mb-4"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>Back</span>
+          Back
         </button>
-      </div>
 
-      {/* ────────── Event Header (Mobile-First) ────────── */}
-      <div className="rounded-xl border border-gray-800/80 bg-gradient-to-b from-[#1a1b1f] to-[#13141a] overflow-hidden mb-4 shadow-lg">
-        {/* Competition bar */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-800/50 bg-[#1a1b1f]/80">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {event.isLive && (
-              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 shrink-0">
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">
-                  Live
-                </span>
-              </span>
-            )}
-            <Trophy className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-            <span className="text-xs text-gray-400 truncate">{competitionName}</span>
+        {/* ────────── Match Header ────────── */}
+        <div className="bg-[#1A1B1F] rounded-lg p-5 mb-4">
+          {/* Competition name */}
+          <div className="text-[12px] text-gray-400 uppercase tracking-wider mb-4">
+            {competitionName}
           </div>
-          <div className="shrink-0 ml-2">
-            {event.isLive && event.metadata?.period ? (
-              <span className="text-xs text-red-400 font-medium">
-                {event.metadata.period}
-                {event.metadata.matchTime ? ` - ${event.metadata.matchTime}` : ''}
-              </span>
-            ) : !event.isLive ? (
-              <KickoffCountdown startTime={event.startTime} />
-            ) : null}
-          </div>
-        </div>
 
-        {/* Teams + Score (Mobile optimized) */}
-        <div className="px-4 py-5">
+          {/* Teams */}
           <div className="flex items-center justify-between gap-4">
             {/* Home team */}
             <div className="flex-1 text-center">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-[64px] md:h-[64px] mx-auto mb-2 rounded-full bg-[#22232a] border border-gray-800 flex items-center justify-center">
+              <div className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 rounded-full bg-[#222328] flex items-center justify-center">
                 {event.homeTeamLogo ? (
                   <img
                     src={event.homeTeamLogo}
                     alt={home}
-                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 object-contain"
+                    className="w-8 h-8 md:w-10 md:h-10 object-contain"
                   />
                 ) : (
-                  <span className="text-xl sm:text-2xl font-bold text-gray-400">{home.charAt(0)}</span>
+                  <span className="text-xl md:text-2xl font-bold text-gray-400">{home.charAt(0)}</span>
                 )}
               </div>
-              <p className="font-bold text-base sm:text-lg md:text-xl text-white leading-tight line-clamp-2">
-                {home}
-              </p>
+              <p className="font-bold text-base md:text-xl text-white">{home}</p>
             </div>
 
             {/* Score / VS */}
-            <div className="px-3 text-center shrink-0">
+            <div className="text-center">
               {event.isLive ? (
                 <div>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <span className="text-3xl sm:text-4xl md:text-5xl font-black font-mono text-white leading-none">
+                  <div className="flex items-center gap-2">
+                    <span className="text-4xl md:text-5xl font-black font-mono text-white">
                       {event.homeScore ?? 0}
                     </span>
-                    <span className="text-lg sm:text-xl text-gray-600 font-light">:</span>
-                    <span className="text-3xl sm:text-4xl md:text-5xl font-black font-mono text-white leading-none">
+                    <span className="text-xl text-gray-600">:</span>
+                    <span className="text-4xl md:text-5xl font-black font-mono text-white">
                       {event.awayScore ?? 0}
                     </span>
                   </div>
-                  {event.metadata?.matchTime && (
-                    <div className="mt-2 flex items-center justify-center gap-1.5">
-                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-xs font-medium text-red-400">
-                        {event.metadata.matchTime}
+                  <div className="mt-2 flex items-center justify-center gap-1.5">
+                    <span className="px-2 py-0.5 text-[10px] font-bold text-red-500 bg-red-500/15 rounded uppercase">
+                      LIVE
+                    </span>
+                    {event.metadata?.matchTime && (
+                      <span className="text-xs font-medium text-green-400">
+                        {event.metadata.matchTime as string}
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div>
-                  <span className="text-2xl sm:text-3xl font-bold text-gray-600">VS</span>
-                  <p className="text-[10px] sm:text-xs text-gray-500 mt-1.5">
+                  <span className="text-2xl md:text-3xl font-bold text-gray-600">VS</span>
+                  <p className="text-xs text-gray-500 mt-1">
                     {new Date(event.startTime).toLocaleDateString('en-US', {
-                      weekday: 'short',
                       month: 'short',
                       day: 'numeric',
                     })}
                   </p>
-                  <p className="text-[10px] sm:text-xs text-gray-600">
+                  <p className="text-xs text-gray-600">
                     {new Date(event.startTime).toLocaleTimeString('en-US', {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -1342,207 +1225,135 @@ export default function EventDetailPage() {
 
             {/* Away team */}
             <div className="flex-1 text-center">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-[64px] md:h-[64px] mx-auto mb-2 rounded-full bg-[#22232a] border border-gray-800 flex items-center justify-center">
+              <div className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 rounded-full bg-[#222328] flex items-center justify-center">
                 {event.awayTeamLogo ? (
                   <img
                     src={event.awayTeamLogo}
                     alt={away}
-                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 object-contain"
+                    className="w-8 h-8 md:w-10 md:h-10 object-contain"
                   />
                 ) : (
-                  <span className="text-xl sm:text-2xl font-bold text-gray-400">{away.charAt(0)}</span>
+                  <span className="text-xl md:text-2xl font-bold text-gray-400">{away.charAt(0)}</span>
                 )}
               </div>
-              <p className="font-bold text-base sm:text-lg md:text-xl text-white leading-tight line-clamp-2">
-                {away}
-              </p>
+              <p className="font-bold text-base md:text-xl text-white">{away}</p>
             </div>
           </div>
 
           {/* Basketball scoreboard */}
           {isBasketball && event.isLive && <BasketballScoreboard event={event} />}
         </div>
-      </div>
 
-      {/* ────────── Sticky Category Tabs (Horizontal Scroll, Snap) ────────── */}
-      <div className="sticky top-0 z-20 bg-[#0f1014] pb-2 -mx-4 px-4">
-        <div
-          ref={tabsRef}
-          className="flex items-center gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth"
-          style={{ scrollSnapType: 'x mandatory' }}
-        >
-          {CATEGORY_TABS.map((tab) => {
-            const count = categoryCounts[tab.key];
-            const isActive = activeCategory === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => handleTabClick(tab.key)}
-                disabled={count === 0}
-                className={cn(
-                  'flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all shrink-0 snap-start h-11',
-                  isActive
-                    ? 'bg-lime-500 text-black shadow-lg shadow-lime-500/20'
-                    : count > 0
-                      ? 'bg-[#1a1b1f] text-gray-300 border border-gray-800 hover:border-gray-700 active:bg-[#1f2025]'
-                      : 'bg-[#1a1b1f] text-gray-600 border border-gray-800/50 cursor-not-allowed opacity-50'
-                )}
-              >
-                {tab.key === 'specials' && <Zap className="w-4 h-4" />}
-                {tab.key === 'player_props' && <Star className="w-4 h-4" />}
-                <span>{tab.label}</span>
-                {count > 0 && (
-                  <span
-                    className={cn(
-                      'text-[10px] font-bold px-1.5 py-0.5 rounded',
-                      isActive ? 'bg-black/20 text-black' : 'bg-gray-800 text-gray-400'
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        {/* Active indicator bar (lime bottom border effect) */}
-        <div className="h-0.5 bg-lime-500 mt-2 rounded-full" style={{ width: '40px' }} />
-      </div>
-
-      {/* ────────── Markets Grid (Desktop: 2-column with sidebar) ────────── */}
-      <div ref={marketsRef} className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 mt-4">
-        {/* Left column: Markets list */}
-        <div>
-          {displayedMarkets.length === 0 ? (
-            <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] text-center py-12">
-              <svg
-                className="w-12 h-12 mx-auto text-gray-600 mb-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-              <p className="text-gray-400 text-base font-medium">No markets in this category</p>
-              <p className="text-gray-500 text-sm mt-1">Try another category to see available markets.</p>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-gray-800/80 overflow-hidden shadow-sm">
-              {displayedMarkets.map((market, idx) => (
-                <MarketAccordion
-                  key={market.id}
-                  market={market}
-                  event={event}
-                  defaultOpen={idx < 3}
-                />
-              ))}
-            </div>
-          )}
+        {/* ────────── Market Category Tabs ────────── */}
+        <div className="sticky top-0 z-20 bg-[#0F0F12] pb-2 -mx-4 px-4">
+          <div
+            ref={tabsRef}
+            className="flex items-center gap-2 overflow-x-auto scrollbar-hide"
+          >
+            {CATEGORY_TABS.map((tab) => {
+              const count = categoryCounts[tab.key];
+              const isActive = activeCategory === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveCategory(tab.key)}
+                  disabled={count === 0}
+                  className={cn(
+                    'flex items-center gap-1.5 px-4 h-9 rounded text-[13px] font-medium whitespace-nowrap transition-all shrink-0 border',
+                    isActive
+                      ? 'bg-[#8D52DA]/15 border-[#8D52DA] text-white'
+                      : count > 0
+                        ? 'bg-transparent border-white/[0.06] text-gray-400 hover:border-white/[0.12]'
+                        : 'bg-transparent border-white/[0.06] text-gray-600 cursor-not-allowed opacity-50'
+                  )}
+                >
+                  <span>{tab.label}</span>
+                  {count > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Right column: Match info sidebar (desktop only) */}
-        <div className="hidden lg:block">
-          <div className="sticky top-20 space-y-4">
-            {/* Match Info Card */}
-            <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-800 bg-[#16171b]">
-                <h3 className="text-sm font-semibold text-white">Match Info</h3>
+        {/* ────────── Markets Grid with Sidebar ────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mt-4">
+          {/* Left: Markets */}
+          <div>
+            {displayedMarkets.length === 0 ? (
+              <div className="rounded-lg border border-white/[0.06] bg-[#1A1B1F] text-center py-12">
+                <p className="text-gray-400 text-base">No markets in this category</p>
               </div>
-              <div className="p-4 space-y-3">
-                <div className="flex items-start gap-3">
-                  <Trophy className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-500">Competition</p>
-                    <p className="text-sm text-white">{competitionName}</p>
-                  </div>
+            ) : (
+              <div className="bg-[#1A1B1F] rounded-lg p-2">
+                {displayedMarkets.map((market, idx) => (
+                  <MarketAccordion
+                    key={market.id}
+                    market={market}
+                    event={event}
+                    defaultOpen={idx < 3}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Sidebar (desktop only) */}
+          <div className="hidden lg:block">
+            <div className="sticky top-20 space-y-4">
+              {/* Match Info */}
+              <div className="rounded-lg border border-white/[0.06] bg-[#1A1B1F] overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <h3 className="text-sm font-bold text-white">Match Info</h3>
                 </div>
-                <div className="flex items-start gap-3">
-                  <BarChart3 className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-500">Sport</p>
-                    <p className="text-sm text-white">{sportName}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-500">Date</p>
-                    <p className="text-sm text-white">{formatDate(event.startTime)}</p>
-                  </div>
-                </div>
-                {Boolean((event.metadata as Record<string, unknown> | null)?.venue) && (
+                <div className="p-4 space-y-3">
                   <div className="flex items-start gap-3">
-                    <MapPin className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-500">Venue</p>
-                      <p className="text-sm text-white">
-                        {(event.metadata as Record<string, unknown>).venue as string}
-                      </p>
+                    <Trophy className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-500">Competition</p>
+                      <p className="text-sm text-white">{competitionName}</p>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-800 bg-[#16171b]">
-                <h3 className="text-sm font-semibold text-white">Statistics</h3>
-              </div>
-              <div className="p-4 grid grid-cols-2 gap-3">
-                <div className="bg-[#13141a] rounded-lg p-3 text-center border border-gray-800/50">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Status</p>
-                  <p
-                    className={cn(
-                      'text-xs font-semibold',
-                      event.isLive ? 'text-lime-400' : 'text-gray-300'
-                    )}
-                  >
-                    {event.isLive ? 'Live' : 'Upcoming'}
-                  </p>
-                </div>
-                <div className="bg-[#13141a] rounded-lg p-3 text-center border border-gray-800/50">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Markets</p>
-                  <p className="text-xs font-semibold text-white">{allMarkets.length}</p>
-                </div>
-                {event.isLive && (
-                  <div className="col-span-2 bg-[#13141a] rounded-lg p-3 text-center border border-gray-800/50">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Score</p>
-                    <p className="text-lg font-bold font-mono text-lime-400">
-                      {event.homeScore ?? 0} - {event.awayScore ?? 0}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <BarChart3 className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-500">Sport</p>
+                      <p className="text-sm text-white">{sportName}</p>
+                    </div>
                   </div>
-                )}
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-500">Date</p>
+                      <p className="text-sm text-white">{formatDate(event.startTime)}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Mobile-only match info (below markets) */}
-      <div className="lg:hidden mt-4 space-y-4">
-        <div className="rounded-lg border border-gray-800 bg-[#1a1b1f] overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-800 bg-[#16171b]">
-            <h3 className="text-sm font-semibold text-white">Match Info</h3>
-          </div>
-          <div className="p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <Trophy className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs text-gray-500">Competition</p>
-                <p className="text-sm text-white">{competitionName}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Calendar className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs text-gray-500">Date</p>
-                <p className="text-sm text-white">{formatDate(event.startTime)}</p>
+              {/* Statistics */}
+              <div className="rounded-lg border border-white/[0.06] bg-[#1A1B1F] overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <h3 className="text-sm font-bold text-white">Statistics</h3>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Status</span>
+                    <span className={cn(
+                      'text-sm font-semibold',
+                      event.isLive ? 'text-red-400' : 'text-gray-300'
+                    )}>
+                      {event.isLive ? 'Live' : 'Upcoming'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Total Markets</span>
+                    <span className="text-sm font-semibold text-white">{allMarkets.length}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
-import { Search, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useBetSlipStore } from '@/stores/betSlipStore';
 import { cn } from '@/lib/utils';
 import type { BetSlipItem } from '@/types';
@@ -39,22 +39,6 @@ interface MockEvent {
   awayScore?: number;
   matchTime?: string;
 }
-
-interface MockLeague {
-  id: string;
-  name: string;
-  sport: string;
-  sportSlug: string;
-  country: string;
-  logo: string;
-}
-
-const LEAGUES: MockLeague[] = [
-  { id: 'epl', name: 'Premier League', sport: 'Soccer', sportSlug: 'soccer', country: 'England', logo: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { id: 'laliga', name: 'La Liga', sport: 'Soccer', sportSlug: 'soccer', country: 'Spain', logo: '🇪🇸' },
-  { id: 'nba', name: 'NBA', sport: 'Basketball', sportSlug: 'basketball', country: 'USA', logo: '🇺🇸' },
-  { id: 'nfl', name: 'NFL', sport: 'American Football', sportSlug: 'american-football', country: 'USA', logo: '🇺🇸' },
-];
 
 function makeMarket(homeOdds: string, drawOdds: string | null, awayOdds: string, eventId: string): MockMarket {
   const selections: MockSelection[] = [
@@ -98,29 +82,27 @@ const MOCK_EVENTS: MockEvent[] = [
   { id: 'laliga-1', homeTeam: 'Real Madrid', awayTeam: 'Barcelona', startTime: today(21, 0), isLive: false, isFeatured: true, league: 'La Liga', leagueId: 'laliga', sport: 'Soccer', sportSlug: 'soccer', markets: [makeMarket('2.60', '3.25', '2.70', 'laliga-1')] },
   { id: 'laliga-2', homeTeam: 'Atletico Madrid', awayTeam: 'Sevilla', startTime: tomorrow(19, 0), isLive: false, isFeatured: false, league: 'La Liga', leagueId: 'laliga', sport: 'Soccer', sportSlug: 'soccer', markets: [makeMarket('1.75', '3.60', '4.80', 'laliga-2')] },
   { id: 'laliga-3', homeTeam: 'Real Sociedad', awayTeam: 'Villarreal', startTime: inDays(2, 20, 0), isLive: false, isFeatured: false, league: 'La Liga', leagueId: 'laliga', sport: 'Soccer', sportSlug: 'soccer', markets: [makeMarket('2.20', '3.30', '3.30', 'laliga-3')] },
-  { id: 'laliga-4', homeTeam: 'Athletic Bilbao', awayTeam: 'Real Betis', startTime: inDays(4, 18, 0), isLive: false, isFeatured: false, league: 'La Liga', leagueId: 'laliga', sport: 'Soccer', sportSlug: 'soccer', markets: [makeMarket('2.05', '3.40', '3.60', 'laliga-4')] },
 
   // --- NBA ---
   { id: 'nba-1', homeTeam: 'Los Angeles Lakers', awayTeam: 'Boston Celtics', startTime: today(19, 30), isLive: true, isFeatured: true, league: 'NBA', leagueId: 'nba', sport: 'Basketball', sportSlug: 'basketball', markets: [makeMarket('1.85', null, '1.95', 'nba-1')], homeScore: 87, awayScore: 92, matchTime: 'Q3 4:22' },
   { id: 'nba-2', homeTeam: 'Golden State Warriors', awayTeam: 'Milwaukee Bucks', startTime: today(22, 0), isLive: false, isFeatured: false, league: 'NBA', leagueId: 'nba', sport: 'Basketball', sportSlug: 'basketball', markets: [makeMarket('2.10', null, '1.75', 'nba-2')] },
   { id: 'nba-3', homeTeam: 'Denver Nuggets', awayTeam: 'Phoenix Suns', startTime: tomorrow(21, 0), isLive: false, isFeatured: false, league: 'NBA', leagueId: 'nba', sport: 'Basketball', sportSlug: 'basketball', markets: [makeMarket('1.70', null, '2.15', 'nba-3')] },
-  { id: 'nba-4', homeTeam: 'Miami Heat', awayTeam: 'Philadelphia 76ers', startTime: inDays(2, 19, 0), isLive: false, isFeatured: false, league: 'NBA', leagueId: 'nba', sport: 'Basketball', sportSlug: 'basketball', markets: [makeMarket('1.90', null, '1.90', 'nba-4')] },
-  { id: 'nba-5', homeTeam: 'Dallas Mavericks', awayTeam: 'Oklahoma City Thunder', startTime: inDays(3, 20, 30), isLive: false, isFeatured: false, league: 'NBA', leagueId: 'nba', sport: 'Basketball', sportSlug: 'basketball', markets: [makeMarket('2.25', null, '1.65', 'nba-5')] },
 
   // --- NFL ---
   { id: 'nfl-1', homeTeam: 'Kansas City Chiefs', awayTeam: 'San Francisco 49ers', startTime: inDays(2, 18, 30), isLive: false, isFeatured: false, league: 'NFL', leagueId: 'nfl', sport: 'American Football', sportSlug: 'american-football', markets: [makeMarket('1.65', null, '2.25', 'nfl-1')] },
   { id: 'nfl-2', homeTeam: 'Philadelphia Eagles', awayTeam: 'Dallas Cowboys', startTime: inDays(2, 22, 15), isLive: false, isFeatured: false, league: 'NFL', leagueId: 'nfl', sport: 'American Football', sportSlug: 'american-football', markets: [makeMarket('1.80', null, '2.00', 'nfl-2')] },
-  { id: 'nfl-3', homeTeam: 'Buffalo Bills', awayTeam: 'Baltimore Ravens', startTime: inDays(5, 20, 0), isLive: false, isFeatured: false, league: 'NFL', leagueId: 'nfl', sport: 'American Football', sportSlug: 'american-football', markets: [makeMarket('1.95', null, '1.85', 'nfl-3')] },
 ];
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const SPORT_PILLS = [
-  'All', 'Soccer', 'Basketball', 'Tennis', 'American Football',
-  'Baseball', 'Ice Hockey', 'MMA', 'Boxing', 'Cricket',
-  'Rugby', 'Golf', 'Esports',
+// Sports list with icons and counts
+const SPORTS_LIST = [
+  { slug: 'soccer', name: 'Soccer', icon: '⚽', count: 156 },
+  { slug: 'basketball', name: 'Basketball', icon: '🏀', count: 89 },
+  { slug: 'tennis', name: 'Tennis', icon: '🎾', count: 124 },
+  { slug: 'american-football', name: 'American Football', icon: '🏈', count: 42 },
+  { slug: 'ice-hockey', name: 'Ice Hockey', icon: '🏒', count: 67 },
+  { slug: 'baseball', name: 'Baseball', icon: '⚾', count: 53 },
+  { slug: 'esports', name: 'Esports', icon: '🎮', count: 78 },
+  { slug: 'mma', name: 'MMA', icon: '🥊', count: 12 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -146,20 +128,28 @@ function formatEventTime(iso: string, isLive: boolean, matchTime?: string): stri
   return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${time}`;
 }
 
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (sameDay(d, today)) return 'Today';
+  if (sameDay(d, tomorrow)) return 'Tomorrow';
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function SportsPage() {
   const { toggleSelection, hasSelection } = useBetSlipStore();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeSport, setActiveSport] = useState('All');
-  const [collapsedLeagues, setCollapsedLeagues] = useState<Record<string, boolean>>({});
-
-  const toggleLeague = (leagueId: string) => {
-    setCollapsedLeagues((prev) => ({ ...prev, [leagueId]: !prev[leagueId] }));
-  };
 
   const handleOddsClick = (event: MockEvent, selection: MockSelection) => {
     const item: BetSlipItem = {
@@ -175,92 +165,48 @@ export default function SportsPage() {
     toggleSelection(item);
   };
 
-  // Filtering
-  const filteredEvents = useMemo(() => {
-    let events = MOCK_EVENTS;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      events = events.filter(
-        (e) =>
-          e.homeTeam.toLowerCase().includes(q) ||
-          e.awayTeam.toLowerCase().includes(q) ||
-          e.league.toLowerCase().includes(q) ||
-          e.sport.toLowerCase().includes(q)
-      );
-    }
-
-    if (activeSport !== 'All') {
-      events = events.filter((e) => e.sport === activeSport);
-    }
-
-    return events;
-  }, [searchQuery, activeSport]);
-
   const featuredEvents = useMemo(
-    () => filteredEvents.filter((e) => e.isFeatured).slice(0, 4),
-    [filteredEvents]
+    () => MOCK_EVENTS.filter((e) => e.isFeatured).slice(0, 3),
+    []
   );
 
-  const groupedByLeague = useMemo(() => {
-    const map = new Map<string, MockEvent[]>();
-    for (const e of filteredEvents) {
-      const arr = map.get(e.leagueId) || [];
-      arr.push(e);
-      map.set(e.leagueId, arr);
-    }
-    return map;
-  }, [filteredEvents]);
+  // Group events by date
+  const eventsByDate = useMemo(() => {
+    const groups = new Map<string, MockEvent[]>();
+    MOCK_EVENTS.forEach((event) => {
+      const dateKey = formatDate(event.startTime);
+      if (!groups.has(dateKey)) {
+        groups.set(dateKey, []);
+      }
+      groups.get(dateKey)!.push(event);
+    });
+    return groups;
+  }, []);
+
+  const liveCount = useMemo(() => MOCK_EVENTS.filter((e) => e.isLive).length, []);
 
   return (
-    <div className="w-full px-4 max-w-6xl mx-auto pb-8 space-y-4">
+    <div className="w-full px-4 max-w-6xl mx-auto pb-20 space-y-6">
+      {/* Simple page header */}
+      <h1 className="text-2xl font-bold text-white pt-4">Sports</h1>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-          size={18}
-        />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search events, teams, leagues..."
-          className="w-full h-11 pl-10 pr-4 rounded-lg text-sm text-white placeholder-gray-500 bg-white/5 border border-white/8 outline-none transition-colors focus:border-purple-500"
-        />
-      </div>
-
-      {/* Sport Category Pills - horizontal scroll with fade gradient */}
-      <div className="relative">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide scroll-smooth snap-x snap-mandatory">
-          {SPORT_PILLS.map((pill) => (
-            <button
-              key={pill}
-              onClick={() => setActiveSport(pill)}
-              className={cn(
-                'min-h-[44px] px-4 py-2 rounded-full text-sm whitespace-nowrap font-medium transition-all snap-start',
-                activeSport === pill
-                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
-                  : 'bg-white/5 text-gray-400 hover:text-gray-200 active:scale-95'
-              )}
-            >
-              {pill}
-            </button>
-          ))}
-        </div>
-        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0b0d] to-transparent pointer-events-none" />
-      </div>
-
-      {/* Featured Matches */}
+      {/* Featured/Live section */}
       {featuredEvents.length > 0 && (
         <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Star size={16} className="text-yellow-500" />
-            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
-              Featured Matches
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+              {liveCount > 0 ? 'Live & Featured' : 'Featured'}
             </h2>
+            {liveCount > 0 && (
+              <Link
+                href="/sports/live"
+                className="text-xs text-purple-400 hover:text-purple-300 font-medium"
+              >
+                View all live
+              </Link>
+            )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
+          <div className="space-y-3">
             {featuredEvents.map((event) => (
               <FeaturedCard
                 key={event.id}
@@ -273,66 +219,56 @@ export default function SportsPage() {
         </section>
       )}
 
-      {/* No results */}
-      {filteredEvents.length === 0 && (
-        <div className="text-center py-16">
-          <p className="text-gray-500 text-sm">No events found matching your criteria.</p>
-          <p className="text-gray-600 text-xs mt-1">Try adjusting your search or filters.</p>
-        </div>
-      )}
-
-      {/* Competitions List */}
-      {LEAGUES.map((league) => {
-        const events = groupedByLeague.get(league.id);
-        if (!events || events.length === 0) return null;
-        const isCollapsed = !!collapsedLeagues[league.id];
-
-        return (
-          <section key={league.id} className="rounded-lg overflow-hidden border border-white/8 bg-white/[0.02]">
-            {/* League header - min 44px height for touch */}
-            <button
-              onClick={() => toggleLeague(league.id)}
-              className="w-full min-h-[44px] flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/[0.07] transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg leading-none">{league.logo}</span>
-                <span className="text-sm font-semibold text-white">{league.name}</span>
-                <span className="text-xs text-gray-500 font-normal hidden sm:inline">
-                  {league.country}
-                </span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/10 text-gray-400">
-                  {events.length}
-                </span>
-              </div>
-              {isCollapsed ? (
-                <ChevronDown size={16} className="text-gray-500" />
-              ) : (
-                <ChevronUp size={16} className="text-gray-500" />
-              )}
-            </button>
-
-            {/* Event rows */}
-            {!isCollapsed && (
-              <div className="divide-y divide-white/[0.04]">
-                {events.map((event) => (
-                  <EventRow
-                    key={event.id}
-                    event={event}
-                    onOddsClick={handleOddsClick}
-                    hasSelection={hasSelection}
-                  />
-                ))}
-              </div>
+      {/* Sports list - simple rows */}
+      <section className="rounded overflow-hidden border border-white/[0.04]">
+        {SPORTS_LIST.map((sport, idx) => (
+          <Link
+            key={sport.slug}
+            href={`/sports/${sport.slug}`}
+            className={cn(
+              'flex items-center justify-between px-4 h-[52px] bg-[#1A1B1F] hover:bg-[#222328] transition-colors',
+              idx !== SPORTS_LIST.length - 1 && 'border-b border-white/[0.04]'
             )}
-          </section>
-        );
-      })}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{sport.icon}</span>
+              <span className="text-sm font-medium text-white">{sport.name}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500 font-medium">{sport.count} events</span>
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            </div>
+          </Link>
+        ))}
+      </section>
+
+      {/* Upcoming events grouped by date */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+          Upcoming Events
+        </h2>
+        {Array.from(eventsByDate.entries()).map(([date, events]) => (
+          <div key={date} className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">
+              {date}
+            </h3>
+            {events.filter((e) => !e.isLive).slice(0, 5).map((event) => (
+              <UpcomingEventRow
+                key={event.id}
+                event={event}
+                onOddsClick={handleOddsClick}
+                hasSelection={hasSelection}
+              />
+            ))}
+          </div>
+        ))}
+      </section>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Featured Card
+// Featured Card (larger card for live/featured events)
 // ---------------------------------------------------------------------------
 
 function FeaturedCard({
@@ -348,43 +284,43 @@ function FeaturedCard({
   if (!market) return null;
 
   return (
-    <div className="rounded-xl p-4 bg-gradient-to-br from-purple-600/10 to-transparent border border-purple-500/20 hover:border-purple-500/30 transition-all">
+    <div className="rounded-lg p-4 bg-[#1A1B1F] border border-white/[0.06] hover:border-white/10 transition-all">
       {/* Live badge */}
       {event.isLive && (
-        <div className="inline-flex items-center gap-1.5 bg-red-500/20 text-red-400 text-[11px] font-bold uppercase px-2 py-1 rounded-full mb-2">
-          <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+        <div className="inline-flex items-center gap-1.5 bg-green-500/15 text-green-400 text-xs font-bold uppercase px-2 py-1 rounded mb-3">
+          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
           Live
         </div>
       )}
 
       {/* League + Time */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-[11px] text-gray-500 font-medium">{event.league}</span>
+        <span className="text-xs text-gray-500 font-medium">{event.league}</span>
         <span className="text-gray-700">•</span>
-        <span className={cn('text-[11px] font-medium', event.isLive ? 'text-red-400' : 'text-gray-500')}>
+        <span className={cn('text-xs font-medium', event.isLive ? 'text-green-400' : 'text-gray-500')}>
           {formatEventTime(event.startTime, event.isLive, event.matchTime)}
         </span>
       </div>
 
       {/* Teams */}
-      <Link href={`/sports/event/${event.id}`} className="block mb-4 min-h-[44px]">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-white line-clamp-2 flex items-center gap-2">
+      <Link href={`/sports/event/${event.id}`} className="block mb-4">
+        <div className="space-y-1.5">
+          <p className="text-base font-semibold text-white flex items-center justify-between">
             {event.homeTeam}
             {event.isLive && event.homeScore !== undefined && (
-              <span className="text-yellow-400 font-bold">{event.homeScore}</span>
+              <span className="text-white font-bold font-mono tabular-nums">{event.homeScore}</span>
             )}
           </p>
-          <p className="text-sm font-semibold text-white line-clamp-2 flex items-center gap-2">
+          <p className="text-base font-semibold text-white flex items-center justify-between">
             {event.awayTeam}
             {event.isLive && event.awayScore !== undefined && (
-              <span className="text-yellow-400 font-bold">{event.awayScore}</span>
+              <span className="text-white font-bold font-mono tabular-nums">{event.awayScore}</span>
             )}
           </p>
         </div>
       </Link>
 
-      {/* Odds row - min 44px height buttons, 64px min width */}
+      {/* Odds row */}
       <div className="grid grid-cols-3 gap-2">
         {market.selections.map((sel) => {
           const selected = hasSelection(sel.id);
@@ -393,16 +329,16 @@ function FeaturedCard({
               key={sel.id}
               onClick={() => onOddsClick(event, sel)}
               className={cn(
-                'min-h-[44px] min-w-[64px] flex flex-col items-center justify-center py-2 rounded-lg transition-all',
+                'h-9 flex items-center justify-center gap-2 rounded transition-all font-mono text-sm font-bold',
                 selected
-                  ? 'bg-purple-600/30 ring-1 ring-purple-500 text-purple-300'
-                  : 'bg-white/[0.08] hover:bg-white/[0.12] text-white active:scale-95'
+                  ? 'bg-purple-600/20 ring-1 ring-purple-500 text-purple-300'
+                  : 'bg-white/[0.06] hover:bg-white/[0.10] text-white'
               )}
             >
-              <span className="text-gray-400 text-[11px] mb-0.5">
+              <span className="text-gray-500 text-xs font-normal">
                 {sel.name === '1' ? '1' : sel.name === '2' ? '2' : 'X'}
               </span>
-              <span className="font-bold text-sm">{sel.odds}</span>
+              <span>{sel.odds}</span>
             </button>
           );
         })}
@@ -412,10 +348,10 @@ function FeaturedCard({
 }
 
 // ---------------------------------------------------------------------------
-// Event Row
+// Upcoming Event Row (compact)
 // ---------------------------------------------------------------------------
 
-function EventRow({
+function UpcomingEventRow({
   event,
   onOddsClick,
   hasSelection,
@@ -428,61 +364,47 @@ function EventRow({
   if (!market) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors min-h-[88px] sm:min-h-[64px]">
-      {/* Time column - min 44px touch target */}
-      <div className="flex items-center gap-3 sm:w-24 shrink-0">
-        {event.isLive ? (
-          <div className="flex items-center gap-1.5 min-h-[44px]">
-            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-red-400 text-[11px] font-bold">
-              {event.matchTime || 'LIVE'}
-            </span>
-          </div>
-        ) : (
-          <span className="text-gray-500 text-[11px] min-h-[44px] flex items-center">
-            {formatEventTime(event.startTime, false)}
-          </span>
-        )}
+    <div className="flex items-center gap-3 px-4 py-3 bg-[#1A1B1F] rounded border border-white/[0.04] hover:border-white/[0.08] transition-all">
+      {/* Time */}
+      <div className="w-16 shrink-0">
+        <span className="text-xs text-gray-500">
+          {formatEventTime(event.startTime, false)}
+        </span>
       </div>
 
-      {/* Teams column - allow line-clamp on mobile */}
+      {/* Teams */}
       <Link
         href={`/sports/event/${event.id}`}
-        className="flex-1 min-w-0 min-h-[44px] flex items-center"
+        className="flex-1 min-w-0"
       >
-        <div className="w-full space-y-1">
-          <p className="text-sm text-white font-medium line-clamp-2 flex items-center gap-2">
-            {event.homeTeam}
-            {event.isLive && event.homeScore !== undefined && (
-              <span className="text-yellow-400 font-bold tabular-nums">{event.homeScore}</span>
-            )}
-          </p>
-          <p className="text-sm text-white font-medium line-clamp-2 flex items-center gap-2">
-            {event.awayTeam}
-            {event.isLive && event.awayScore !== undefined && (
-              <span className="text-yellow-400 font-bold tabular-nums">{event.awayScore}</span>
-            )}
-          </p>
+        <div className="flex items-center gap-1 text-sm">
+          <span className="text-gray-300 truncate">{event.homeTeam}</span>
+          <span className="text-gray-600 shrink-0">vs</span>
+          <span className="text-gray-300 truncate">{event.awayTeam}</span>
         </div>
+        <div className="text-xs text-gray-600 mt-0.5">{event.league}</div>
       </Link>
 
-      {/* Odds columns - 3-col on mobile when possible, min 64px width, 44px height */}
-      <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-2 shrink-0">
+      {/* Odds */}
+      <div className="flex gap-2 shrink-0">
         {market.selections.map((sel) => {
           const selected = hasSelection(sel.id);
           return (
             <button
               key={sel.id}
-              onClick={() => onOddsClick(event, sel)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOddsClick(event, sel);
+              }}
               className={cn(
-                'min-h-[44px] min-w-[64px] sm:w-[72px] flex flex-col items-center justify-center py-2 rounded-md transition-all',
+                'w-14 h-8 flex items-center justify-center rounded transition-all font-mono text-xs font-bold',
                 selected
-                  ? 'bg-purple-600/30 ring-1 ring-purple-500 text-purple-300'
-                  : 'bg-white/[0.06] hover:bg-white/[0.10] text-white active:scale-95'
+                  ? 'bg-purple-600/20 ring-1 ring-purple-500 text-purple-300'
+                  : 'bg-white/[0.06] hover:bg-white/[0.10] text-white'
               )}
             >
-              <span className="text-gray-500 text-[11px] mb-0.5">{sel.name}</span>
-              <span className="font-bold text-sm">{sel.odds}</span>
+              {sel.odds}
             </button>
           );
         })}

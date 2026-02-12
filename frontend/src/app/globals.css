@@ -4,83 +4,75 @@
 
 @layer base {
   :root {
-    /* ── Cloudbet Design System: Colors ── */
+    /* ── Real Cloudbet Design System Colors ── */
     --color-primary: #8D52DA;
     --color-primary-hover: #7a42c4;
-    --color-accent-foreground: #E0E0E0;
 
     --color-success: #30E000;
     --color-error: #FF494A;
     --color-warning: #FFD641;
     --color-live: #BFFF00;
 
-    /* Surfaces */
+    /* Backgrounds */
     --color-bg-deepest: #0F0F12;
-    --color-bg: #111214;
+    --color-bg-default: #141114;
     --color-surface: #1A1B1F;
-    --color-surface-secondary: #222328;
+    --color-surface-elevated: #222328;
     --color-surface-hover: #2A2B30;
 
     /* Borders */
     --color-border: rgba(255, 255, 255, 0.08);
     --color-border-dim: rgba(255, 255, 255, 0.04);
-    --color-border-selected: rgba(224, 232, 255, 0.1);
 
     /* Text */
     --color-text-primary: #FFFFFF;
-    --color-text-secondary: rgba(255, 255, 255, 0.6);
+    --color-text-secondary: rgba(224, 232, 255, 0.6);
     --color-text-dim: rgba(224, 232, 255, 0.3);
-    --color-text-muted: rgba(255, 255, 255, 0.4);
-
-    /* Shadows */
-    --shadow-connect-btn: 0px 4px 12px rgba(0, 0, 0, 0.1);
-    --shadow-card: 0px 4px 12px rgba(0, 0, 0, 0.1);
-    --shadow-dialog: 0px 8px 32px rgba(0, 0, 0, 0.32);
-    --shadow-card-hover: 0px 2px 6px rgba(0, 0, 0, 0.24);
-    --shadow-btn-hover: 0px 4px 12px rgba(0, 0, 0, 0.2);
 
     /* Radii */
     --radius-btn: 4px;
     --radius-card: 8px;
     --radius-modal: 8px;
-    --radius-pill: 9999px;
     --radius-game-card: 12px;
 
     /* Gradients */
-    --gradient-download-card: linear-gradient(126deg, rgba(120, 120, 120, 0.2) 9.49%, rgba(0, 0, 0, 0) 71.04%), #1A1B1F;
-    --gradient-connect-btn: linear-gradient(0deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.15));
+    --gradient-button: linear-gradient(0deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.15));
 
-    /* Safe area insets for iOS (notch, home indicator) */
+    /* Shadows */
+    --shadow-sm: 0px 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0px 8px 32px rgba(0, 0, 0, 0.32);
+
+    /* Safe area insets */
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-left: env(safe-area-inset-left, 0px);
     --safe-area-right: env(safe-area-inset-right, 0px);
   }
 
-  /* ── Smooth scrolling & iOS optimization ── */
+  /* ── Base HTML Setup ── */
   html {
-    font-size: 16px; /* Base font size for mobile - prevents iOS auto-zoom */
+    font-size: 16px; /* CRITICAL: Prevents iOS auto-zoom */
     scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%; /* Prevent iOS font scaling */
+    -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation; /* Disable double-tap zoom */
+    touch-action: manipulation;
   }
 
-  /* ── Base dark theme body ── */
+  /* ── Body ── */
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 0.875rem; /* 14px at 16px root */
+    font-size: 0.875rem; /* 14px */
     line-height: 1.6;
     color: var(--color-text-primary);
-    background-color: var(--color-bg);
+    background-color: var(--color-bg-deepest);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
     min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height for mobile */
+    min-height: 100dvh;
   }
 
-  /* ── Selection color (brand purple) ── */
+  /* ── Selection ── */
   ::selection {
     background-color: rgba(141, 82, 218, 0.4);
     color: #FFFFFF;
@@ -91,7 +83,7 @@
     color: #FFFFFF;
   }
 
-  /* ── Scrollbar: thin, dark, professional ── */
+  /* ── Scrollbar ── */
   * {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
@@ -109,23 +101,17 @@
   ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
-    transition: background 0.2s ease;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
   }
 
-  ::-webkit-scrollbar-corner {
-    background: transparent;
-  }
-
-  /* ── Input focus styles ── */
+  /* ── Input Base Styles ── */
   input,
   textarea,
   select {
-    /* CRITICAL: Minimum 16px font size to prevent iOS auto-zoom */
-    font-size: 16px;
+    font-size: 16px; /* CRITICAL: Prevents iOS auto-zoom */
   }
 
   input:focus,
@@ -144,20 +130,16 @@
     outline-offset: 2px;
   }
 
-  /* ── Touch highlight removal ── */
-  a,
-  button,
-  input,
-  select,
-  textarea {
+  /* ── Touch Highlight Removal ── */
+  a, button, input, select, textarea {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* ── Base element resets for dark theme ── */
+  /* ── Links ── */
   a {
     color: var(--color-primary);
     text-decoration: none;
-    transition: color 0.2s ease;
+    transition: color 0.15s ease;
   }
 
   a:hover {
@@ -168,35 +150,27 @@
     opacity: 0.8;
   }
 
-  img,
-  video {
+  /* ── Images ── */
+  img, video {
     max-width: 100%;
     height: auto;
     display: block;
   }
 
+  /* ── HR ── */
   hr {
     border: none;
     border-top: 1px solid var(--color-border);
     margin: 1rem 0;
   }
 
-  /* ── Placeholder color ── */
+  /* ── Placeholder ── */
   ::placeholder {
-    color: var(--color-text-dim);
-    opacity: 1; /* Firefox */
-  }
-
-  ::-webkit-input-placeholder {
-    color: var(--color-text-dim);
-  }
-
-  ::-moz-placeholder {
     color: var(--color-text-dim);
     opacity: 1;
   }
 
-  /* ── Autofill styles ── */
+  /* ── Autofill ── */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {
@@ -206,32 +180,18 @@
   }
 }
 
-/* ── Scrollbar utility classes ── */
 @layer utilities {
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
+  /* ── Scrollbar Utilities ── */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
-  /* Safe area utilities for fixed elements */
+  /* ── Safe Area Utilities ── */
   .safe-top {
     padding-top: var(--safe-area-top);
   }
@@ -248,38 +208,7 @@
     padding-right: var(--safe-area-right);
   }
 
-  .safe-x {
-    padding-left: var(--safe-area-left);
-    padding-right: var(--safe-area-right);
-  }
-
-  .safe-y {
-    padding-top: var(--safe-area-top);
-    padding-bottom: var(--safe-area-bottom);
-  }
-
-  /* Fixed element safe areas (for nav bars) */
-  .fixed-top-safe {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    padding-top: var(--safe-area-top);
-    padding-left: var(--safe-area-left);
-    padding-right: var(--safe-area-right);
-  }
-
-  .fixed-bottom-safe {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding-bottom: var(--safe-area-bottom);
-    padding-left: var(--safe-area-left);
-    padding-right: var(--safe-area-right);
-  }
-
-  /* Touch target utilities - WCAG 2.1 compliant (44x44px minimum) */
+  /* ── Touch Target Utilities ── */
   .touch-target {
     min-height: 44px;
     min-width: 44px;
@@ -305,207 +234,161 @@
   }
 }
 
-/* ── Component classes ── */
 @layer components {
-  /* Buttons - Professional betting site styling */
+  /* ── Buttons ── */
   .btn-primary {
-    @apply bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
-    box-shadow: none;
+    @apply bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2.5 transition-all duration-150;
+    border-radius: var(--radius-btn);
     min-height: 44px;
     font-size: 14px;
+    position: relative;
+    overflow: hidden;
   }
-  .btn-primary:hover:not(:disabled) {
-    box-shadow: var(--shadow-btn-hover);
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--gradient-button);
+    pointer-events: none;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
   }
 
   .btn-secondary {
-    @apply bg-surface-tertiary hover:bg-surface-hover text-white font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
+    @apply bg-surface-elevated hover:bg-surface-hover text-white font-semibold px-4 py-2.5 transition-all duration-150;
+    border-radius: var(--radius-btn);
     min-height: 44px;
     font-size: 14px;
   }
 
-  .btn-accent {
-    @apply hover:brightness-110 text-black font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
-    background-color: var(--color-live);
-    min-height: 44px;
-    font-size: 14px;
+  .btn-secondary:active {
+    transform: scale(0.98);
   }
 
-  .btn-connect {
-    background: var(--gradient-connect-btn);
-    box-shadow: var(--shadow-connect-btn);
-    @apply text-white font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
+  /* ── Odds Button ── */
+  .odds-btn {
+    @apply flex flex-col items-center justify-center px-3 py-2 bg-surface-elevated hover:bg-surface-hover border border-transparent transition-all duration-150 cursor-pointer;
+    border-radius: var(--radius-btn);
     min-height: 44px;
+    min-width: 64px;
     font-size: 14px;
+    font-weight: 600;
+    position: relative;
   }
 
-  .btn-success {
-    @apply bg-accent-green hover:brightness-110 text-black font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
-    min-height: 44px;
-    font-size: 14px;
+  .odds-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--gradient-button);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
   }
 
-  .btn-danger {
-    @apply bg-accent-red hover:brightness-110 text-white font-semibold px-4 py-2.5 rounded-btn transition-all duration-200 active:scale-[0.98];
-    min-height: 44px;
-    font-size: 14px;
+  .odds-btn:hover::before {
+    opacity: 1;
   }
 
-  /* Cards - Enhanced with smooth transitions */
+  .odds-btn:active {
+    transform: scale(0.98);
+  }
+
+  .odds-btn.selected {
+    background-color: rgba(141, 82, 218, 0.2);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  /* ── Cards ── */
   .card {
-    @apply bg-surface-secondary border border-border rounded-card p-4 transition-shadow duration-200;
-    box-shadow: var(--shadow-card);
-  }
-  .card:hover {
-    box-shadow: var(--shadow-card-hover);
+    @apply bg-surface border border-border transition-shadow duration-200;
+    border-radius: var(--radius-card);
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
   }
 
   .game-card {
-    @apply bg-surface-secondary border border-border p-0 overflow-hidden transition-all duration-200;
+    @apply bg-surface border border-border overflow-hidden transition-all duration-200;
     border-radius: var(--radius-game-card);
   }
+
   .game-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-card-hover);
+    box-shadow: var(--shadow-sm);
   }
 
-  .glass-card {
-    background: rgba(26, 27, 31, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-card);
-  }
-
-  .download-card {
-    background: var(--gradient-download-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-card);
-  }
-
-  /* Inputs - Mobile-optimized with 16px font size */
+  /* ── Input ── */
   .input {
-    @apply w-full bg-surface-tertiary border border-border rounded-btn px-3 py-2.5 text-white transition-colors;
-    font-size: 16px; /* CRITICAL: Prevents iOS auto-zoom */
+    @apply w-full bg-surface-elevated border border-border text-white px-3 py-2.5 transition-colors duration-150;
+    border-radius: var(--radius-btn);
+    font-size: 16px;
     min-height: 44px;
   }
+
   .input::placeholder {
     color: var(--color-text-dim);
   }
+
   .input:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgba(141, 82, 218, 0.25);
   }
 
-  .input-cloudbet {
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-btn);
-    color: white;
-    padding: 10px 12px;
-    font-size: 16px; /* CRITICAL: Prevents iOS auto-zoom */
-    width: 100%;
-    outline: none;
-    transition: border-color 0.2s ease;
-    min-height: 44px;
-  }
-  .input-cloudbet:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px rgba(141, 82, 218, 0.25);
-  }
-  .input-cloudbet::placeholder {
-    color: var(--color-text-dim);
+  /* ── Modal ── */
+  .modal {
+    @apply bg-surface-elevated border border-border;
+    border-radius: var(--radius-modal);
+    box-shadow: var(--shadow-lg);
   }
 
-  /* Odds buttons - Professional betting site style */
-  .odds-btn {
-    @apply flex flex-col items-center justify-center px-3 py-2 rounded-btn bg-surface-tertiary hover:bg-surface-hover border border-transparent transition-all duration-150 cursor-pointer;
-    min-height: 44px;
-    min-width: 64px;
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .odds-btn:hover {
-    border-color: var(--color-border-selected);
-  }
-  .odds-btn:active {
-    transform: scale(0.98);
-  }
-  .odds-btn.selected {
-    @apply bg-brand-500/20 border-brand-500 text-brand-400;
-  }
-
-  .odds-value {
-    @apply font-semibold text-base;
-    line-height: 1.2;
-  }
-
-  .odds-label {
-    @apply text-xs text-text-secondary mt-0.5;
-    line-height: 1.2;
-  }
-
-  /* Dialog / Modal - Enhanced for mobile */
-  .dialog {
-    @apply bg-surface-secondary rounded-modal;
-    box-shadow: var(--shadow-dialog);
-    border: 1px solid var(--color-border);
-  }
-
-  /* Badges */
-  .badge-pending {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent-yellow/15 text-accent-yellow;
-  }
-  .badge-completed {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent-green/15 text-accent-green;
-  }
-  .badge-failed {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent-red/15 text-accent-red;
-  }
+  /* ── Badges ── */
   .badge-live {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-accent-red/15 text-accent-red;
-  }
-  .live-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold bg-accent-red text-white rounded-full animate-pulse-slow;
-  }
-
-  /* Gradient text */
-  .text-gradient {
-    background: linear-gradient(135deg, #8D52DA, #b07aef);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full;
+    background-color: rgba(255, 73, 74, 0.15);
+    color: var(--color-error);
   }
 
-  /* Skeleton loading */
+  .badge-success {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full;
+    background-color: rgba(48, 224, 0, 0.15);
+    color: var(--color-success);
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full;
+    background-color: rgba(255, 214, 65, 0.15);
+    color: var(--color-warning);
+  }
+
+  /* ── Skeleton ── */
   .skeleton {
-    @apply bg-surface-tertiary rounded;
+    @apply bg-surface-elevated rounded;
     animation: skeleton-pulse 1.5s ease-in-out infinite;
-  }
-
-  /* Transition utilities - Smooth professional feel */
-  .transition-fast {
-    transition: all 0.15s ease;
-  }
-  .transition-normal {
-    transition: all 0.3s ease;
-  }
-  .transition-slow {
-    transition: all 0.5s ease;
-  }
-
-  /* Button hover effect */
-  .btn-hover:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-card-hover);
-  }
-  .btn-hover:active {
-    transform: translateY(0);
   }
 }
 
 /* ── Keyframes ── */
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes oddsUp {
   0% { background-color: transparent; }
   50% { background-color: rgba(48, 224, 0, 0.2); }
@@ -518,92 +401,17 @@
   100% { background-color: transparent; }
 }
 
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.7; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(5deg); }
-}
-
-@keyframes modalFadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes modalSlideRight {
-  from { opacity: 0; transform: translateX(100%); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes modalBackdropIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes bounceIn {
-  0% { transform: scale(0.9); opacity: 0; }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
 }
 
-/* ── Animation utility classes ── */
-.animate-float {
-  animation: float 3s ease-in-out infinite;
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
 }
 
-.animate-float-slow {
-  animation: float-slow 5s ease-in-out infinite;
-}
-
-.animate-float-delayed {
-  animation: float 4s ease-in-out 1s infinite;
-}
-
-.animate-modal {
-  animation: modalFadeIn 0.3s ease-out;
-}
-
-.animate-slide-right {
-  animation: modalSlideRight 0.3s ease-out;
-}
-
-.animate-modal-backdrop {
-  animation: modalBackdropIn 0.2s ease-out;
-}
-
+/* ── Animation Classes ── */
 .odds-up {
   animation: oddsUp 0.5s ease;
 }

@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Trophy, Radio, Dice5, Ticket } from 'lucide-react';
+import { Trophy, Radio, Dice5, Ticket } from 'lucide-react';
 import { useBetSlipStore } from '@/stores/betSlipStore';
 
 // ---------------------------------------------------------------------------
@@ -14,30 +14,22 @@ interface TabItem {
   key: string;
   label: string;
   href: string;
-  icon: typeof Home;
+  icon: typeof Trophy;
 }
 
 // ---------------------------------------------------------------------------
-// Tabs configuration
+// Tabs configuration - 4 tabs only: Sports, Live, Casino, Bet Slip
 // ---------------------------------------------------------------------------
 
 const TABS: TabItem[] = [
-  { key: 'home', label: 'Home', href: '/', icon: Home },
   { key: 'sports', label: 'Sports', href: '/sports', icon: Trophy },
   { key: 'live', label: 'Live', href: '/sports/live', icon: Radio },
   { key: 'casino', label: 'Casino', href: '/casino', icon: Dice5 },
-  { key: 'my-bets', label: 'My Bets', href: '/my-bets', icon: Ticket },
+  { key: 'bet-slip', label: 'Bet Slip', href: '/my-bets', icon: Ticket },
 ];
 
 // ---------------------------------------------------------------------------
-// Colors - Professional Cloudbet/bet365 style
-// ---------------------------------------------------------------------------
-
-const ACTIVE_COLOR = '#BFFF00'; // Lime/green for active state
-const INACTIVE_COLOR = 'rgba(255, 255, 255, 0.45)'; // Muted gray for inactive
-
-// ---------------------------------------------------------------------------
-// Component
+// Component - VERY subtle, minimal bottom bar
 // ---------------------------------------------------------------------------
 
 export function BottomNav() {
@@ -46,11 +38,6 @@ export function BottomNav() {
 
   const isActive = useCallback((tab: TabItem): boolean => {
     if (!tab.href) return false;
-
-    // Exact match for home
-    if (tab.key === 'home') {
-      return pathname === '/';
-    }
 
     // Live tab matching
     if (tab.key === 'live') {
@@ -73,84 +60,56 @@ export function BottomNav() {
     <nav
       className="lg:hidden fixed bottom-0 left-0 right-0 z-[999]"
       style={{
-        height: 'calc(56px + env(safe-area-inset-bottom, 0px))',
+        height: 'calc(52px + env(safe-area-inset-bottom, 0px))',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        backgroundColor: 'rgba(15, 15, 18, 0.95)',
+        backgroundColor: '#111214',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         borderTop: '1px solid rgba(255, 255, 255, 0.06)',
       }}
     >
-      <div className="flex items-stretch justify-around h-[56px]">
+      <div className="flex items-stretch justify-around h-[52px]">
         {TABS.map((tab) => {
           const active = isActive(tab);
           const Icon = tab.icon;
-          const color = active ? ACTIVE_COLOR : INACTIVE_COLOR;
-          const isLive = tab.key === 'live';
-          const isMyBets = tab.key === 'my-bets';
+          const isBetSlip = tab.key === 'bet-slip';
 
           return (
             <Link
               key={tab.key}
               href={tab.href}
-              className="flex flex-col items-center justify-center flex-1 min-w-0 transition-colors duration-200 active:scale-95"
+              className="flex flex-col items-center justify-center flex-1 min-w-0 transition-transform duration-100 active:scale-95"
               style={{
-                minHeight: '44px',
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
               {/* Icon container */}
-              <div className="relative flex items-center justify-center mb-1">
+              <div className="relative flex items-center justify-center mb-0.5">
                 <Icon
-                  className="transition-all duration-200"
+                  className="transition-colors duration-200"
                   style={{
-                    width: '24px',
-                    height: '24px',
-                    strokeWidth: active ? 2.2 : 1.8,
-                    color: color,
+                    width: '20px',
+                    height: '20px',
+                    strokeWidth: 1.8,
+                    color: active ? '#ffffff' : 'rgba(255, 255, 255, 0.35)',
                   }}
                 />
 
-                {/* Live indicator - red dot */}
-                {isLive && (
+                {/* Bet Slip badge - small purple circle with white number */}
+                {isBetSlip && itemCount > 0 && (
                   <span
-                    className="absolute -top-0.5 -right-0.5 flex items-center justify-center"
+                    className="absolute -top-1 -right-1.5 flex items-center justify-center font-bold leading-none text-white rounded-full"
                     style={{
-                      width: '8px',
-                      height: '8px',
+                      minWidth: '16px',
+                      height: '16px',
+                      paddingLeft: '3px',
+                      paddingRight: '3px',
+                      fontSize: '9px',
+                      backgroundColor: '#8B5CF6',
+                      boxShadow: '0 0 0 1.5px #111214',
                     }}
                   >
-                    <span
-                      className="absolute w-full h-full rounded-full"
-                      style={{
-                        backgroundColor: '#EF4444',
-                      }}
-                    />
-                    <span
-                      className="absolute w-full h-full rounded-full animate-ping"
-                      style={{
-                        backgroundColor: '#EF4444',
-                        opacity: 0.75,
-                      }}
-                    />
-                  </span>
-                )}
-
-                {/* My Bets badge - contained within tab */}
-                {isMyBets && itemCount > 0 && (
-                  <span
-                    className="absolute -top-1.5 -right-2 flex items-center justify-center font-bold leading-none text-black rounded-full"
-                    style={{
-                      minWidth: '18px',
-                      height: '18px',
-                      paddingLeft: '4px',
-                      paddingRight: '4px',
-                      fontSize: '10px',
-                      backgroundColor: ACTIVE_COLOR,
-                      boxShadow: '0 0 0 2px rgba(15, 15, 18, 0.95)',
-                    }}
-                  >
-                    {itemCount > 99 ? '99+' : itemCount}
+                    {itemCount > 99 ? '99' : itemCount}
                   </span>
                 )}
               </div>
@@ -159,13 +118,27 @@ export function BottomNav() {
               <span
                 className="font-medium leading-none transition-colors duration-200"
                 style={{
-                  fontSize: '11px',
-                  letterSpacing: '0.01em',
-                  color: color,
+                  fontSize: '10px',
+                  letterSpacing: '0.03em',
+                  color: active ? '#ffffff' : 'rgba(255, 255, 255, 0.35)',
                 }}
               >
                 {tab.label}
               </span>
+
+              {/* Active indicator - small 2px purple dot below icon */}
+              {active && (
+                <div
+                  className="absolute"
+                  style={{
+                    bottom: '6px',
+                    width: '2px',
+                    height: '2px',
+                    borderRadius: '50%',
+                    backgroundColor: '#8B5CF6',
+                  }}
+                />
+              )}
             </Link>
           );
         })}

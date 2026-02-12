@@ -1,15 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { Gift, Tag, Percent, Clock, ArrowRight, Zap, Trophy, Star, Ticket, TrendingUp, UserPlus } from 'lucide-react';
+import { Gift, Clock, ArrowRight } from 'lucide-react';
 
-// ─── Types ──────────────────────────────────────────────────────────
-
-type PromotionCategory = 'all' | 'sports' | 'casino' | 'vip' | 'new-users';
-type PromotionBadge = 'Deposit Bonus' | 'Free Bet' | 'Cashback' | 'Odds Boost' | 'Referral';
-type PromotionStatus = 'active' | 'limited' | 'expired';
-type PromotionCTA = 'Claim Now' | 'Learn More' | 'Opt In';
+// Types
+type PromotionCategory = 'all' | 'sports' | 'casino' | 'vip';
+type PromotionBadge = 'Deposit Bonus' | 'Free Bet' | 'Cashback' | 'Odds Boost';
 
 interface Promotion {
   id: string;
@@ -17,53 +13,20 @@ interface Promotion {
   description: string;
   category: PromotionCategory;
   badge: PromotionBadge;
-  status: PromotionStatus;
-  cta: PromotionCTA;
   validUntil: string;
   gradient: string;
-  iconBg: string;
-  icon: React.ReactNode;
 }
 
-// ─── Constants ──────────────────────────────────────────────────────
-
-const CATEGORY_TABS: { key: PromotionCategory; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'sports', label: 'Sports' },
-  { key: 'casino', label: 'Casino' },
-  { key: 'vip', label: 'VIP' },
-  { key: 'new-users', label: 'New Users' },
-];
-
-const BADGE_COLORS: Record<PromotionBadge, string> = {
-  'Deposit Bonus': 'bg-[#8D52DA]/20 text-[#B47EFF]',
-  'Free Bet': 'bg-emerald-500/20 text-emerald-400',
-  'Cashback': 'bg-amber-500/20 text-amber-400',
-  'Odds Boost': 'bg-sky-500/20 text-sky-400',
-  'Referral': 'bg-pink-500/20 text-pink-400',
-};
-
-const STATUS_COLORS: Record<PromotionStatus, { dot: string; text: string; label: string }> = {
-  active: { dot: 'bg-emerald-400', text: 'text-emerald-400', label: 'Active' },
-  limited: { dot: 'bg-amber-400', text: 'text-amber-400', label: 'Limited Time' },
-  expired: { dot: 'bg-gray-500', text: 'text-gray-500', label: 'Expired' },
-};
-
-const ICON_SIZE = 28;
-
+// Mock Data
 const PROMOTIONS: Promotion[] = [
   {
     id: 'promo-1',
     title: 'Welcome Bonus',
     description: '100% up to $500 on first deposit',
-    category: 'new-users',
+    category: 'all',
     badge: 'Deposit Bonus',
-    status: 'active',
-    cta: 'Claim Now',
     validUntil: '2026-06-30',
-    gradient: 'from-[#8D52DA] via-[#6B3FA0] to-[#3D2066]',
-    iconBg: 'bg-[#8D52DA]/30',
-    icon: <Gift size={ICON_SIZE} className="text-[#B47EFF]" />,
+    gradient: 'from-[#8D52DA] to-[#5A3A8F]',
   },
   {
     id: 'promo-2',
@@ -71,12 +34,8 @@ const PROMOTIONS: Promotion[] = [
     description: 'Get a $10 free bet every Friday',
     category: 'sports',
     badge: 'Free Bet',
-    status: 'active',
-    cta: 'Opt In',
     validUntil: '2026-12-31',
-    gradient: 'from-emerald-600 via-emerald-700 to-emerald-900',
-    iconBg: 'bg-emerald-500/30',
-    icon: <Ticket size={ICON_SIZE} className="text-emerald-400" />,
+    gradient: 'from-emerald-600 to-emerald-800',
   },
   {
     id: 'promo-3',
@@ -84,12 +43,8 @@ const PROMOTIONS: Promotion[] = [
     description: '10% weekly cashback on casino losses',
     category: 'casino',
     badge: 'Cashback',
-    status: 'active',
-    cta: 'Opt In',
     validUntil: '2026-12-31',
-    gradient: 'from-amber-600 via-amber-700 to-amber-900',
-    iconBg: 'bg-amber-500/30',
-    icon: <Percent size={ICON_SIZE} className="text-amber-400" />,
+    gradient: 'from-amber-600 to-amber-800',
   },
   {
     id: 'promo-4',
@@ -97,12 +52,8 @@ const PROMOTIONS: Promotion[] = [
     description: 'Boosted odds on all Premier League matches',
     category: 'sports',
     badge: 'Odds Boost',
-    status: 'limited',
-    cta: 'Claim Now',
     validUntil: '2026-05-25',
-    gradient: 'from-sky-600 via-sky-700 to-sky-900',
-    iconBg: 'bg-sky-500/30',
-    icon: <TrendingUp size={ICON_SIZE} className="text-sky-400" />,
+    gradient: 'from-sky-600 to-sky-800',
   },
   {
     id: 'promo-5',
@@ -110,12 +61,8 @@ const PROMOTIONS: Promotion[] = [
     description: '50% reload bonus for VIP members',
     category: 'vip',
     badge: 'Deposit Bonus',
-    status: 'active',
-    cta: 'Claim Now',
     validUntil: '2026-12-31',
-    gradient: 'from-purple-600 via-purple-800 to-purple-950',
-    iconBg: 'bg-purple-500/30',
-    icon: <Star size={ICON_SIZE} className="text-purple-400" />,
+    gradient: 'from-purple-600 to-purple-900',
   },
   {
     id: 'promo-6',
@@ -123,56 +70,43 @@ const PROMOTIONS: Promotion[] = [
     description: 'Extra 5% on all crypto deposits',
     category: 'all',
     badge: 'Deposit Bonus',
-    status: 'active',
-    cta: 'Learn More',
     validUntil: '2026-09-30',
-    gradient: 'from-orange-600 via-orange-700 to-orange-900',
-    iconBg: 'bg-orange-500/30',
-    icon: <Zap size={ICON_SIZE} className="text-orange-400" />,
-  },
-  {
-    id: 'promo-7',
-    title: 'Refer a Friend',
-    description: 'Get $25 for each friend you refer',
-    category: 'all',
-    badge: 'Referral',
-    status: 'active',
-    cta: 'Learn More',
-    validUntil: '2026-12-31',
-    gradient: 'from-pink-600 via-pink-700 to-pink-900',
-    iconBg: 'bg-pink-500/30',
-    icon: <UserPlus size={ICON_SIZE} className="text-pink-400" />,
-  },
-  {
-    id: 'promo-8',
-    title: 'Weekend Parlay Boost',
-    description: '25% extra on 4+ leg parlays',
-    category: 'sports',
-    badge: 'Odds Boost',
-    status: 'limited',
-    cta: 'Opt In',
-    validUntil: '2026-04-30',
-    gradient: 'from-cyan-600 via-cyan-700 to-cyan-900',
-    iconBg: 'bg-cyan-500/30',
-    icon: <Trophy size={ICON_SIZE} className="text-cyan-400" />,
+    gradient: 'from-orange-600 to-orange-800',
   },
 ];
 
-// ─── Component ──────────────────────────────────────────────────────
+const CATEGORY_TABS = [
+  { key: 'all', label: 'All' },
+  { key: 'sports', label: 'Sports' },
+  { key: 'casino', label: 'Casino' },
+  { key: 'vip', label: 'VIP' },
+];
+
+const BADGE_COLORS: Record<PromotionBadge, string> = {
+  'Deposit Bonus': 'bg-[rgba(141,82,218,0.15)] text-[#8D52DA]',
+  'Free Bet': 'bg-[rgba(48,224,0,0.15)] text-[#30E000]',
+  'Cashback': 'bg-[rgba(255,214,0,0.15)] text-[#FFD600]',
+  'Odds Boost': 'bg-[rgba(59,130,246,0.15)] text-[#3B82F6]',
+};
+
+function formatValidUntil(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 export default function PromotionsPage() {
   const [activeCategory, setActiveCategory] = useState<PromotionCategory>('all');
   const [promoCode, setPromoCode] = useState('');
   const [promoCodeStatus, setPromoCodeStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [promoCodeMessage, setPromoCodeMessage] = useState('');
-  const [showPromoModal, setShowPromoModal] = useState(false);
 
   const filtered =
     activeCategory === 'all'
       ? PROMOTIONS
-      : PROMOTIONS.filter(
-          (p) => p.category === activeCategory || p.category === 'all'
-        );
+      : PROMOTIONS.filter((p) => p.category === activeCategory || p.category === 'all');
 
   function handleApplyPromoCode() {
     const trimmed = promoCode.trim();
@@ -181,222 +115,32 @@ export default function PromotionsPage() {
       setPromoCodeMessage('Please enter a promo code.');
       return;
     }
-    // Mock validation
     if (trimmed.toUpperCase() === 'WELCOME500' || trimmed.toUpperCase() === 'CRYPTOBET') {
       setPromoCodeStatus('success');
-      setPromoCodeMessage(`Promo code "${trimmed.toUpperCase()}" applied successfully! Bonus has been credited to your account.`);
+      setPromoCodeMessage(`Promo code "${trimmed.toUpperCase()}" applied successfully!`);
     } else {
       setPromoCodeStatus('error');
       setPromoCodeMessage(`Invalid promo code "${trimmed}". Please check and try again.`);
     }
   }
 
-  function formatValidUntil(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  }
-
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-24 px-4">
-      {/* ─── Header ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl md:text-4xl font-bold text-white">Promotions</h1>
-        <button
-          onClick={() => setShowPromoModal(!showPromoModal)}
-          className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-[#8D52DA] text-[#B47EFF] hover:bg-[#8D52DA]/10 transition-colors text-sm font-medium min-h-[44px]"
-        >
-          <Tag size={16} />
-          Enter promo code
-        </button>
+    <div className="max-w-6xl mx-auto px-4 pb-24 bg-[#0F0F12] min-h-screen">
+      {/* Header */}
+      <div className="py-6">
+        <h1 className="text-3xl font-bold text-white mb-2">Promotions</h1>
+        <p className="text-[rgba(224,232,255,0.6)]">Exclusive bonuses and offers</p>
       </div>
 
-      {/* ─── Inline Promo Code Entry (toggled) ─────────────────── */}
-      {showPromoModal && (
-        <div className="bg-[#1A1B1F] border border-[#2A2B30] rounded-xl p-5 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
-            <div className="flex-1 w-full">
-              <label htmlFor="header-promo" className="block text-sm text-gray-400 mb-1.5">
-                Promo Code
-              </label>
-              <input
-                id="header-promo"
-                type="text"
-                value={promoCode}
-                onChange={(e) => {
-                  setPromoCode(e.target.value);
-                  if (promoCodeStatus !== 'idle') {
-                    setPromoCodeStatus('idle');
-                    setPromoCodeMessage('');
-                  }
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && handleApplyPromoCode()}
-                placeholder="e.g. WELCOME500"
-                className="w-full bg-[#12131A] border border-[#2A2B30] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#8D52DA] transition-colors text-base min-h-[44px]"
-                style={{ fontSize: '16px' }}
-              />
-            </div>
-            <button
-              onClick={handleApplyPromoCode}
-              className="px-6 py-3 bg-[#8D52DA] hover:bg-[#7B45C3] text-white font-medium rounded-lg transition-colors text-sm whitespace-nowrap min-h-[44px]"
-            >
-              Apply
-            </button>
-          </div>
-          {promoCodeMessage && (
-            <p
-              className={cn(
-                'text-sm',
-                promoCodeStatus === 'success' ? 'text-emerald-400' : 'text-red-400'
-              )}
-            >
-              {promoCodeMessage}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ─── Category Tabs - 44px height, horizontal scroll ─────────────────────────────────────── */}
-      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
-        <div className="flex gap-2 min-w-max pb-1">
-          {CATEGORY_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveCategory(tab.key)}
-              className={cn(
-                'px-5 py-2.5 h-[44px] rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
-                activeCategory === tab.key
-                  ? 'bg-[#8D52DA] text-white'
-                  : 'bg-[#1A1B1F] text-gray-400 hover:text-white hover:bg-[#252630]'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ─── Promotion Cards Grid - single column on mobile ──────────────────────────────────── */}
-      {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filtered.map((promo) => {
-            const statusInfo = STATUS_COLORS[promo.status];
-            return (
-              <div
-                key={promo.id}
-                className="bg-[#1A1B1F] rounded-xl overflow-hidden border border-transparent hover:border-[#8D52DA]/40 transition-all group"
-              >
-                {/* Banner - aspect-[16/10] on mobile */}
-                <div
-                  className={cn(
-                    'relative aspect-[16/10] md:aspect-video bg-gradient-to-br flex items-center justify-center',
-                    promo.gradient
-                  )}
-                >
-                  {/* Decorative circles */}
-                  <div className="absolute top-4 right-4 w-20 h-20 bg-white/5 rounded-full blur-xl" />
-                  <div className="absolute bottom-4 left-4 w-16 h-16 bg-black/10 rounded-full blur-lg" />
-
-                  {/* Icon container */}
-                  <div
-                    className={cn(
-                      'relative z-10 w-16 h-16 rounded-2xl flex items-center justify-center backdrop-blur-sm',
-                      promo.iconBg
-                    )}
-                  >
-                    {promo.icon}
-                  </div>
-
-                  {/* Status indicator - properly positioned */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1">
-                    <span className={cn('w-2 h-2 rounded-full', statusInfo.dot)} />
-                    <span className={cn('text-[11px] font-medium', statusInfo.text)}>
-                      {statusInfo.label}
-                    </span>
-                  </div>
-
-                  {/* Badge - properly positioned */}
-                  <div className="absolute top-3 right-3">
-                    <span
-                      className={cn(
-                        'px-2.5 py-1 text-[11px] font-semibold rounded-full',
-                        BADGE_COLORS[promo.badge]
-                      )}
-                    >
-                      {promo.badge}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-5">
-                  <h3 className="text-lg font-bold text-white mb-1 group-hover:text-[#B47EFF] transition-colors">
-                    {promo.title}
-                  </h3>
-                  <p className="text-gray-400 text-sm mb-3 leading-relaxed">
-                    {promo.description}
-                  </p>
-
-                  {/* Valid until */}
-                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-4">
-                    <Clock size={13} />
-                    <span>Valid until {formatValidUntil(promo.validUntil)}</span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    {promo.cta === 'Claim Now' ? (
-                      <button className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#8D52DA] hover:bg-[#7B45C3] text-white text-sm font-medium rounded-lg transition-colors min-h-[44px] flex-1 sm:flex-initial">
-                        {promo.cta}
-                        <ArrowRight size={14} />
-                      </button>
-                    ) : promo.cta === 'Opt In' ? (
-                      <button className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#8D52DA] hover:bg-[#7B45C3] text-white text-sm font-medium rounded-lg transition-colors min-h-[44px] flex-1 sm:flex-initial">
-                        {promo.cta}
-                        <ArrowRight size={14} />
-                      </button>
-                    ) : (
-                      <button className="flex items-center justify-center gap-2 px-5 py-2.5 border border-[#8D52DA] text-[#B47EFF] hover:bg-[#8D52DA]/10 text-sm font-medium rounded-lg transition-colors min-h-[44px] flex-1 sm:flex-initial">
-                        {promo.cta}
-                        <ArrowRight size={14} />
-                      </button>
-                    )}
-                    <button className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-2 transition-colors min-h-[44px] flex items-center">
-                      T&Cs apply
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="bg-[#1A1B1F] rounded-xl text-center py-16 px-6">
-          <div className="w-14 h-14 bg-[#252630] rounded-full mx-auto mb-4 flex items-center justify-center">
-            <Gift size={24} className="text-gray-500" />
-          </div>
-          <h3 className="text-lg font-medium text-white mb-1">No promotions found</h3>
-          <p className="text-gray-500 text-sm max-w-md mx-auto">
-            There are no promotions in this category right now. Check back soon or browse all promotions.
-          </p>
-        </div>
-      )}
-
-      {/* ─── Promo Code Section (Bottom) - 16px font, clear CTA ───────────────────────── */}
-      <div className="bg-[#1A1B1F] rounded-xl border border-[#2A2B30] p-6 md:p-8">
-        <div className="max-w-xl mx-auto text-center">
-          <div className="w-12 h-12 bg-[#8D52DA]/20 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <Tag size={22} className="text-[#B47EFF]" />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-2">Have a Promo Code?</h2>
-          <p className="text-gray-400 text-sm mb-6">
-            Enter your promotional code below to unlock exclusive bonuses and offers.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+      {/* Promo Code Input */}
+      <div className="bg-[#1A1B1F] border border-[rgba(255,255,255,0.06)] rounded-lg p-5 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+          <div className="flex-1 w-full">
+            <label htmlFor="promo-code" className="block text-sm text-[rgba(224,232,255,0.6)] mb-1.5">
+              Promo Code
+            </label>
             <input
+              id="promo-code"
               type="text"
               value={promoCode}
               onChange={(e) => {
@@ -407,43 +151,130 @@ export default function PromotionsPage() {
                 }
               }}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyPromoCode()}
-              placeholder="Enter promo code"
-              className="flex-1 bg-[#12131A] border border-[#2A2B30] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#8D52DA] transition-colors text-center uppercase tracking-wider min-h-[44px]"
+              placeholder="e.g. WELCOME500"
+              className="w-full bg-[#222328] border border-[rgba(255,255,255,0.06)] rounded px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-[#8D52DA] transition-colors text-base h-10"
               style={{ fontSize: '16px' }}
             />
-            <button
-              onClick={handleApplyPromoCode}
-              className="px-8 py-3 bg-[#8D52DA] hover:bg-[#7B45C3] text-white font-semibold rounded-lg transition-colors text-sm whitespace-nowrap min-h-[44px]"
-            >
-              Apply
-            </button>
           </div>
-
-          {/* Status message */}
-          {promoCodeMessage && (
-            <div
-              className={cn(
-                'mt-4 text-sm px-4 py-2.5 rounded-lg',
-                promoCodeStatus === 'success'
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
-              )}
-            >
-              {promoCodeMessage}
-            </div>
-          )}
+          <button
+            onClick={handleApplyPromoCode}
+            className="px-6 py-3 bg-[#8D52DA] hover:opacity-90 text-white font-medium rounded transition-opacity text-sm whitespace-nowrap h-10"
+          >
+            Apply
+          </button>
         </div>
+        {promoCodeMessage && (
+          <p
+            className={`text-sm mt-3 ${
+              promoCodeStatus === 'success' ? 'text-[#30E000]' : 'text-[#FF494A]'
+            }`}
+          >
+            {promoCodeMessage}
+          </p>
+        )}
       </div>
 
-      {/* ─── Terms Notice ──────────────────────────────────────── */}
-      <p className="text-center text-xs text-gray-600">
+      {/* Category Tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-1">
+        {CATEGORY_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveCategory(tab.key as PromotionCategory)}
+            className={`px-5 py-2.5 h-10 rounded text-sm font-medium whitespace-nowrap transition-all ${
+              activeCategory === tab.key
+                ? 'bg-[#8D52DA] text-white'
+                : 'bg-[#222328] text-[rgba(224,232,255,0.6)] hover:text-white hover:bg-[#2A2B30] border border-[rgba(255,255,255,0.06)]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Promotion Cards Grid */}
+      {filtered.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {filtered.map((promo) => (
+            <div
+              key={promo.id}
+              className="bg-[#1A1B1F] rounded-lg overflow-hidden border border-[rgba(255,255,255,0.06)] hover:border-[rgba(141,82,218,0.4)] transition-all group"
+            >
+              {/* Banner */}
+              <div className={`relative aspect-video bg-gradient-to-br ${promo.gradient} flex items-center justify-center p-6`}>
+                <div className="absolute top-4 right-4 w-20 h-20 bg-white/5 rounded-full blur-xl" />
+                <div className="absolute bottom-4 left-4 w-16 h-16 bg-black/10 rounded-full blur-lg" />
+
+                <div className="relative z-10 w-16 h-16 rounded-2xl flex items-center justify-center bg-white/10 backdrop-blur-sm">
+                  <Gift className="w-8 h-8 text-white" />
+                </div>
+
+                <div className="absolute top-3 right-3">
+                  <span className={`px-2.5 py-1 text-[11px] font-semibold rounded-full ${BADGE_COLORS[promo.badge]}`}>
+                    {promo.badge}
+                  </span>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-5">
+                <h3 className="text-lg font-bold text-white mb-1 group-hover:text-[#B47EFF] transition-colors">
+                  {promo.title}
+                </h3>
+                <p className="text-[rgba(224,232,255,0.6)] text-sm mb-3 leading-relaxed">
+                  {promo.description}
+                </p>
+
+                {/* Valid until */}
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-4">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Valid until {formatValidUntil(promo.validUntil)}</span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <button className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#8D52DA] hover:opacity-90 text-white text-sm font-medium rounded transition-opacity flex-1 sm:flex-initial">
+                    Claim Now
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-2 transition-colors">
+                    T&Cs apply
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-[#1A1B1F] rounded-lg text-center py-16 px-6 border border-[rgba(255,255,255,0.06)]">
+          <div className="w-14 h-14 bg-[#222328] rounded-full mx-auto mb-4 flex items-center justify-center">
+            <Gift className="w-6 h-6 text-gray-500" />
+          </div>
+          <h3 className="text-lg font-medium text-white mb-1">No promotions found</h3>
+          <p className="text-gray-500 text-sm max-w-md mx-auto">
+            There are no promotions in this category right now. Check back soon or browse all promotions.
+          </p>
+        </div>
+      )}
+
+      {/* Terms Notice */}
+      <p className="text-center text-xs text-gray-600 mt-8">
         All promotions are subject to{' '}
-        <a href="/help/terms" className="text-[#B47EFF] hover:underline">
+        <a href="/help/terms" className="text-[#8D52DA] hover:underline">
           Terms & Conditions
         </a>
         . Wagering requirements and other restrictions may apply. Promotions may be modified or withdrawn at any time.
         Must be 18+ to participate.
       </p>
+
+      <style jsx global>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }
