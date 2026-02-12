@@ -186,11 +186,11 @@ export default function SportsPage() {
   const liveCount = useMemo(() => MOCK_EVENTS.filter((e) => e.isLive).length, []);
 
   return (
-    <div className="w-full px-4 max-w-6xl mx-auto pb-20 space-y-6">
-      {/* Simple page header */}
-      <h1 className="text-2xl font-bold text-white pt-4">Sports</h1>
+    <div className="w-full px-4 max-w-5xl mx-auto pb-20 space-y-6">
+      {/* Page header: 22px bold */}
+      <h1 className="text-[22px] font-bold text-white pt-4">Sports</h1>
 
-      {/* Featured/Live section */}
+      {/* Featured/Live section with proper card sizing */}
       {featuredEvents.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -219,14 +219,14 @@ export default function SportsPage() {
         </section>
       )}
 
-      {/* Sports list - simple rows */}
+      {/* Sport list rows: h-[48px] each, proper padding */}
       <section className="rounded overflow-hidden border border-white/[0.04]">
         {SPORTS_LIST.map((sport, idx) => (
           <Link
             key={sport.slug}
             href={`/sports/${sport.slug}`}
             className={cn(
-              'flex items-center justify-between px-4 h-[52px] bg-[#1A1B1F] hover:bg-[#222328] transition-colors',
+              'flex items-center justify-between px-4 h-[48px] bg-[#1A1B1F] hover:bg-[#222328] transition-colors',
               idx !== SPORTS_LIST.length - 1 && 'border-b border-white/[0.04]'
             )}
           >
@@ -284,7 +284,7 @@ function FeaturedCard({
   if (!market) return null;
 
   return (
-    <div className="rounded-lg p-4 bg-[#1A1B1F] border border-white/[0.06] hover:border-white/10 transition-all">
+    <div className="rounded p-4 bg-[#1A1B1F] border border-white/[0.06] hover:border-white/10 transition-all">
       {/* Live badge */}
       {event.isLive && (
         <div className="inline-flex items-center gap-1.5 bg-green-500/15 text-green-400 text-xs font-bold uppercase px-2 py-1 rounded mb-3">
@@ -320,7 +320,7 @@ function FeaturedCard({
         </div>
       </Link>
 
-      {/* Odds row */}
+      {/* Odds row: h-9, min-w-[64px], 4px radius */}
       <div className="grid grid-cols-3 gap-2">
         {market.selections.map((sel) => {
           const selected = hasSelection(sel.id);
@@ -329,7 +329,7 @@ function FeaturedCard({
               key={sel.id}
               onClick={() => onOddsClick(event, sel)}
               className={cn(
-                'h-9 flex items-center justify-center gap-2 rounded transition-all font-mono text-sm font-bold',
+                'h-9 min-w-[64px] flex items-center justify-center gap-2 rounded transition-all font-mono text-sm font-bold',
                 selected
                   ? 'bg-purple-600/20 ring-1 ring-purple-500 text-purple-300'
                   : 'bg-white/[0.06] hover:bg-white/[0.10] text-white'
@@ -385,7 +385,7 @@ function UpcomingEventRow({
         <div className="text-xs text-gray-600 mt-0.5">{event.league}</div>
       </Link>
 
-      {/* Odds */}
+      {/* Odds: min-w-[64px], h-9 */}
       <div className="flex gap-2 shrink-0">
         {market.selections.map((sel) => {
           const selected = hasSelection(sel.id);
@@ -398,7 +398,7 @@ function UpcomingEventRow({
                 onOddsClick(event, sel);
               }}
               className={cn(
-                'w-14 h-8 flex items-center justify-center rounded transition-all font-mono text-xs font-bold',
+                'min-w-[64px] h-9 flex items-center justify-center rounded transition-all font-mono text-xs font-bold',
                 selected
                   ? 'bg-purple-600/20 ring-1 ring-purple-500 text-purple-300'
                   : 'bg-white/[0.06] hover:bg-white/[0.10] text-white'

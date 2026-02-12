@@ -159,7 +159,7 @@ const SPORT_FILTERS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Odds Button with trend arrows
+// Odds Button with trend arrows (small, 10px)
 // ---------------------------------------------------------------------------
 
 function LiveOddsButton({
@@ -190,7 +190,7 @@ function LiveOddsButton({
         onSelect();
       }}
       className={cn(
-        'w-16 h-9 flex items-center justify-center gap-1 rounded transition-all font-mono text-xs font-bold',
+        'h-9 min-w-[64px] flex items-center justify-center gap-1 rounded transition-all font-mono text-xs font-bold',
         isSelected
           ? 'bg-purple-600/20 ring-1 ring-purple-500 text-purple-300'
           : 'bg-white/[0.06] hover:bg-white/[0.10] text-white'
@@ -237,13 +237,13 @@ function CompetitionGroup({
 
   return (
     <div className="rounded overflow-hidden border border-white/[0.04]">
-      {/* Competition header */}
+      {/* Competition header: 13px muted, h-10 */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full flex items-center justify-between px-4 h-[44px] bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
+        className="w-full flex items-center justify-between px-4 h-10 bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 font-medium">{competition}</span>
+          <span className="text-[13px] text-gray-400 font-medium">{competition}</span>
           <span className="text-xs text-gray-600">({events.length})</span>
         </div>
         <ChevronDown
@@ -254,29 +254,29 @@ function CompetitionGroup({
         />
       </button>
 
-      {/* Event rows */}
+      {/* Event rows: 2px green left border, match time in green, scores bold mono */}
       {!isCollapsed && events.map((event, idx) => (
         <div
           key={event.id}
           className={cn(
-            'flex items-center gap-4 px-4 py-3 bg-[#1A1B1F] hover:bg-[#222328] transition-colors border-l-2 border-l-green-500',
+            'flex items-center gap-3 px-4 py-3 bg-[#1A1B1F] hover:bg-[#222328] transition-colors border-l-2 border-l-green-500',
             idx !== events.length - 1 && 'border-b border-white/[0.04]'
           )}
         >
-          {/* Live indicator + Time */}
+          {/* Live indicator + Time in green */}
           <div className="w-20 shrink-0">
             <div className="flex items-center gap-1.5 mb-0.5">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-xs font-bold text-green-400">LIVE</span>
+              <span className="text-[12px] font-bold text-green-400">LIVE</span>
             </div>
-            <span className="text-xs text-green-400">{event.matchTime}</span>
+            <span className="text-[12px] text-green-400">{event.matchTime}</span>
           </div>
 
-          {/* Teams + Scores */}
+          {/* Teams + Scores bold mono */}
           <Link href={`/sports/event/${event.id}`} className="flex-1 min-w-0">
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white font-medium truncate">
+                <span className="text-[14px] text-white font-medium truncate">
                   {event.homeTeam}
                 </span>
                 <span className="text-base font-bold font-mono text-white tabular-nums ml-2">
@@ -284,7 +284,7 @@ function CompetitionGroup({
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white font-medium truncate">
+                <span className="text-[14px] text-white font-medium truncate">
                   {event.awayTeam}
                 </span>
                 <span className="text-base font-bold font-mono text-white tabular-nums ml-2">
@@ -294,7 +294,7 @@ function CompetitionGroup({
             </div>
           </Link>
 
-          {/* Odds buttons with trend arrows */}
+          {/* Odds buttons with trend arrows (10px) */}
           <div className="flex gap-2 shrink-0">
             {event.markets[0]?.selections.map((sel) => {
               const selected = hasSelection(sel.id);
@@ -342,11 +342,11 @@ function SportSection({
   }, [events]);
 
   return (
-    <div className="rounded-lg overflow-hidden border border-white/[0.04]">
+    <div className="rounded overflow-hidden border border-white/[0.04]">
       {/* Sport header */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full flex items-center justify-between px-4 h-[48px] bg-white/[0.05] hover:bg-white/[0.07] transition-colors"
+        className="w-full flex items-center justify-between px-4 h-12 bg-white/[0.05] hover:bg-white/[0.07] transition-colors"
       >
         <div className="flex items-center gap-2.5">
           <span className="text-lg">{sportEmoji}</span>
@@ -440,17 +440,17 @@ export default function LivePage() {
   }, [filteredEvents]);
 
   return (
-    <div className="w-full px-4 max-w-6xl mx-auto pb-20 space-y-4">
-      {/* Header with live count */}
+    <div className="w-full px-4 max-w-5xl mx-auto pb-20 space-y-4">
+      {/* Header: "Live" + green dot + count badge */}
       <div className="flex items-center gap-3 pt-4">
-        <h1 className="text-2xl font-bold text-white">Live</h1>
+        <h1 className="text-[22px] font-bold text-white">Live</h1>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-500/15">
           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           <span className="text-sm font-bold text-green-400">{events.length}</span>
         </span>
       </div>
 
-      {/* Sport filter tabs - horizontal scroll, simple pills */}
+      {/* Sport filter pills: horizontal scroll, h-9, 4px radius */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {SPORT_FILTERS.map((filter) => {
           const count = sportCounts[filter.key] || 0;
@@ -482,9 +482,9 @@ export default function LivePage() {
         })}
       </div>
 
-      {/* Live events grouped by sport then competition */}
+      {/* Live events grouped by sport > competition */}
       {filteredEvents.length === 0 ? (
-        <div className="rounded-lg border border-white/[0.06] bg-[#1A1B1F] text-center py-16">
+        <div className="rounded border border-white/[0.06] bg-[#1A1B1F] text-center py-16">
           <p className="text-gray-400 text-base font-medium">No live events</p>
           <p className="text-sm text-gray-600 mt-1">Check back later or try a different sport.</p>
         </div>
@@ -502,7 +502,7 @@ export default function LivePage() {
         </div>
       )}
 
-      {/* Auto-refresh note */}
+      {/* Auto-refresh indicator */}
       <p className="text-center text-xs text-gray-600 pt-2">
         Odds update automatically every 5 seconds
       </p>

@@ -101,6 +101,7 @@ const config: Config = {
         '64': '256px',
       },
       borderRadius: {
+        DEFAULT: '4px',
         btn: '4px',
         card: '8px',
         modal: '8px',

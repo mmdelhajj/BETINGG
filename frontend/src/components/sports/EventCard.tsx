@@ -72,11 +72,13 @@ function OddsButton({
   label,
   isSelected,
   onSelect,
+  compact,
 }: {
   selection: Selection | null;
   label: string;
   isSelected: boolean;
   onSelect: () => void;
+  compact?: boolean;
 }) {
   const [flash, setFlash] = useState<OddsFlash>(null);
   const prevOdds = useRef<string | null>(null);
@@ -96,19 +98,26 @@ function OddsButton({
     prevOdds.current = selection.odds;
   }, [selection?.odds, selection]);
 
+  const buttonHeight = compact ? 'h-[36px]' : 'h-[40px]';
+  const labelSize = compact ? 'text-[10px]' : 'text-[11px]';
+  const oddsSize = compact ? 'text-[13px]' : 'text-[14px]';
+  const paddingX = compact ? 'px-2.5' : 'px-3';
+
   if (!selection) {
     return (
       <div
         className={cn(
-          'flex-1 h-[40px] rounded flex items-center justify-between px-3',
+          'flex-1 rounded flex items-center justify-between',
+          buttonHeight,
+          paddingX,
           'bg-white/[0.03] border border-white/[0.06]',
         )}
         style={{ borderRadius: '4px' }}
       >
-        <span className="text-[11px] text-[rgba(224,232,255,0.3)] uppercase font-medium">
+        <span className={cn(labelSize, 'text-[rgba(224,232,255,0.3)] uppercase font-medium')}>
           {label}
         </span>
-        <span className="text-[14px] text-[rgba(224,232,255,0.3)] font-bold font-mono">
+        <span className={cn(oddsSize, 'text-[rgba(224,232,255,0.3)] font-bold font-mono')}>
           -
         </span>
       </div>
@@ -126,7 +135,9 @@ function OddsButton({
       }}
       disabled={isSuspended}
       className={cn(
-        'flex-1 h-[40px] rounded flex items-center justify-between px-3',
+        'flex-1 rounded flex items-center justify-between',
+        buttonHeight,
+        paddingX,
         'border transition-all duration-200',
         'relative overflow-hidden',
         // Selected state - purple
@@ -161,7 +172,8 @@ function OddsButton({
       {/* Label left */}
       <span
         className={cn(
-          'text-[11px] uppercase font-medium',
+          labelSize,
+          'uppercase font-medium',
           isSelected ? 'text-white' : 'text-[rgba(224,232,255,0.3)]',
         )}
       >
@@ -171,7 +183,8 @@ function OddsButton({
       {/* Odds right */}
       <span
         className={cn(
-          'text-[14px] font-bold font-mono tabular-nums',
+          oddsSize,
+          'font-bold font-mono tabular-nums',
           isSelected
             ? 'text-white'
             : flash === 'up'
@@ -235,7 +248,7 @@ function LiveScore({
 export function EventCard({
   event,
   compact = false,
-  featured = false,
+  featured: _featured = false,
 }: EventCardProps) {
   const { toggleSelection, hasSelection } = useBetSlipStore();
 
@@ -297,9 +310,13 @@ export function EventCard({
   const drawLabel = 'X';
   const awayLabel = '2';
 
-  /* ---- Padding based on variant ----------------------------------- */
+  /* ---- Sizing based on variant ------------------------------------ */
 
-  const cardPadding = compact ? 'p-2' : featured ? 'p-3' : 'p-3';
+  const cardPadding = compact ? 'p-2' : 'p-3';
+  const headerGap = compact ? 'mb-1.5' : 'mb-2';
+  const teamFontSize = compact ? 'text-[13px]' : 'text-[14px]';
+  const teamGap = compact ? 'mb-1' : 'mb-1.5';
+  const oddsGap = compact ? 'gap-1' : 'gap-1.5';
 
   /* ---- Render ------------------------------------------------------ */
 
@@ -311,16 +328,16 @@ export function EventCard({
         'border border-[rgba(255,255,255,0.06)]',
         'hover:border-[rgba(255,255,255,0.10)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.2)]',
         cardPadding,
-        // Live card: green left border
+        // Live card: green left border (2px)
         event.isLive && 'border-l-2 border-l-[#30E000]',
       )}
       style={{ borderRadius: '8px' }}
     >
       {/* ========== HEADER: Competition + Time/Date ==================== */}
-      <div className="flex items-center justify-between mb-2">
+      <div className={cn('flex items-center justify-between', headerGap)}>
         {/* Competition name */}
         <span
-          className="text-[11px] text-[rgba(224,232,255,0.3)] truncate"
+          className="text-[11px] text-[rgba(224,232,255,0.3)] truncate flex-1 min-w-0"
           title={event.competition?.name}
         >
           {event.competition?.name}
@@ -330,7 +347,7 @@ export function EventCard({
         <div className="flex items-center gap-2 shrink-0 ml-2">
           {event.isLive ? (
             <>
-              {/* Live badge */}
+              {/* Live badge - red background */}
               <div
                 className="px-1.5 py-0.5 rounded"
                 style={{
@@ -343,13 +360,13 @@ export function EventCard({
               </div>
               {/* Match time in green */}
               {event.metadata?.matchTime && (
-                <span className="text-[11px] text-[#30E000] font-medium">
+                <span className="text-[11px] text-[#30E000] font-medium tabular-nums">
                   {event.metadata.matchTime}
                 </span>
               )}
             </>
           ) : (
-            <span className="text-[11px] text-[rgba(224,232,255,0.3)]">
+            <span className="text-[12px] text-[rgba(224,232,255,0.3)]">
               {formatEventDate(event.startTime)}
             </span>
           )}
@@ -360,11 +377,11 @@ export function EventCard({
       {event.homeTeam && event.awayTeam ? (
         <>
           {/* Home team row */}
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[14px] text-white font-medium truncate">
+          <div className={cn('flex items-center justify-between', teamGap)}>
+            <span className={cn(teamFontSize, 'text-white font-medium truncate flex-1 min-w-0 pr-2')}>
               {event.homeTeam}
             </span>
-            {event.isLive && (
+            {event.isLive && event.homeScore !== undefined && (
               <LiveScore
                 score={event.homeScore ?? 0}
                 prevScoreRef={prevHomeScore}
@@ -372,12 +389,12 @@ export function EventCard({
             )}
           </div>
 
-          {/* Away team row */}
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[14px] text-white font-medium truncate">
+          {/* Away team row - 2px gap between rows */}
+          <div className={cn('flex items-center justify-between', compact ? 'mb-2' : 'mb-3')}>
+            <span className={cn(teamFontSize, 'text-white font-medium truncate flex-1 min-w-0 pr-2')}>
               {event.awayTeam}
             </span>
-            {event.isLive && (
+            {event.isLive && event.awayScore !== undefined && (
               <LiveScore
                 score={event.awayScore ?? 0}
                 prevScoreRef={prevAwayScore}
@@ -386,10 +403,10 @@ export function EventCard({
           </div>
 
           {/* ========== ODDS ROW ======================================== */}
-          <div className="flex gap-[6px]">
+          <div className={cn('flex', oddsGap)}>
             {isNoDraw ? (
               <>
-                {/* Home */}
+                {/* Two-way: Home + Away */}
                 <OddsButton
                   selection={homeSel}
                   label={homeLabel}
@@ -397,8 +414,8 @@ export function EventCard({
                   onSelect={() =>
                     homeSel && handleSelectOdds(homeSel, moneylineMarket)
                   }
+                  compact={compact}
                 />
-                {/* Away */}
                 <OddsButton
                   selection={awaySel}
                   label={awayLabel}
@@ -406,11 +423,12 @@ export function EventCard({
                   onSelect={() =>
                     awaySel && handleSelectOdds(awaySel, moneylineMarket)
                   }
+                  compact={compact}
                 />
               </>
             ) : (
               <>
-                {/* Home */}
+                {/* Three-way: Home + Draw + Away */}
                 <OddsButton
                   selection={homeSel}
                   label={homeLabel}
@@ -418,8 +436,8 @@ export function EventCard({
                   onSelect={() =>
                     homeSel && handleSelectOdds(homeSel, moneylineMarket)
                   }
+                  compact={compact}
                 />
-                {/* Draw */}
                 <OddsButton
                   selection={drawSel}
                   label={drawLabel}
@@ -427,8 +445,8 @@ export function EventCard({
                   onSelect={() =>
                     drawSel && handleSelectOdds(drawSel, moneylineMarket)
                   }
+                  compact={compact}
                 />
-                {/* Away */}
                 <OddsButton
                   selection={awaySel}
                   label={awayLabel}
@@ -436,6 +454,7 @@ export function EventCard({
                   onSelect={() =>
                     awaySel && handleSelectOdds(awaySel, moneylineMarket)
                   }
+                  compact={compact}
                 />
               </>
             )}
@@ -443,7 +462,7 @@ export function EventCard({
 
           {/* ========== FOOTER: +N markets link ======================== */}
           {marketCount > 1 && (
-            <div className="mt-2 flex items-center justify-center">
+            <div className={cn('flex items-center justify-center', compact ? 'mt-1.5' : 'mt-2')}>
               <Link
                 href={`/sports/event/${event.id}`}
                 className="text-[11px] text-[rgba(224,232,255,0.5)] hover:text-[rgba(224,232,255,0.8)] transition-colors"
@@ -457,14 +476,14 @@ export function EventCard({
       ) : (
         /* ---- Fallback: no teams (outrights, specials) --------------- */
         <>
-          <div className="mb-3">
-            <p className="text-[14px] text-white font-medium line-clamp-2">
+          <div className={compact ? 'mb-2' : 'mb-3'}>
+            <p className={cn(teamFontSize, 'text-white font-medium line-clamp-2')}>
               {event.name}
             </p>
           </div>
 
           {mainSelections.length > 0 && (
-            <div className="flex gap-[6px]">
+            <div className={cn('flex', oddsGap)}>
               {mainSelections.slice(0, 3).map((sel) => (
                 <OddsButton
                   key={sel.id}
@@ -472,13 +491,14 @@ export function EventCard({
                   label={sel.name.slice(0, 3).toUpperCase()}
                   isSelected={hasSelection(sel.id)}
                   onSelect={() => handleSelectOdds(sel, moneylineMarket)}
+                  compact={compact}
                 />
               ))}
             </div>
           )}
 
           {marketCount > 1 && (
-            <div className="mt-2 flex items-center justify-center">
+            <div className={cn('flex items-center justify-center', compact ? 'mt-1.5' : 'mt-2')}>
               <Link
                 href={`/sports/event/${event.id}`}
                 className="text-[11px] text-[rgba(224,232,255,0.5)] hover:text-[rgba(224,232,255,0.8)] transition-colors"

@@ -424,21 +424,21 @@ function LiveEventCard({ event }: { event: Event }) {
         {event.markets && event.markets.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {homeOdds && (
-              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded py-1.5 transition-all duration-150">
-                <div className="text-[11px] text-gray-400">1</div>
-                <div className="text-sm text-white font-semibold">{homeOdds}</div>
+              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded h-[38px] transition-all duration-150 flex flex-col items-center justify-center">
+                <div className="text-[11px] text-gray-400 leading-none">1</div>
+                <div className="text-sm text-white font-semibold leading-none mt-0.5">{homeOdds}</div>
               </button>
             )}
             {drawOdds && (
-              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded py-1.5 transition-all duration-150">
-                <div className="text-[11px] text-gray-400">X</div>
-                <div className="text-sm text-white font-semibold">{drawOdds}</div>
+              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded h-[38px] transition-all duration-150 flex flex-col items-center justify-center">
+                <div className="text-[11px] text-gray-400 leading-none">X</div>
+                <div className="text-sm text-white font-semibold leading-none mt-0.5">{drawOdds}</div>
               </button>
             )}
             {awayOdds && (
-              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded py-1.5 transition-all duration-150">
-                <div className="text-[11px] text-gray-400">2</div>
-                <div className="text-sm text-white font-semibold">{awayOdds}</div>
+              <button className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/40 rounded h-[38px] transition-all duration-150 flex flex-col items-center justify-center">
+                <div className="text-[11px] text-gray-400 leading-none">2</div>
+                <div className="text-sm text-white font-semibold leading-none mt-0.5">{awayOdds}</div>
               </button>
             )}
           </div>
@@ -465,7 +465,7 @@ function CasinoGameCard({ game }: { game: { slug: string; name: string; gradient
           <span className="text-4xl font-black text-white/20">{game.name.charAt(0)}</span>
         </div>
       </div>
-      <p className="text-xs text-white font-medium mt-2 truncate">{game.name}</p>
+      <p className="text-[13px] text-white font-medium mt-2 truncate">{game.name}</p>
     </Link>
   );
 }
@@ -477,8 +477,8 @@ function CasinoGameCard({ game }: { game: { slug: string; name: string; gradient
 export default function HomePage() {
   return (
     <div className="pb-24 lg:pb-8">
-      {/* Hero Section - Full width, no container */}
-      <section className="w-full mb-8 h-[200px] md:h-[280px]">
+      {/* Hero Section - Professional dark purple gradient */}
+      <section className="w-full mb-8 h-[180px] md:h-[260px]">
         <div className="relative h-full bg-gradient-to-br from-[#1A1B1F] via-[#2D1B4E] to-[#1A1B1F] overflow-hidden">
           {/* Subtle background decoration */}
           <div className="absolute inset-0 opacity-10">
@@ -486,18 +486,18 @@ export default function HomePage() {
             <div className="absolute bottom-10 left-20 w-64 h-64 rounded-full bg-purple-600 blur-3xl" />
           </div>
 
-          {/* Hero Content */}
-          <div className="relative z-10 h-full flex flex-col justify-center px-4 md:px-6 max-w-7xl mx-auto">
-            <h1 className="text-white text-3xl md:text-5xl font-bold mb-2">
+          {/* Hero Content - Centered with proper sizing */}
+          <div className="relative z-10 h-full flex flex-col justify-center items-center text-center px-4 md:px-6 max-w-7xl mx-auto">
+            <h1 className="text-white text-2xl md:text-4xl font-bold mb-2">
               Welcome to CryptoBet
             </h1>
-            <p className="text-white/90 text-lg md:text-2xl font-semibold mb-6">
+            <p className="text-white/70 text-sm mb-6">
               Get Your $2,500 Welcome Package
             </p>
             <div>
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center bg-[#8D52DA] hover:bg-[#7A3FC7] text-white font-semibold px-8 py-3 rounded transition-all duration-150"
+                className="inline-flex items-center justify-center bg-[#8D52DA] hover:bg-[#7A3FC7] text-white font-semibold h-10 px-6 rounded transition-all duration-150"
               >
                 Join Now
               </Link>
@@ -508,7 +508,7 @@ export default function HomePage() {
 
       {/* All sections below hero have consistent padding */}
       <div className="space-y-8">
-        {/* Live Now Section */}
+        {/* Live Now Section - Edge-to-edge scroll */}
         <section className="px-4 md:px-6 max-w-7xl mx-auto">
           <SectionHeader
             title="Live Now"
@@ -529,7 +529,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Popular Events Section */}
+        {/* Popular Events Section - Grid layout */}
         <section className="px-4 md:px-6 max-w-7xl mx-auto">
           <SectionHeader
             title="Popular"
@@ -543,21 +543,21 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Top Leagues Section */}
+        {/* Top Leagues Section - Horizontal scroll with proper badge sizing */}
         <section className="px-4 md:px-6 max-w-7xl mx-auto">
           <SectionHeader title="Top Leagues" href="/sports" />
           <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-3 pb-2">
+            <div className="flex gap-2 pb-2">
               {TOP_LEAGUES.map((league) => (
                 <Link
                   key={league.competition}
                   href={`/sports/${league.slug}/${league.competition}`}
-                  className="flex items-center gap-2.5 px-4 h-12 rounded bg-[#1A1B1F] border border-white/[0.06] hover:border-white/10 transition-all duration-150 shrink-0"
+                  className="flex items-center gap-2.5 px-4 h-11 rounded bg-[#1A1B1F] border border-white/[0.06] hover:border-white/10 transition-all duration-150 shrink-0"
                 >
                   <span className="w-6 h-6 rounded bg-white/5 flex items-center justify-center text-[11px] font-bold text-gray-400">
                     {league.flag}
                   </span>
-                  <span className="text-sm font-medium text-gray-300 whitespace-nowrap">
+                  <span className="text-[13px] font-medium text-white whitespace-nowrap">
                     {league.name}
                   </span>
                 </Link>
@@ -566,7 +566,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Casino Picks Section */}
+        {/* Casino Picks Section - Game cards with proper sizing */}
         <section className="px-4 md:px-6 max-w-7xl mx-auto">
           <SectionHeader
             title="Casino"
@@ -582,7 +582,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Promotions Banner */}
+        {/* Promotions Banner - Full width gradient card */}
         <section className="px-4 md:px-6 max-w-7xl mx-auto">
           <Link
             href="/promotions"

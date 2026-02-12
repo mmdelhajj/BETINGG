@@ -122,7 +122,7 @@ const LANGUAGES = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  Component - Cloudbet-style footer: compact, professional          */
+/*  Component - Compact footer design                                 */
 /* ------------------------------------------------------------------ */
 export function Footer() {
   const [langOpen, setLangOpen] = useState(false);
@@ -140,7 +140,7 @@ export function Footer() {
       }}
     >
       <div className="max-w-6xl mx-auto px-4 lg:px-6 pt-8 pb-4">
-        {/* ── Crypto Icons Row (top) ──────────────────────────────── */}
+        {/* ── Crypto Icons Row - 20px icons, muted ────────────────────── */}
         <div className="flex flex-wrap items-center justify-center gap-3 lg:gap-4 mb-8">
           {CRYPTO_TOKENS.map((token) => {
             const Icon = token.icon;
@@ -151,8 +151,11 @@ export function Footer() {
                 title={token.symbol}
               >
                 <Icon
-                  className="w-5 h-5"
-                  style={{ color: 'rgba(255, 255, 255, 0.25)' }}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    color: 'rgba(255, 255, 255, 0.25)'
+                  }}
                 />
                 <span
                   className="text-[11px] font-medium"
@@ -171,10 +174,11 @@ export function Footer() {
           style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}
         />
 
-        {/* ── Footer Link Columns - 4-col desktop, 2-col tablet, 1-col mobile */}
+        {/* ── Footer Links - 4-col desktop, 2-col tablet, 1-col mobile ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-8">
           {FOOTER_COLUMNS.map((column) => (
             <div key={column.title}>
+              {/* Headers - 11px uppercase, muted */}
               <h4
                 className="text-[11px] font-semibold uppercase mb-3"
                 style={{
@@ -184,6 +188,7 @@ export function Footer() {
               >
                 {column.title}
               </h4>
+              {/* Links - 13px, rgba(255,255,255,0.5), py-1.5 */}
               <ul className="space-y-0">
                 {column.links.map((link) => (
                   <li key={link.href}>
@@ -215,7 +220,7 @@ export function Footer() {
 
         {/* ── Social Links + Language Selector Row ──────────────── */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6">
-          {/* Social Links */}
+          {/* Social Icons - 18px, muted */}
           <div className="flex items-center gap-3">
             {SOCIAL_LINKS.map((social) => {
               const Icon = social.icon;
@@ -235,7 +240,7 @@ export function Footer() {
                     (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.3)')
                   }
                 >
-                  <Icon className="w-[18px] h-[18px]" />
+                  <Icon style={{ width: '18px', height: '18px' }} />
                 </a>
               );
             })}

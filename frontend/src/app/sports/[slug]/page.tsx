@@ -282,20 +282,20 @@ export default function SportPage() {
   };
 
   return (
-    <div className="w-full px-4 max-w-6xl mx-auto pb-20 space-y-4">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 pt-4">
+    <div className="w-full px-4 max-w-5xl mx-auto pb-20 space-y-4">
+      {/* Breadcrumb: small, muted */}
+      <nav className="flex items-center gap-2 text-xs text-gray-500 pt-4">
         <Link href="/sports" className="hover:text-purple-400 transition-colors">
           Sports
         </Link>
-        <ChevronRight className="w-3.5 h-3.5 text-gray-700" />
+        <ChevronRight className="w-3 h-3 text-gray-700" />
         <span className="text-white font-medium">{config.name}</span>
       </nav>
 
-      {/* Header: icon + name + live count badge */}
+      {/* Header: sport icon + name (20px bold) + live count badge */}
       <div className="flex items-center gap-3">
-        <span className="text-3xl">{config.icon}</span>
-        <h1 className="text-2xl font-bold text-white">{config.name}</h1>
+        <span className="text-2xl">{config.icon}</span>
+        <h1 className="text-[20px] font-bold text-white">{config.name}</h1>
         {liveCount > 0 && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-500/15 border border-green-500/30">
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
@@ -304,60 +304,62 @@ export default function SportPage() {
         )}
       </div>
 
-      {/* Tab bar: All | Today | Tomorrow | Live */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <button
-          onClick={() => setTimeFilter('all')}
-          className={cn(
-            'h-9 px-4 rounded text-sm font-medium transition-all border whitespace-nowrap',
-            timeFilter === 'all'
-              ? 'bg-purple-500/15 text-white border-purple-500'
-              : 'bg-transparent text-gray-400 border-white/[0.06] hover:text-white hover:border-white/10'
-          )}
-        >
-          All
-        </button>
-        <button
-          onClick={() => setTimeFilter('today')}
-          className={cn(
-            'h-9 px-4 rounded text-sm font-medium transition-all border whitespace-nowrap',
-            timeFilter === 'today'
-              ? 'bg-purple-500/15 text-white border-purple-500'
-              : 'bg-transparent text-gray-400 border-white/[0.06] hover:text-white hover:border-white/10'
-          )}
-        >
-          Today {todayCount > 0 && `(${todayCount})`}
-        </button>
-        <button
-          onClick={() => setTimeFilter('tomorrow')}
-          className={cn(
-            'h-9 px-4 rounded text-sm font-medium transition-all border whitespace-nowrap',
-            timeFilter === 'tomorrow'
-              ? 'bg-purple-500/15 text-white border-purple-500'
-              : 'bg-transparent text-gray-400 border-white/[0.06] hover:text-white hover:border-white/10'
-          )}
-        >
-          Tomorrow {tomorrowCount > 0 && `(${tomorrowCount})`}
-        </button>
-        {liveCount > 0 && (
+      {/* Filter tabs: sticky, h-9, 4px radius, proper spacing */}
+      <div className="sticky top-0 z-10 bg-[#0F1011] py-2 -mx-4 px-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
           <button
-            onClick={() => setTimeFilter('live')}
+            onClick={() => setTimeFilter('all')}
             className={cn(
-              'h-9 px-4 rounded text-sm font-medium transition-all border whitespace-nowrap flex items-center gap-1.5',
-              timeFilter === 'live'
-                ? 'bg-green-500/15 text-green-400 border-green-500'
+              'h-9 px-4 rounded text-sm font-medium transition-all border whitespace-nowrap',
+              timeFilter === 'all'
+                ? 'bg-purple-500/15 text-white border-purple-500'
                 : 'bg-transparent text-gray-400 border-white/[0.06] hover:text-white hover:border-white/10'
             )}
           >
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-            Live ({liveCount})
+            All
           </button>
-        )}
+          <button
+            onClick={() => setTimeFilter('today')}
+            className={cn(
+              'h-9 px-4 rounded text-sm font-medium transition-all border whitespace-nowrap',
+              timeFilter === 'today'
+                ? 'bg-purple-500/15 text-white border-purple-500'
+                : 'bg-transparent text-gray-400 border-white/[0.06] hover:text-white hover:border-white/10'
+            )}
+          >
+            Today {todayCount > 0 && `(${todayCount})`}
+          </button>
+          <button
+            onClick={() => setTimeFilter('tomorrow')}
+            className={cn(
+              'h-9 px-4 rounded text-sm font-medium transition-all border whitespace-nowrap',
+              timeFilter === 'tomorrow'
+                ? 'bg-purple-500/15 text-white border-purple-500'
+                : 'bg-transparent text-gray-400 border-white/[0.06] hover:text-white hover:border-white/10'
+            )}
+          >
+            Tomorrow {tomorrowCount > 0 && `(${tomorrowCount})`}
+          </button>
+          {liveCount > 0 && (
+            <button
+              onClick={() => setTimeFilter('live')}
+              className={cn(
+                'h-9 px-4 rounded text-sm font-medium transition-all border whitespace-nowrap flex items-center gap-1.5',
+                timeFilter === 'live'
+                  ? 'bg-green-500/15 text-green-400 border-green-500'
+                  : 'bg-transparent text-gray-400 border-white/[0.06] hover:text-white hover:border-white/10'
+              )}
+            >
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              Live ({liveCount})
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Events grouped by competition */}
       {sortedEvents.length === 0 ? (
-        <div className="rounded-lg border border-white/[0.06] bg-[#1A1B1F] text-center py-16">
+        <div className="rounded border border-white/[0.06] bg-[#1A1B1F] text-center py-16">
           <p className="text-gray-400 text-base font-medium">No events found</p>
           <p className="text-sm text-gray-600 mt-1">
             {timeFilter !== 'all' ? 'Try selecting a different filter.' : 'Events will appear here when scheduled.'}
@@ -369,14 +371,14 @@ export default function SportPage() {
             const isCollapsed = collapsedComps[competition.id];
             return (
               <div key={competition.id} className="rounded overflow-hidden border border-white/[0.04]">
-                {/* Competition header - collapsible */}
+                {/* Competition header: 13px muted, h-10 */}
                 <button
                   onClick={() => toggleCompetition(competition.id)}
-                  className="w-full flex items-center justify-between px-4 h-[48px] bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
+                  className="w-full flex items-center justify-between px-4 h-10 bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-base">{competition.flag}</span>
-                    <span className="text-sm font-medium text-gray-400">{competition.name}</span>
+                    <span className="text-[13px] font-medium text-gray-400">{competition.name}</span>
                   </div>
                   <ChevronDown
                     className={cn(
@@ -386,29 +388,29 @@ export default function SportPage() {
                   />
                 </button>
 
-                {/* Event rows */}
+                {/* Event rows: teams stacked (14px), time (12px), odds buttons (h-9, min-w-[64px], 4px radius) */}
                 {!isCollapsed && events.map((event, idx) => (
                   <div
                     key={event.id}
                     className={cn(
-                      'flex items-center gap-4 px-4 py-3 bg-[#1A1B1F] hover:bg-[#222328] transition-colors',
+                      'flex items-center gap-3 px-4 py-3 bg-[#1A1B1F] hover:bg-[#222328] transition-colors',
                       idx !== events.length - 1 && 'border-b border-white/[0.04]'
                     )}
                   >
-                    {/* Time/Live badge */}
+                    {/* Time column: 12px */}
                     <div className="w-20 shrink-0">
                       {event.isLive ? (
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-xs font-bold text-green-400">LIVE</span>
+                            <span className="text-[12px] font-bold text-green-400">LIVE</span>
                           </div>
                           {event.matchTime && (
-                            <span className="text-xs text-green-400">{event.matchTime}</span>
+                            <span className="text-[12px] text-green-400">{event.matchTime}</span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-[12px] text-gray-500">
                           {new Date(event.startTime).toLocaleTimeString('en-US', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -417,25 +419,25 @@ export default function SportPage() {
                       )}
                     </div>
 
-                    {/* Teams (stacked vertically) */}
+                    {/* Teams stacked: 14px */}
                     <Link href={`/sports/event/${event.id}`} className="flex-1 min-w-0">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-white font-medium truncate">
+                          <span className="text-[14px] text-white font-medium truncate">
                             {event.homeTeam}
                           </span>
                           {event.isLive && event.homeScore !== undefined && (
-                            <span className="text-sm font-bold font-mono text-white tabular-nums ml-2">
+                            <span className="text-[14px] font-bold font-mono text-white tabular-nums ml-2">
                               {event.homeScore}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-white font-medium truncate">
+                          <span className="text-[14px] text-white font-medium truncate">
                             {event.awayTeam}
                           </span>
                           {event.isLive && event.awayScore !== undefined && (
-                            <span className="text-sm font-bold font-mono text-white tabular-nums ml-2">
+                            <span className="text-[14px] font-bold font-mono text-white tabular-nums ml-2">
                               {event.awayScore}
                             </span>
                           )}
@@ -443,7 +445,7 @@ export default function SportPage() {
                       </div>
                     </Link>
 
-                    {/* Odds buttons (1X2 or 12) */}
+                    {/* Odds buttons: h-9, min-w-[64px], 4px radius, one-line (label + odds) */}
                     <div className="flex gap-2 shrink-0">
                       {event.markets[0]?.selections.map((sel) => {
                         const selected = hasSelection(sel.id);
@@ -456,7 +458,7 @@ export default function SportPage() {
                               handleOddsClick(event, sel);
                             }}
                             className={cn(
-                              'w-16 h-9 flex items-center justify-center gap-1.5 rounded transition-all font-mono text-xs font-bold',
+                              'h-9 min-w-[64px] flex items-center justify-center gap-1.5 rounded transition-all font-mono text-xs font-bold',
                               selected
                                 ? 'bg-purple-600/20 ring-1 ring-purple-500 text-purple-300'
                                 : 'bg-white/[0.06] hover:bg-white/[0.10] text-white'

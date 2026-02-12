@@ -20,6 +20,7 @@ type BetStatus = 'PENDING' | 'LIVE' | 'WON' | 'LOST' | 'VOID' | 'CASHED_OUT';
 type BetType = 'SINGLE' | 'PARLAY' | 'SYSTEM';
 type LegStatus = 'PENDING' | 'WON' | 'LOST' | 'VOID';
 type FilterTab = 'open' | 'settled';
+type SettledFilter = 'all' | 'won' | 'lost';
 
 interface BetLegData {
   id: string;
@@ -184,7 +185,7 @@ function StatusBadge({ status }: { status: BetStatus }) {
 
   const info = map[status];
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${info.className}`}>
+    <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold ${info.className}`}>
       {status === 'LIVE' && (
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#30E000] opacity-75" />
@@ -260,12 +261,12 @@ function LegRow({ leg }: { leg: BetLegData }) {
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-xs text-gray-500">
+        <p className="mt-0.5 text-[13px] text-gray-500">
           {leg.market} — <span className="text-gray-300">{leg.selection}</span>
         </p>
       </div>
       <div className="text-right shrink-0">
-        <span className="font-mono text-sm text-white">{leg.oddsPlaced.toFixed(2)}</span>
+        <span className="font-mono text-[13px] text-white">{leg.oddsPlaced.toFixed(2)}</span>
       </div>
     </div>
   );
@@ -286,7 +287,7 @@ function BetCard({ bet }: { bet: BetData }) {
   const hasMore = remainingLegs.length > 0;
 
   return (
-    <div className="rounded-lg border p-4 transition-colors bg-[#1A1B1F] border-[rgba(255,255,255,0.06)]">
+    <div className="rounded-lg p-4 transition-colors bg-[#1A1B1F] border border-[rgba(255,255,255,0.06)]">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <BetTypeBadge type={bet.type} />
@@ -346,7 +347,7 @@ function BetCard({ bet }: { bet: BetData }) {
           )}
           <button
             onClick={() => setExpanded((p) => !p)}
-            className="mt-2 flex w-full items-center justify-center gap-1 rounded py-2 text-xs text-gray-500 transition-colors hover:text-gray-300 min-h-[44px]"
+            className="mt-2 flex w-full items-center justify-center gap-1 rounded py-2 text-xs text-gray-500 transition-colors hover:text-gray-300"
           >
             {expanded ? (
               <>
@@ -364,7 +365,7 @@ function BetCard({ bet }: { bet: BetData }) {
 
       {showCashOut && (
         <div className="mt-4">
-          <button className="flex w-full max-w-md mx-auto items-center justify-center gap-2 rounded bg-[#8D52DA] px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 min-h-[44px]">
+          <button className="flex w-full items-center justify-center gap-2 rounded border-2 border-[#8D52DA] bg-transparent px-4 h-9 text-sm font-semibold text-[#8D52DA] transition-colors hover:bg-[rgba(141,82,218,0.1)]">
             <CircleDollarSign className="h-4 w-4" />
             Cash Out <span className="font-mono">{formatAmount(bet.cashOutValue!, bet.currency)}</span>
           </button>
@@ -376,7 +377,7 @@ function BetCard({ bet }: { bet: BetData }) {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border px-6 py-16 text-center bg-[#1A1B1F] border-[rgba(255,255,255,0.06)]">
+    <div className="flex flex-col items-center justify-center rounded-lg px-6 py-16 text-center bg-[#1A1B1F] border border-[rgba(255,255,255,0.06)]">
       <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(255,255,255,0.04)]">
         <Ticket className="h-10 w-10 text-gray-600" />
       </div>
@@ -386,7 +387,7 @@ function EmptyState() {
       </p>
       <a
         href="/sports"
-        className="mt-5 inline-flex items-center gap-2 rounded bg-[#8D52DA] px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 min-h-[44px]"
+        className="mt-5 inline-flex items-center gap-2 rounded bg-[#8D52DA] px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
       >
         <Trophy className="h-4 w-4" />
         Place your first bet
@@ -397,6 +398,7 @@ function EmptyState() {
 
 export default function MyBetsPage() {
   const [filterTab, setFilterTab] = useState<FilterTab>('open');
+  const [settledFilter, setSettledFilter] = useState<SettledFilter>('all');
 
   const filteredBets = useMemo(() => {
     let result = MOCK_BETS;
@@ -407,15 +409,23 @@ export default function MyBetsPage() {
       result = result.filter(
         (b) => b.status === 'WON' || b.status === 'LOST' || b.status === 'VOID' || b.status === 'CASHED_OUT'
       );
+
+      // Apply settled sub-filter
+      if (settledFilter === 'won') {
+        result = result.filter((b) => b.status === 'WON' || b.status === 'CASHED_OUT');
+      } else if (settledFilter === 'lost') {
+        result = result.filter((b) => b.status === 'LOST');
+      }
     }
 
     return result;
-  }, [filterTab]);
+  }, [filterTab, settledFilter]);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 pb-24 bg-[#0F0F12] min-h-screen">
-      <h1 className="text-2xl font-bold text-white mb-5">My Bets</h1>
+    <div className="mx-auto max-w-3xl px-4 py-6 pb-20 bg-[#0F0F12] min-h-screen">
+      <h1 className="text-[20px] font-bold text-white mb-5">My Bets</h1>
 
+      {/* Tabs - Active / Settled with purple underline */}
       <div className="flex border-b border-[rgba(255,255,255,0.06)] mb-5">
         {[
           { key: 'open', label: 'Active' },
@@ -424,17 +434,40 @@ export default function MyBetsPage() {
           <button
             key={tab.key}
             onClick={() => setFilterTab(tab.key as FilterTab)}
-            className={`relative px-5 h-[44px] text-sm font-medium transition-colors ${
+            className={`relative px-5 h-10 text-sm font-medium transition-colors ${
               filterTab === tab.key ? 'text-white' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
             {tab.label}
             {filterTab === tab.key && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8D52DA]" />
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#8D52DA]" />
             )}
           </button>
         ))}
       </div>
+
+      {/* Filter Pills - Won/Lost/All (only show when Settled is active) */}
+      {filterTab === 'settled' && (
+        <div className="flex gap-2 mb-4">
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'won', label: 'Won' },
+            { key: 'lost', label: 'Lost' },
+          ].map((filter) => (
+            <button
+              key={filter.key}
+              onClick={() => setSettledFilter(filter.key as SettledFilter)}
+              className={`h-8 px-3 rounded text-xs font-medium transition-colors ${
+                settledFilter === filter.key
+                  ? 'bg-[#8D52DA] text-white'
+                  : 'bg-[#222328] text-gray-400 hover:text-white border border-[rgba(255,255,255,0.06)]'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         {filteredBets.length === 0 ? (

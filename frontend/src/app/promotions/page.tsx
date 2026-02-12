@@ -5,7 +5,7 @@ import { Gift, Clock, ArrowRight } from 'lucide-react';
 
 // Types
 type PromotionCategory = 'all' | 'sports' | 'casino' | 'vip';
-type PromotionBadge = 'Deposit Bonus' | 'Free Bet' | 'Cashback' | 'Odds Boost';
+type PromotionBadge = 'NEW' | 'ENDING SOON' | 'Deposit Bonus' | 'Free Bet' | 'Cashback' | 'Odds Boost';
 
 interface Promotion {
   id: string;
@@ -24,7 +24,7 @@ const PROMOTIONS: Promotion[] = [
     title: 'Welcome Bonus',
     description: '100% up to $500 on first deposit',
     category: 'all',
-    badge: 'Deposit Bonus',
+    badge: 'NEW',
     validUntil: '2026-06-30',
     gradient: 'from-[#8D52DA] to-[#5A3A8F]',
   },
@@ -51,7 +51,7 @@ const PROMOTIONS: Promotion[] = [
     title: 'Premier League Special',
     description: 'Boosted odds on all Premier League matches',
     category: 'sports',
-    badge: 'Odds Boost',
+    badge: 'ENDING SOON',
     validUntil: '2026-05-25',
     gradient: 'from-sky-600 to-sky-800',
   },
@@ -83,6 +83,8 @@ const CATEGORY_TABS = [
 ];
 
 const BADGE_COLORS: Record<PromotionBadge, string> = {
+  'NEW': 'bg-[rgba(48,224,0,0.15)] text-[#30E000]',
+  'ENDING SOON': 'bg-[rgba(255,73,74,0.15)] text-[#FF494A]',
   'Deposit Bonus': 'bg-[rgba(141,82,218,0.15)] text-[#8D52DA]',
   'Free Bet': 'bg-[rgba(48,224,0,0.15)] text-[#30E000]',
   'Cashback': 'bg-[rgba(255,214,0,0.15)] text-[#FFD600]',
@@ -125,15 +127,15 @@ export default function PromotionsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 pb-24 bg-[#0F0F12] min-h-screen">
+    <div className="max-w-5xl mx-auto px-4 pb-20 bg-[#0F0F12] min-h-screen">
       {/* Header */}
       <div className="py-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Promotions</h1>
-        <p className="text-[rgba(224,232,255,0.6)]">Exclusive bonuses and offers</p>
+        <h1 className="text-[20px] font-bold text-white mb-2">Promotions</h1>
+        <p className="text-sm text-[rgba(224,232,255,0.6)]">Exclusive bonuses and offers</p>
       </div>
 
-      {/* Promo Code Input */}
-      <div className="bg-[#1A1B1F] border border-[rgba(255,255,255,0.06)] rounded-lg p-5 mb-6">
+      {/* Promo Code Input - h-10 input and button, 4px radius */}
+      <div className="bg-[#1A1B1F] border border-[rgba(255,255,255,0.06)] rounded p-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
           <div className="flex-1 w-full">
             <label htmlFor="promo-code" className="block text-sm text-[rgba(224,232,255,0.6)] mb-1.5">
@@ -152,13 +154,13 @@ export default function PromotionsPage() {
               }}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyPromoCode()}
               placeholder="e.g. WELCOME500"
-              className="w-full bg-[#222328] border border-[rgba(255,255,255,0.06)] rounded px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-[#8D52DA] transition-colors text-base h-10"
+              className="w-full bg-[#222328] border border-[rgba(255,255,255,0.06)] rounded px-4 h-10 text-white placeholder:text-gray-500 focus:outline-none focus:border-[#8D52DA] transition-colors"
               style={{ fontSize: '16px' }}
             />
           </div>
           <button
             onClick={handleApplyPromoCode}
-            className="px-6 py-3 bg-[#8D52DA] hover:opacity-90 text-white font-medium rounded transition-opacity text-sm whitespace-nowrap h-10"
+            className="px-6 h-10 bg-[#8D52DA] hover:opacity-90 text-white font-medium rounded transition-opacity text-sm whitespace-nowrap"
           >
             Apply
           </button>
@@ -174,13 +176,13 @@ export default function PromotionsPage() {
         )}
       </div>
 
-      {/* Category Tabs */}
+      {/* Category Tabs - horizontal scroll, h-10, 4px radius */}
       <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-1">
         {CATEGORY_TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveCategory(tab.key as PromotionCategory)}
-            className={`px-5 py-2.5 h-10 rounded text-sm font-medium whitespace-nowrap transition-all ${
+            className={`px-5 h-10 rounded text-sm font-medium whitespace-nowrap transition-all ${
               activeCategory === tab.key
                 ? 'bg-[#8D52DA] text-white'
                 : 'bg-[#222328] text-[rgba(224,232,255,0.6)] hover:text-white hover:bg-[#2A2B30] border border-[rgba(255,255,255,0.06)]'
@@ -191,7 +193,7 @@ export default function PromotionsPage() {
         ))}
       </div>
 
-      {/* Promotion Cards Grid */}
+      {/* Promotion Cards Grid - 1 col mobile, 2 col md */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filtered.map((promo) => (
@@ -199,8 +201,8 @@ export default function PromotionsPage() {
               key={promo.id}
               className="bg-[#1A1B1F] rounded-lg overflow-hidden border border-[rgba(255,255,255,0.06)] hover:border-[rgba(141,82,218,0.4)] transition-all group"
             >
-              {/* Banner */}
-              <div className={`relative aspect-video bg-gradient-to-br ${promo.gradient} flex items-center justify-center p-6`}>
+              {/* Banner - aspect-[16/9] on mobile */}
+              <div className={`relative aspect-[16/9] bg-gradient-to-br ${promo.gradient} flex items-center justify-center p-6`}>
                 <div className="absolute top-4 right-4 w-20 h-20 bg-white/5 rounded-full blur-xl" />
                 <div className="absolute bottom-4 left-4 w-16 h-16 bg-black/10 rounded-full blur-lg" />
 
@@ -208,6 +210,7 @@ export default function PromotionsPage() {
                   <Gift className="w-8 h-8 text-white" />
                 </div>
 
+                {/* Badge - NEW or ENDING SOON style */}
                 <div className="absolute top-3 right-3">
                   <span className={`px-2.5 py-1 text-[11px] font-semibold rounded-full ${BADGE_COLORS[promo.badge]}`}>
                     {promo.badge}
@@ -215,12 +218,12 @@ export default function PromotionsPage() {
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="p-5">
-                <h3 className="text-lg font-bold text-white mb-1 group-hover:text-[#B47EFF] transition-colors">
+              {/* Content - p-4 */}
+              <div className="p-4">
+                <h3 className="text-base font-bold text-white mb-1 group-hover:text-[#B47EFF] transition-colors">
                   {promo.title}
                 </h3>
-                <p className="text-[rgba(224,232,255,0.6)] text-sm mb-3 leading-relaxed">
+                <p className="text-[rgba(224,232,255,0.6)] text-[13px] mb-3 leading-relaxed">
                   {promo.description}
                 </p>
 
@@ -230,16 +233,11 @@ export default function PromotionsPage() {
                   <span>Valid until {formatValidUntil(promo.validUntil)}</span>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <button className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#8D52DA] hover:opacity-90 text-white text-sm font-medium rounded transition-opacity flex-1 sm:flex-initial">
-                    Claim Now
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                  <button className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-2 transition-colors">
-                    T&Cs apply
-                  </button>
-                </div>
+                {/* CTA button - purple, h-10, 4px radius, full width */}
+                <button className="w-full flex items-center justify-center gap-2 px-5 h-10 bg-[#8D52DA] hover:opacity-90 text-white text-sm font-medium rounded transition-opacity">
+                  Claim Now
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           ))}

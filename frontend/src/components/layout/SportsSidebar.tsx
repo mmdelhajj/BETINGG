@@ -99,7 +99,7 @@ function Divider() {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-3 pt-4 pb-2 text-[11px] font-bold text-gray-500 uppercase tracking-widest select-none">
+    <div className="px-3 pt-4 pb-2 text-[11px] font-bold uppercase select-none tracking-widest" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>
       {children}
     </div>
   );
@@ -191,17 +191,17 @@ export function SportsSidebar() {
             : 'text-[rgba(255,255,255,0.6)] hover:bg-[rgba(255,255,255,0.04)] hover:text-white'
         )}
       >
-        {/* Active indicator - left border */}
+        {/* Active indicator - 2px purple left border */}
         {isActive && (
           <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#8d52da]" />
         )}
 
-        {/* Sport icon */}
+        {/* Sport icon - 16px */}
         <div className="shrink-0">
           <SportIcon slug={sport.slug} size={16} emoji={sport.emoji} />
         </div>
 
-        {/* Sport name */}
+        {/* Sport name - 14px */}
         <span className="flex-1 text-[14px] font-normal truncate">{sport.name}</span>
 
         {/* Live indicator dot */}
@@ -209,7 +209,7 @@ export function SportsSidebar() {
           <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
         )}
 
-        {/* Event count badge */}
+        {/* Event count */}
         {eventCount > 0 && (
           <span className="text-[12px] text-[rgba(255,255,255,0.4)] font-normal tabular-nums shrink-0">
             {eventCount}
@@ -243,12 +243,12 @@ export function SportsSidebar() {
   );
 
   // ---------------------------------------------------------------------------
-  // Scrollable content
+  // Scrollable content with thin scrollbar
   // ---------------------------------------------------------------------------
 
   const ScrollContent = () => (
     <div className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-      {/* Loading state */}
+      {/* Loading state - skeleton rows */}
       {isLoading && (
         <div className="px-3 space-y-1 mt-2">
           {Array.from({ length: 12 }).map((_, i) => (
@@ -264,7 +264,7 @@ export function SportsSidebar() {
       {/* Sports list */}
       {!isLoading && (
         <>
-          {/* SPORTS label */}
+          {/* SPORTS label - 11px, uppercase, tracking-widest, muted */}
           <SectionLabel>SPORTS</SectionLabel>
 
           {/* Popular sports */}
@@ -272,7 +272,7 @@ export function SportsSidebar() {
             <SportRow key={sport.slug} sport={sport} />
           ))}
 
-          {/* Divider */}
+          {/* Divider between popular and all sports */}
           <Divider />
 
           {/* ALL SPORTS label */}
@@ -297,22 +297,22 @@ export function SportsSidebar() {
   return (
     <>
       {/* ------------------------------------------------------------------ */}
-      {/* Mobile backdrop overlay                                            */}
+      {/* Mobile backdrop overlay - rgba(0,0,0,0.5)                          */}
       {/* ------------------------------------------------------------------ */}
       {drawer.isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.5)] md:hidden"
+          className="fixed inset-0 z-40 lg:hidden"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           onClick={drawer.close}
-          style={{ touchAction: 'none' }}
         />
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* Mobile drawer (< 768px) - Slides from left                        */}
+      {/* Mobile drawer (< lg) - max-width min(85vw, 300px)                 */}
       {/* ------------------------------------------------------------------ */}
       <aside
         className={cn(
-          'fixed z-50 h-full flex flex-col md:hidden',
+          'fixed z-50 h-full flex flex-col lg:hidden',
           'shadow-2xl transition-transform duration-200 ease-out',
           drawer.isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -327,7 +327,7 @@ export function SportsSidebar() {
           paddingLeft: 'env(safe-area-inset-left)',
         }}
       >
-        {/* Header with close button */}
+        {/* Header on mobile - logo + close X button */}
         <div className="flex items-center justify-between px-4 py-4 shrink-0 border-b border-[rgba(255,255,255,0.06)]">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
@@ -351,11 +351,11 @@ export function SportsSidebar() {
       </aside>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Desktop sidebar (>= 768px) - Fixed 220px width                    */}
+      {/* Desktop sidebar (>= lg) - fixed 220px, top-[60px], bottom-0       */}
       {/* ------------------------------------------------------------------ */}
       <aside
         className={cn(
-          'hidden md:flex flex-col',
+          'hidden lg:flex flex-col',
           'fixed left-0 top-[60px] bottom-0 z-30',
           'w-[220px]',
           'border-r border-[rgba(255,255,255,0.06)]'

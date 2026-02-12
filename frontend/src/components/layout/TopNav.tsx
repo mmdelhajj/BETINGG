@@ -129,26 +129,26 @@ export function TopNav() {
         }}
       >
         <div className="flex items-center w-full h-[60px] max-w-[1920px] mx-auto">
-          {/* ---- Logo ---- */}
+          {/* ---- Logo (36-40px clickable area) ---- */}
           <Link
             href="/"
-            className="flex items-center justify-center shrink-0 h-[60px] mr-8 hover:opacity-80 transition-opacity"
+            className="flex items-center justify-center shrink-0 w-10 h-10 mr-6 md:mr-8 hover:opacity-80 transition-opacity"
             aria-label="Cloudbet Home"
           >
             <svg
-              width="36"
-              height="36"
-              viewBox="0 0 36 36"
+              width="40"
+              height="40"
+              viewBox="0 0 40 40"
               fill="none"
-              className="w-9 h-9"
+              className="w-10 h-10"
             >
-              <rect width="36" height="36" rx="8" fill="#8D52DA" />
+              <rect width="40" height="40" rx="8" fill="#8D52DA" />
               <text
-                x="18"
-                y="24"
+                x="20"
+                y="26"
                 textAnchor="middle"
                 fill="white"
-                fontSize="16"
+                fontSize="18"
                 fontWeight="800"
                 fontFamily="Inter, system-ui, sans-serif"
                 letterSpacing="-0.5"
@@ -158,7 +158,7 @@ export function TopNav() {
             </svg>
           </Link>
 
-          {/* ---- Desktop Nav Links ---- */}
+          {/* ---- Desktop Nav Links (14px, medium weight, proper spacing) ---- */}
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => {
               const isActive = isLinkActive(link.href);
@@ -176,7 +176,7 @@ export function TopNav() {
                   {link.label}
                   {isActive && (
                     <span
-                      className="absolute bottom-0 left-0 right-0 h-0.5"
+                      className="absolute bottom-0 left-0 right-0 h-[2px]"
                       style={{ backgroundColor: '#8D52DA' }}
                     />
                   )}
@@ -190,10 +190,10 @@ export function TopNav() {
 
           {/* ---- Right Side (Desktop) ---- */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Search Icon */}
+            {/* Search Icon (44px tap target) */}
             <button
               onClick={() => setShowSearchOverlay(true)}
-              className="flex items-center justify-center w-10 h-10 rounded text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center justify-center w-11 h-11 rounded text-white/60 hover:text-white hover:bg-white/5 transition-colors"
               aria-label="Search"
             >
               <Search className="w-5 h-5" strokeWidth={2} />
@@ -201,7 +201,7 @@ export function TopNav() {
 
             {isAuthenticated ? (
               <>
-                {/* Balance Display */}
+                {/* Balance Display (mono font for numbers) */}
                 <div className="relative" ref={currencyRef}>
                   <button
                     onClick={() => setShowCurrencyMenu((p) => !p)}
@@ -215,7 +215,7 @@ export function TopNav() {
                     >
                       {activeCurrency.symbol}
                     </span>
-                    {/* Balance */}
+                    {/* Balance (mono font) */}
                     <span className="text-white font-mono text-sm font-semibold whitespace-nowrap">
                       {formatBalance(0)}
                     </span>
@@ -227,7 +227,7 @@ export function TopNav() {
                     />
                   </button>
 
-                  {/* Currency Dropdown */}
+                  {/* Currency Dropdown (40px item heights) */}
                   <AnimatePresence>
                     {showCurrencyMenu && (
                       <motion.div
@@ -239,6 +239,7 @@ export function TopNav() {
                         style={{
                           backgroundColor: '#1C1C1E',
                           border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '4px',
                         }}
                       >
                         <div className="py-1">
@@ -250,7 +251,7 @@ export function TopNav() {
                                 setShowCurrencyMenu(false);
                               }}
                               className={cn(
-                                'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                                'w-full flex items-center gap-3 px-4 h-10 text-sm transition-colors',
                                 selectedCurrency === c.code
                                   ? 'text-white bg-white/5'
                                   : 'text-white/80 hover:bg-white/5'
@@ -274,9 +275,9 @@ export function TopNav() {
                   </AnimatePresence>
                 </div>
 
-                {/* Deposit Button */}
+                {/* Deposit Button (h-10, px-5, purple bg, 4px radius, gradient) */}
                 <button
-                  className="relative px-4 h-10 rounded font-semibold text-white text-sm overflow-hidden transition-all hover:brightness-110"
+                  className="relative px-5 h-10 rounded font-semibold text-white text-sm overflow-hidden transition-all hover:brightness-110"
                   style={{
                     backgroundColor: '#8D52DA',
                     borderRadius: '4px',
@@ -318,10 +319,10 @@ export function TopNav() {
               </>
             ) : (
               <>
-                {/* Join Button (Purple) */}
+                {/* Join Button (h-10, px-5, purple bg, 4px radius, gradient) */}
                 <Link
                   href="/register"
-                  className="relative px-4 h-10 rounded font-semibold text-white text-sm overflow-hidden transition-all hover:brightness-110"
+                  className="relative px-5 h-10 rounded font-semibold text-white text-sm overflow-hidden transition-all hover:brightness-110 flex items-center"
                   style={{
                     backgroundColor: '#8D52DA',
                     borderRadius: '4px',
@@ -348,10 +349,10 @@ export function TopNav() {
 
           {/* ---- Right Side (Mobile) ---- */}
           <div className="flex md:hidden items-center gap-2">
-            {/* Search */}
+            {/* Search (44px tap target) */}
             <button
               onClick={() => setShowSearchOverlay(true)}
-              className="flex items-center justify-center w-10 h-10 rounded text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center justify-center w-11 h-11 rounded text-white/60 hover:text-white hover:bg-white/5 transition-colors"
               aria-label="Search"
             >
               <Search className="w-5 h-5" strokeWidth={2} />
@@ -361,7 +362,7 @@ export function TopNav() {
             {isAuthenticated && (
               <button
                 onClick={() => setShowCurrencyMenu(true)}
-                className="flex items-center gap-1.5 px-2 h-10 rounded hover:bg-white/5 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 h-10 rounded hover:bg-white/5 transition-colors"
               >
                 <span
                   className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
@@ -375,10 +376,10 @@ export function TopNav() {
               </button>
             )}
 
-            {/* Hamburger Menu */}
+            {/* Hamburger Menu (44px tap target) */}
             <button
               onClick={() => setShowMobileMenu(true)}
-              className="flex items-center justify-center w-10 h-10 rounded text-white hover:bg-white/5 transition-colors"
+              className="flex items-center justify-center w-11 h-11 rounded text-white hover:bg-white/5 transition-colors"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6" strokeWidth={2} />
@@ -451,7 +452,7 @@ export function TopNav() {
         )}
       </AnimatePresence>
 
-      {/* ---- Mobile Menu Drawer ---- */}
+      {/* ---- Mobile Menu Drawer (proper sizing, safe area support) ---- */}
       <AnimatePresence>
         {showMobileMenu && (
           <>
@@ -476,6 +477,8 @@ export function TopNav() {
               style={{
                 backgroundColor: '#141114',
                 paddingTop: 'calc(60px + env(safe-area-inset-top))',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+                paddingRight: 'env(safe-area-inset-right)',
               }}
             >
               <div className="p-6">
@@ -511,7 +514,7 @@ export function TopNav() {
                 {isAuthenticated ? (
                   <div className="space-y-3">
                     <button
-                      className="w-full relative px-4 h-12 rounded font-semibold text-white text-sm overflow-hidden transition-all"
+                      className="w-full relative px-5 h-12 rounded font-semibold text-white text-sm overflow-hidden transition-all"
                       style={{
                         backgroundColor: '#8D52DA',
                         borderRadius: '4px',
@@ -531,7 +534,7 @@ export function TopNav() {
                   <div className="space-y-3">
                     <Link
                       href="/register"
-                      className="w-full relative px-4 h-12 rounded font-semibold text-white text-sm overflow-hidden transition-all flex items-center justify-center"
+                      className="w-full relative px-5 h-12 rounded font-semibold text-white text-sm overflow-hidden transition-all flex items-center justify-center"
                       style={{
                         backgroundColor: '#8D52DA',
                         borderRadius: '4px',
@@ -548,7 +551,7 @@ export function TopNav() {
                     </Link>
                     <Link
                       href="/login"
-                      className="w-full px-4 h-12 rounded font-medium text-white text-sm transition-colors flex items-center justify-center hover:bg-white/5"
+                      className="w-full px-5 h-12 rounded font-medium text-white text-sm transition-colors flex items-center justify-center hover:bg-white/5"
                       style={{
                         border: '1px solid rgba(255,255,255,0.15)',
                         borderRadius: '4px',
@@ -564,7 +567,7 @@ export function TopNav() {
         )}
       </AnimatePresence>
 
-      {/* Currency Menu (Mobile) */}
+      {/* Currency Menu (Mobile - 40px item heights) */}
       <AnimatePresence>
         {showCurrencyMenu && !showMobileMenu && (
           <motion.div
@@ -600,7 +603,7 @@ export function TopNav() {
                         setShowCurrencyMenu(false);
                       }}
                       className={cn(
-                        'w-full flex items-center gap-3 px-4 py-3 rounded text-sm transition-colors',
+                        'w-full flex items-center gap-3 px-4 h-10 rounded text-sm transition-colors',
                         selectedCurrency === c.code
                           ? 'text-white bg-white/10'
                           : 'text-white/80 hover:bg-white/5'
@@ -608,7 +611,7 @@ export function TopNav() {
                       style={{ borderRadius: '4px' }}
                     >
                       <span
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
                         style={{ backgroundColor: c.color }}
                       >
                         {c.symbol}

@@ -816,7 +816,7 @@ function MarketAccordion({
       {/* Market Header */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-transparent hover:bg-white/[0.02] transition-colors rounded-lg"
+        className="w-full flex items-center justify-between px-4 py-3 bg-transparent hover:bg-white/[0.02] transition-colors rounded"
         aria-expanded={isOpen}
       >
         <span className="text-sm font-bold text-white">{market.name}</span>
@@ -871,7 +871,7 @@ function MarketAccordion({
                         {sel.name}
                       </span>
                       <span className={cn(
-                        'text-sm font-bold font-mono ml-2',
+                        'text-sm font-bold font-mono ml-2 shrink-0',
                         isSelected ? 'text-white' : 'text-white'
                       )}>
                         {formatOdds(sel.odds)}
@@ -918,24 +918,24 @@ function BasketballScoreboard({ event }: { event: Event }) {
   if (quarters.length === 0) return null;
 
   return (
-    <div className="mt-4 overflow-x-auto rounded border border-white/[0.06]">
+    <div className="mt-4 overflow-x-auto rounded-lg border border-white/[0.06]">
       <table className="w-full text-[13px] min-w-[400px]">
-        <thead className="bg-[#1A1B1F]">
+        <thead className="bg-[#222328]">
           <tr>
             <th className="text-left px-3 py-2 text-xs font-medium text-gray-400">Team</th>
             {quarters.map((q) => (
-              <th key={q.label} className="text-center px-3 py-2 text-xs font-medium text-gray-400">
+              <th key={q.label} className="text-center px-3 py-2 text-xs font-medium text-gray-400 whitespace-nowrap">
                 {q.label}
               </th>
             ))}
-            <th className="text-center px-3 py-2 text-xs font-bold text-white">Total</th>
+            <th className="text-center px-3 py-2 text-xs font-bold text-white whitespace-nowrap">Total</th>
           </tr>
         </thead>
         <tbody>
           <tr className="border-t border-white/[0.06]">
-            <td className="px-3 py-2 font-medium text-white">{event.homeTeam}</td>
-            {quarters.map((q) => (
-              <td key={q.label} className="text-center px-3 py-2 font-mono text-[13px] text-gray-300">
+            <td className="px-3 py-2 font-medium text-white whitespace-nowrap">{event.homeTeam}</td>
+            {quarters.map((q, idx) => (
+              <td key={`home-${idx}`} className="text-center px-3 py-2 font-mono text-[13px] text-gray-300">
                 {q.home}
               </td>
             ))}
@@ -944,9 +944,9 @@ function BasketballScoreboard({ event }: { event: Event }) {
             </td>
           </tr>
           <tr className="border-t border-white/[0.06]">
-            <td className="px-3 py-2 font-medium text-white">{event.awayTeam}</td>
-            {quarters.map((q) => (
-              <td key={q.label} className="text-center px-3 py-2 font-mono text-[13px] text-gray-300">
+            <td className="px-3 py-2 font-medium text-white whitespace-nowrap">{event.awayTeam}</td>
+            {quarters.map((q, idx) => (
+              <td key={`away-${idx}`} className="text-center px-3 py-2 font-mono text-[13px] text-gray-300">
                 {q.away}
               </td>
             ))}
@@ -969,15 +969,15 @@ function EventDetailSkeleton() {
     <div className="min-h-screen bg-[#0F0F12] px-4 py-4 pb-24 animate-pulse">
       <div className="h-4 w-32 bg-gray-800 rounded mb-4" />
       <div className="rounded-lg bg-[#1A1B1F] p-5 mb-4">
-        <div className="h-5 w-40 bg-gray-800 rounded mb-4" />
+        <div className="h-3 w-40 bg-gray-800 rounded mb-4" />
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 space-y-2">
-            <div className="h-16 w-16 bg-gray-800 rounded-full mx-auto" />
+            <div className="h-12 w-12 md:h-16 md:w-16 bg-gray-800 rounded-full mx-auto" />
             <div className="h-4 w-20 bg-gray-800 rounded mx-auto" />
           </div>
           <div className="h-10 w-16 bg-gray-800 rounded" />
           <div className="flex-1 space-y-2">
-            <div className="h-16 w-16 bg-gray-800 rounded-full mx-auto" />
+            <div className="h-12 w-12 md:h-16 md:w-16 bg-gray-800 rounded-full mx-auto" />
             <div className="h-4 w-20 bg-gray-800 rounded mx-auto" />
           </div>
         </div>
@@ -1129,7 +1129,7 @@ export default function EventDetailPage() {
           <p className="text-gray-400 text-lg mb-4">{error || 'Event not found'}</p>
           <button
             onClick={() => router.back()}
-            className="px-5 py-2.5 rounded-lg bg-[#8D52DA] text-white text-sm font-semibold hover:bg-[#7A45C0] transition-colors"
+            className="px-5 py-2.5 rounded bg-[#8D52DA] text-white text-sm font-semibold hover:bg-[#7A45C0] transition-colors"
           >
             Go Back
           </button>
@@ -1158,7 +1158,7 @@ export default function EventDetailPage() {
         {/* ────────── Match Header ────────── */}
         <div className="bg-[#1A1B1F] rounded-lg p-5 mb-4">
           {/* Competition name */}
-          <div className="text-[12px] text-gray-400 uppercase tracking-wider mb-4">
+          <div className="text-xs uppercase tracking-wider text-gray-400 mb-4">
             {competitionName}
           </div>
 
@@ -1184,11 +1184,11 @@ export default function EventDetailPage() {
             <div className="text-center">
               {event.isLive ? (
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 justify-center">
                     <span className="text-4xl md:text-5xl font-black font-mono text-white">
                       {event.homeScore ?? 0}
                     </span>
-                    <span className="text-xl text-gray-600">:</span>
+                    <span className="text-2xl text-gray-600">:</span>
                     <span className="text-4xl md:text-5xl font-black font-mono text-white">
                       {event.awayScore ?? 0}
                     </span>
@@ -1206,7 +1206,7 @@ export default function EventDetailPage() {
                 </div>
               ) : (
                 <div>
-                  <span className="text-2xl md:text-3xl font-bold text-gray-600">VS</span>
+                  <span className="text-2xl font-bold text-gray-600">VS</span>
                   <p className="text-xs text-gray-500 mt-1">
                     {new Date(event.startTime).toLocaleDateString('en-US', {
                       month: 'short',
@@ -1249,6 +1249,7 @@ export default function EventDetailPage() {
           <div
             ref={tabsRef}
             className="flex items-center gap-2 overflow-x-auto scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {CATEGORY_TABS.map((tab) => {
               const count = categoryCounts[tab.key];

@@ -332,6 +332,10 @@
     @apply w-full bg-surface-elevated border border-border text-white px-3 py-2.5 transition-colors duration-150;
     border-radius: var(--radius-btn);
     font-size: 16px;
+    min-height: 40px;
+  }
+
+  .input.touch-target {
     min-height: 44px;
   }
 

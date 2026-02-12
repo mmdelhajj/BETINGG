@@ -149,7 +149,7 @@ function GameCard({ game, onToggleFavorite }: { game: CasinoGame; onToggleFavori
     <div className="relative group">
       <Link href={`/casino/${game.id}`} className="block">
         <div
-          className="relative overflow-hidden rounded-xl bg-#1A1B1F border border-transparent hover:border-[#8D52DA] transition-all duration-200"
+          className="relative overflow-hidden rounded-xl bg-[#1A1B1F] border border-transparent hover:border-[#8D52DA] transition-all duration-200"
           style={{ transform: showOverlay ? 'scale(1.02)' : 'scale(1)' }}
           onClick={(e) => {
             if (window.innerWidth < 768 && !showOverlay) {
@@ -161,7 +161,7 @@ function GameCard({ game, onToggleFavorite }: { game: CasinoGame; onToggleFavori
         >
           {/* Thumbnail */}
           <div
-            className="aspect-[3/4] w-full flex items-center justify-center relative"
+            className="aspect-[3/4] w-full flex items-center justify-center relative bg-[#222328]"
             style={{ background: game.image }}
           >
             <span className="text-white/20 text-3xl md:text-4xl font-bold select-none">
@@ -171,17 +171,17 @@ function GameCard({ game, onToggleFavorite }: { game: CasinoGame; onToggleFavori
             {/* Badges - top left */}
             <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10">
               {game.isNew && (
-                <span className="text-[9px] font-bold bg-[#10b981] text-white px-1.5 py-0.5 rounded leading-none">
+                <span className="text-[9px] font-bold uppercase bg-[#10b981] text-white px-1.5 py-0.5 rounded leading-none">
                   NEW
                 </span>
               )}
               {game.isHot && (
-                <span className="text-[9px] font-bold bg-[#ef4444] text-white px-1.5 py-0.5 rounded leading-none flex items-center gap-0.5">
+                <span className="text-[9px] font-bold uppercase bg-[#ef4444] text-white px-1.5 py-0.5 rounded leading-none flex items-center gap-0.5">
                   HOT
                 </span>
               )}
               {game.isJackpot && (
-                <span className="text-[9px] font-bold bg-[#8D52DA] text-white px-1.5 py-0.5 rounded leading-none flex items-center gap-0.5">
+                <span className="text-[9px] font-bold uppercase bg-[#8D52DA] text-white px-1.5 py-0.5 rounded leading-none flex items-center gap-0.5">
                   POPULAR
                 </span>
               )}
@@ -321,14 +321,14 @@ export default function CasinoPage() {
         {/* Search Bar */}
         <div className="mb-4">
           <div className="relative w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search games..."
               className="w-full h-10 bg-[#222328] border border-[rgba(255,255,255,0.06)] rounded px-10 text-base text-white placeholder:text-gray-500 outline-none focus:border-[#8D52DA] transition-all"
-              style={{ fontSize: '16px' }}
+              style={{ fontSize: '16px', borderRadius: '4px' }}
             />
             {search && (
               <button
@@ -354,7 +354,8 @@ export default function CasinoPage() {
                 <button
                   key={cat.key}
                   onClick={() => setActiveCategory(cat.key)}
-                  className={`h-10 px-4 rounded text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
+                  style={{ borderRadius: '4px' }}
+                  className={`h-10 px-4 text-sm font-semibold whitespace-nowrap transition-all shrink-0 ${
                     isActive
                       ? 'bg-[#8D52DA] text-white'
                       : 'bg-[#222328] text-[rgba(224,232,255,0.6)] hover:bg-[#2A2B30] hover:text-white border border-[rgba(255,255,255,0.06)]'
@@ -372,7 +373,8 @@ export default function CasinoPage() {
           <div ref={providerRef} className="relative">
             <button
               onClick={() => setShowProviderDropdown(!showProviderDropdown)}
-              className="flex items-center gap-2 h-10 px-4 rounded bg-[#222328] border border-[rgba(255,255,255,0.06)] text-sm text-[rgba(224,232,255,0.6)] hover:bg-[#2A2B30] hover:text-white transition-colors"
+              style={{ borderRadius: '4px' }}
+              className="flex items-center gap-2 h-10 px-4 bg-[#222328] border border-[rgba(255,255,255,0.06)] text-sm text-[rgba(224,232,255,0.6)] hover:bg-[#2A2B30] hover:text-white transition-colors"
             >
               <span className="text-sm">{activeProvider}</span>
               <ChevronDown
@@ -382,7 +384,7 @@ export default function CasinoPage() {
               />
             </button>
             {showProviderDropdown && (
-              <div className="absolute left-0 top-full mt-1 w-56 bg-[#1A1B1F] border border-[rgba(255,255,255,0.06)] rounded-lg shadow-2xl py-1 z-50 max-h-80 overflow-y-auto">
+              <div className="absolute left-0 top-full mt-1 w-56 bg-[#1A1B1F] border border-[rgba(255,255,255,0.06)] rounded shadow-2xl py-1 z-50 max-h-80 overflow-y-auto">
                 {PROVIDERS.map((p) => (
                   <button
                     key={p}
@@ -390,7 +392,7 @@ export default function CasinoPage() {
                       setActiveProvider(p);
                       setShowProviderDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    className={`w-full text-left h-10 px-4 text-sm transition-colors ${
                       activeProvider === p
                         ? 'text-[#8D52DA] bg-[rgba(141,82,218,0.1)]'
                         : 'text-[rgba(224,232,255,0.6)] hover:bg-[rgba(255,255,255,0.04)] hover:text-white'
@@ -447,7 +449,7 @@ export default function CasinoPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
                 {displayedGames.map((game) => (
                   <GameCard
                     key={game.id}
@@ -461,7 +463,8 @@ export default function CasinoPage() {
                 <div className="flex justify-center mt-6">
                   <button
                     onClick={handleLoadMore}
-                    className="flex items-center gap-2 bg-[#222328] hover:bg-[#2A2B30] border border-[rgba(255,255,255,0.06)] text-white font-semibold px-6 py-3 rounded transition-all"
+                    style={{ borderRadius: '4px' }}
+                    className="flex items-center justify-center gap-2 h-10 bg-[#222328] hover:bg-[#2A2B30] border border-[rgba(255,255,255,0.06)] text-white font-semibold px-6 transition-all"
                   >
                     Load More Games
                     <ChevronDown className="w-4 h-4" />

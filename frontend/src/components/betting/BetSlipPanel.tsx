@@ -43,37 +43,38 @@ function SelectionCard({
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.2 }}
-      className="bg-[#222328] rounded-[4px] p-3 mb-2 relative"
+      className="bg-[#222328] rounded p-3 mb-2 relative"
+      style={{ borderRadius: '4px' }}
     >
-      {/* Remove button - top right */}
+      {/* Remove button - top right (44px touch target) */}
       <button
         onClick={onRemove}
-        className="absolute top-2 right-2 text-gray-500 hover:text-red-500 transition-colors"
+        className="absolute top-2 right-2 text-gray-500 hover:text-red-500 transition-colors p-2 -m-2"
         aria-label="Remove selection"
       >
-        <X className="w-3 h-3" />
+        <X className="w-4 h-4" />
       </button>
 
-      {/* Event name */}
-      <p className="text-[12px] text-gray-500 mb-1 pr-6 truncate">
+      {/* Event name - 12px gray */}
+      <p className="text-[12px] text-gray-500 mb-1 pr-8 truncate">
         {item.eventName}
       </p>
 
-      {/* Selection name + odds */}
+      {/* Selection name + odds - 14px bold */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <p className="text-[14px] font-bold text-white truncate flex-1">
           {item.selectionName}
         </p>
-        <span className="text-[14px] font-bold text-[#8D52DA] font-mono shrink-0">
+        <span className="text-[14px] font-bold text-[#8D52DA] font-mono shrink-0 tabular-nums">
           {formatOdds(item.odds)}
         </span>
       </div>
 
-      {/* Stake input (single mode only) */}
+      {/* Stake input (single mode only) - 40px height, 16px font */}
       {betType === 'single' && (
         <>
           <div className="relative mb-2">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[16px]">
               $
             </span>
             <input
@@ -84,17 +85,19 @@ function SelectionCard({
               value={stake}
               onChange={(e) => onStakeChange(e.target.value)}
               placeholder="0.00"
-              className="w-full h-[40px] bg-[#1A1B1F] border border-[rgba(255,255,255,0.08)] rounded-[4px] pl-7 pr-3 text-[16px] font-mono text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#8D52DA] focus:border-[#8D52DA] transition-all"
+              className="w-full h-[40px] bg-[#1A1B1F] border border-[rgba(255,255,255,0.08)] rounded pl-8 pr-3 text-[16px] font-mono text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#8D52DA] focus:border-[#8D52DA] transition-all"
+              style={{ borderRadius: '4px' }}
             />
           </div>
 
-          {/* Quick stakes */}
+          {/* Quick stakes - 28px height, 12px font */}
           <div className="flex gap-1.5">
             {QUICK_STAKES.map((amount) => (
               <button
                 key={amount}
                 onClick={() => onQuickStake(amount)}
-                className="flex-1 h-[28px] text-[12px] bg-transparent border border-[rgba(255,255,255,0.08)] rounded-[4px] text-gray-400 hover:bg-[rgba(255,255,255,0.04)] hover:text-white transition-colors"
+                className="flex-1 h-[28px] text-[12px] bg-transparent border border-[rgba(255,255,255,0.08)] rounded text-gray-400 hover:bg-[rgba(255,255,255,0.04)] hover:text-white transition-colors font-medium"
+                style={{ borderRadius: '4px' }}
               >
                 ${amount}
               </button>
@@ -221,19 +224,19 @@ export function BetSlipPanel() {
           {items.length > 0 && (
             <button
               onClick={clearSlip}
-              className="text-[12px] text-gray-500 hover:text-white transition-colors"
+              className="text-[12px] text-gray-500 hover:text-white transition-colors py-2 px-2 -m-2"
             >
               Clear
             </button>
           )}
         </div>
 
-        {/* Tab bar: Single | Multi */}
+        {/* Tab bar: Single | Multi - purple 2px underline on active */}
         <div className="flex border-b border-[rgba(255,255,255,0.06)] -mx-4 px-4">
           <button
             onClick={() => setBetType('single')}
             className={cn(
-              'flex-1 text-[14px] font-medium py-2 relative transition-colors',
+              'flex-1 text-[14px] font-medium py-2.5 relative transition-colors',
               betType === 'single'
                 ? 'text-white'
                 : 'text-gray-500 hover:text-gray-300'
@@ -252,7 +255,7 @@ export function BetSlipPanel() {
             onClick={() => setBetType('parlay')}
             disabled={items.length < 2}
             className={cn(
-              'flex-1 text-[14px] font-medium py-2 relative transition-colors',
+              'flex-1 text-[14px] font-medium py-2.5 relative transition-colors',
               betType === 'parlay'
                 ? 'text-white'
                 : items.length < 2
@@ -276,8 +279,8 @@ export function BetSlipPanel() {
       {items.length === 0 ? (
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
-            <Receipt className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-            <p className="text-[14px] text-gray-500 mb-1">
+            <Receipt className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+            <p className="text-[14px] text-gray-500 mb-1 font-medium">
               Your bet slip is empty
             </p>
             <p className="text-[12px] text-gray-700">
@@ -309,12 +312,13 @@ export function BetSlipPanel() {
             <div className="px-4 py-3 border-t border-[rgba(255,255,255,0.06)] shrink-0">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[12px] text-gray-500">Total Odds</span>
-                <span className="text-[14px] text-[#8D52DA] font-mono font-bold">
+                <span className="text-[14px] text-[#8D52DA] font-mono font-bold tabular-nums">
                   {combinedOdds}
                 </span>
               </div>
+              {/* Parlay stake input - 40px height, 16px font */}
               <div className="relative mb-2">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[16px]">
                   $
                 </span>
                 <input
@@ -325,15 +329,18 @@ export function BetSlipPanel() {
                   value={parlayStake}
                   onChange={(e) => setParlayStake(e.target.value)}
                   placeholder="0.00"
-                  className="w-full h-[40px] bg-[#1A1B1F] border border-[rgba(255,255,255,0.08)] rounded-[4px] pl-7 pr-3 text-[16px] font-mono text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#8D52DA] focus:border-[#8D52DA] transition-all"
+                  className="w-full h-[40px] bg-[#1A1B1F] border border-[rgba(255,255,255,0.08)] rounded pl-8 pr-3 text-[16px] font-mono text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#8D52DA] focus:border-[#8D52DA] transition-all"
+                  style={{ borderRadius: '4px' }}
                 />
               </div>
+              {/* Quick stakes - 28px height, 12px font */}
               <div className="flex gap-1.5">
                 {QUICK_STAKES.map((amount) => (
                   <button
                     key={amount}
                     onClick={() => handleQuickStakeParlay(amount)}
-                    className="flex-1 h-[28px] text-[12px] bg-transparent border border-[rgba(255,255,255,0.08)] rounded-[4px] text-gray-400 hover:bg-[rgba(255,255,255,0.04)] hover:text-white transition-colors"
+                    className="flex-1 h-[28px] text-[12px] bg-transparent border border-[rgba(255,255,255,0.08)] rounded text-gray-400 hover:bg-[rgba(255,255,255,0.04)] hover:text-white transition-colors font-medium"
+                    style={{ borderRadius: '4px' }}
                   >
                     ${amount}
                   </button>
@@ -351,7 +358,8 @@ export function BetSlipPanel() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="text-[12px] text-red-400 bg-red-500/10 rounded-[4px] px-3 py-2"
+                  className="text-[12px] text-red-400 bg-red-500/10 rounded px-3 py-2"
+                  style={{ borderRadius: '4px' }}
                 >
                   {placeBetError}
                 </motion.div>
@@ -361,29 +369,30 @@ export function BetSlipPanel() {
             {/* Total stake row */}
             <div className="flex justify-between items-center">
               <span className="text-[14px] text-gray-400">Total Stake</span>
-              <span className="text-[14px] font-mono text-white">
+              <span className="text-[14px] font-mono text-white tabular-nums">
                 ${totalStake}
               </span>
             </div>
 
-            {/* Potential win row */}
+            {/* Potential win row - green */}
             <div className="flex justify-between items-center">
               <span className="text-[14px] text-gray-400">Potential Win</span>
-              <span className="text-[14px] font-mono font-bold text-[#30E000]">
+              <span className="text-[14px] font-mono font-bold text-[#30E000] tabular-nums">
                 ${potentialWin}
               </span>
             </div>
 
-            {/* Place Bet button */}
+            {/* Place Bet button - 44px height, purple gradient */}
             <button
               onClick={handlePlaceBet}
               disabled={!canPlaceBet}
               className={cn(
-                'w-full h-[44px] rounded-[4px] text-[14px] font-bold text-white transition-all',
+                'w-full h-[44px] rounded text-[14px] font-bold text-white transition-all',
                 canPlaceBet
                   ? 'bg-gradient-to-b from-[#9D62EA] to-[#8D52DA] hover:from-[#8C51D9] hover:to-[#7a42c4] active:scale-[0.98]'
                   : 'bg-[#8D52DA] opacity-50 cursor-not-allowed'
               )}
+              style={{ borderRadius: '4px' }}
             >
               {!isAuthenticated ? (
                 'Sign in to bet'
@@ -406,12 +415,12 @@ export function BetSlipPanel() {
   // ─── Render ─────────────────────────────────────────────────────────
   return (
     <>
-      {/* Desktop sidebar - Fixed 300px right panel */}
+      {/* Desktop sidebar - Fixed 300px right panel, full height */}
       <aside className="hidden lg:flex flex-col w-[300px] border-l border-[rgba(255,255,255,0.06)] bg-[#1A1B1F] shrink-0 overflow-hidden fixed right-0 top-0 bottom-0 z-30">
         {panelContent}
       </aside>
 
-      {/* Mobile bottom sheet with drag */}
+      {/* Mobile bottom sheet with drag handle and backdrop */}
       <AnimatePresence>
         {isOpen && isMobile && (
           <>
@@ -444,7 +453,7 @@ export function BetSlipPanel() {
             >
               {/* Drag handle */}
               <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing shrink-0">
-                <div className="w-9 h-1 bg-[rgba(255,255,255,0.15)] rounded-full" />
+                <div className="w-10 h-1 bg-[rgba(255,255,255,0.15)] rounded-full" />
               </div>
 
               {/* Sheet content */}
@@ -456,7 +465,7 @@ export function BetSlipPanel() {
         )}
       </AnimatePresence>
 
-      {/* Mobile floating bet slip toggle button (when closed) */}
+      {/* Mobile FAB - purple round button with count badge (44px+ touch target) */}
       <AnimatePresence>
         {!isOpen && items.length > 0 && isMobile && (
           <motion.button
@@ -465,11 +474,11 @@ export function BetSlipPanel() {
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-30 bg-[#8D52DA] hover:bg-[#7a42c4] text-white rounded-full px-4 py-3 shadow-2xl flex items-center gap-2 font-bold text-[14px] active:scale-95 transition-all"
+            className="fixed bottom-6 right-6 z-30 bg-gradient-to-b from-[#9D62EA] to-[#8D52DA] hover:from-[#8C51D9] hover:to-[#7a42c4] text-white rounded-full px-4 py-3 shadow-2xl flex items-center gap-2.5 font-bold text-[14px] active:scale-95 transition-all min-h-[48px]"
           >
             <Receipt className="w-5 h-5" />
             <span>Bet Slip</span>
-            <span className="bg-white text-[#8D52DA] rounded-full min-w-[20px] h-[20px] flex items-center justify-center text-[12px] font-bold px-1.5">
+            <span className="bg-white text-[#8D52DA] rounded-full min-w-[22px] h-[22px] flex items-center justify-center text-[12px] font-bold px-1.5">
               {items.length}
             </span>
           </motion.button>

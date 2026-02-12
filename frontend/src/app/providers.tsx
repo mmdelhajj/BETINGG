@@ -30,30 +30,55 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Fixed Top Navigation - 60px */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-[60px]">
+      {/* Fixed Top Navigation - 60px + safe-area-inset-top */}
+      <div
+        className="fixed top-0 left-0 right-0 z-50"
+        style={{
+          height: 'calc(60px + env(safe-area-inset-top))',
+        }}
+      >
         <TopNav />
       </div>
 
-      {/* Fixed Left Sidebar - 220px (desktop only) */}
-      <aside className="hidden lg:block fixed top-[60px] left-0 bottom-0 w-[220px] z-40 overflow-y-auto bg-[#111214]">
+      {/* Fixed Left Sidebar - 220px (lg+ only) */}
+      <aside
+        className="hidden lg:block fixed left-0 bottom-0 w-[220px] z-40 overflow-y-auto bg-[#111214]"
+        style={{
+          top: 'calc(60px + env(safe-area-inset-top))',
+          paddingLeft: 'env(safe-area-inset-left)',
+        }}
+      >
         <SportsSidebar />
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content Area - 60px top padding, 220px left margin (lg+), 300px right margin (xl+), bottom nav clearance on mobile */}
       <main
-        className="flex-1 flex flex-col min-h-[calc(100vh-60px)] pt-[60px] lg:ml-[220px] xl:mr-[300px] pb-[calc(52px+env(safe-area-inset-bottom))] lg:pb-0"
+        className="flex-1 flex flex-col lg:ml-[220px] xl:mr-[300px]"
         style={{
+          paddingTop: 'calc(60px + env(safe-area-inset-top))',
           paddingLeft: 'env(safe-area-inset-left)',
           paddingRight: 'env(safe-area-inset-right)',
+          paddingBottom: 'calc(52px + env(safe-area-inset-bottom))',
+          minHeight: '100vh',
         }}
       >
-        <div className="flex-1">{children}</div>
+        {/* Content wrapper */}
+        <div className="flex-1 lg:pb-0" style={{ paddingBottom: '0' }}>
+          {children}
+        </div>
+
+        {/* Footer inside main content area */}
         <Footer />
       </main>
 
       {/* Fixed Right Bet Slip Panel - 300px (xl+ only) */}
-      <aside className="hidden xl:block fixed top-[60px] right-0 bottom-0 w-[300px] z-40 bg-[#111214]">
+      <aside
+        className="hidden xl:block fixed right-0 bottom-0 w-[300px] z-40 bg-[#111214]"
+        style={{
+          top: 'calc(60px + env(safe-area-inset-top))',
+          paddingRight: 'env(safe-area-inset-right)',
+        }}
+      >
         <BetSlipPanel />
       </aside>
 
@@ -62,7 +87,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <BetSlipPanel />
       </div>
 
-      {/* Fixed Bottom Navigation (mobile only) */}
+      {/* Fixed Bottom Navigation (mobile only) - 52px + safe-area-inset-bottom */}
       <BottomNav />
     </div>
   );
@@ -77,12 +102,14 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
 
   if (!mounted) {
     return (
-      <div
-        className="min-h-screen flex flex-col bg-[#0F0F12]"
-      >
-        {/* Top Nav Skeleton - 60px */}
+      <div className="min-h-screen flex flex-col bg-[#0F0F12]">
+        {/* Top Nav Skeleton - 60px + safe-area-inset-top */}
         <div
-          className="h-[60px] flex items-center px-4 lg:px-6 gap-4 shrink-0 bg-[#1A1B1F] border-b border-white/[0.08]"
+          className="flex items-center px-4 lg:px-6 gap-4 shrink-0 bg-[#1A1B1F] border-b border-white/[0.08]"
+          style={{
+            height: 'calc(60px + env(safe-area-inset-top))',
+            paddingTop: 'env(safe-area-inset-top)',
+          }}
         >
           <div className="w-10 h-10 rounded-lg bg-white/[0.03] animate-pulse" />
           <div className="flex-1" />
@@ -91,9 +118,12 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex flex-1">
-          {/* Sidebar Skeleton - 220px (desktop only) */}
+          {/* Sidebar Skeleton - 220px (lg+ only) */}
           <div
             className="hidden lg:block w-[220px] shrink-0 p-3 space-y-2 overflow-y-auto bg-[#111214]"
+            style={{
+              paddingLeft: 'env(safe-area-inset-left)',
+            }}
           >
             {[...Array(12)].map((_, i) => (
               <div key={i} className="h-9 rounded bg-white/[0.03] animate-pulse" />
@@ -102,10 +132,12 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
 
           {/* Main Content Skeleton */}
           <div
-            className="flex-1 p-4 lg:p-6 space-y-4 min-h-[calc(100vh-60px)] pb-[calc(52px+env(safe-area-inset-bottom))] lg:pb-0"
+            className="flex-1 p-4 lg:p-6 space-y-4"
             style={{
-              paddingLeft: 'env(safe-area-inset-left)',
-              paddingRight: 'env(safe-area-inset-right)',
+              minHeight: 'calc(100vh - 60px - env(safe-area-inset-top))',
+              paddingBottom: 'calc(52px + env(safe-area-inset-bottom))',
+              paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1rem, env(safe-area-inset-right))',
             }}
           >
             {/* Title skeleton */}
@@ -125,6 +157,9 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
           {/* Bet Slip Skeleton - 300px (xl+ only) */}
           <div
             className="hidden xl:block w-[300px] shrink-0 p-4 bg-[#111214]"
+            style={{
+              paddingRight: 'env(safe-area-inset-right)',
+            }}
           >
             <div className="h-10 rounded-lg bg-white/[0.03] animate-pulse mb-4" />
             <div className="space-y-3">
@@ -135,10 +170,11 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Bottom Nav Skeleton (mobile only) */}
+        {/* Bottom Nav Skeleton (mobile only) - 52px + safe-area-inset-bottom */}
         <div
-          className="lg:hidden fixed bottom-0 left-0 right-0 h-[52px] flex items-center justify-around px-4 z-50 bg-[#1A1B1F] border-t border-white/[0.08]"
+          className="lg:hidden fixed bottom-0 left-0 right-0 flex items-center justify-around px-4 z-50 bg-[#1A1B1F] border-t border-white/[0.08]"
           style={{
+            height: 'calc(52px + env(safe-area-inset-bottom))',
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >

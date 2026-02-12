@@ -18,7 +18,7 @@ interface TabItem {
 }
 
 // ---------------------------------------------------------------------------
-// Tabs configuration - 4 tabs only: Sports, Live, Casino, Bet Slip
+// Tabs configuration - 4 tabs: Sports, Live, Casino, Bet Slip
 // ---------------------------------------------------------------------------
 
 const TABS: TabItem[] = [
@@ -29,7 +29,7 @@ const TABS: TabItem[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Component - VERY subtle, minimal bottom bar
+// Component - Mobile only bottom navigation
 // ---------------------------------------------------------------------------
 
 export function BottomNav() {
@@ -83,7 +83,7 @@ export function BottomNav() {
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {/* Icon container */}
+              {/* Icon container - 20px icons */}
               <div className="relative flex items-center justify-center mb-0.5">
                 <Icon
                   className="transition-colors duration-200"
@@ -95,7 +95,7 @@ export function BottomNav() {
                   }}
                 />
 
-                {/* Bet Slip badge - small purple circle with white number */}
+                {/* Bet Slip badge - small purple circle with count */}
                 {isBetSlip && itemCount > 0 && (
                   <span
                     className="absolute -top-1 -right-1.5 flex items-center justify-center font-bold leading-none text-white rounded-full"
@@ -105,7 +105,7 @@ export function BottomNav() {
                       paddingLeft: '3px',
                       paddingRight: '3px',
                       fontSize: '9px',
-                      backgroundColor: '#8B5CF6',
+                      backgroundColor: '#8d52da',
                       boxShadow: '0 0 0 1.5px #111214',
                     }}
                   >
@@ -114,7 +114,7 @@ export function BottomNav() {
                 )}
               </div>
 
-              {/* Label */}
+              {/* Label - 10px, letter-spacing */}
               <span
                 className="font-medium leading-none transition-colors duration-200"
                 style={{
@@ -126,7 +126,7 @@ export function BottomNav() {
                 {tab.label}
               </span>
 
-              {/* Active indicator - small 2px purple dot below icon */}
+              {/* Active indicator - 2px purple dot below icon */}
               {active && (
                 <div
                   className="absolute"
@@ -135,7 +135,7 @@ export function BottomNav() {
                     width: '2px',
                     height: '2px',
                     borderRadius: '50%',
-                    backgroundColor: '#8B5CF6',
+                    backgroundColor: '#8d52da',
                   }}
                 />
               )}
