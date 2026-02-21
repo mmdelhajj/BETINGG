@@ -30,6 +30,8 @@ import {
   Star,
   Zap,
   AlertCircle,
+  ArrowLeft,
+  MessageCircle,
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { get, put } from '@/lib/api';
@@ -40,7 +42,7 @@ import { Badge } from '@/components/ui/badge';
 import WalletModal from '@/components/layout/WalletModal';
 
 // ---------------------------------------------------------------------------
-// Nav Items - Cloudbet style: Sports | Casino | Esports
+// Nav Items - Cloudbet style: Sports | Casino | Esports (Desktop)
 // ---------------------------------------------------------------------------
 
 const NAV_ITEMS = [
@@ -62,13 +64,14 @@ const NAV_ITEMS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Mobile Nav Tabs (Cloudbet-style - icons only row)
+// Mobile Navigation Tabs - Cloudbet style: Home | All sports | In-play | Casino
 // ---------------------------------------------------------------------------
 
 const MOBILE_NAV_TABS = [
-  { label: 'Sports', href: '/sports', icon: Trophy },
-  { label: 'Casino', href: '/casino', icon: Dice5 },
-  { label: 'Esports', href: '/esports', icon: Gamepad2 },
+  { label: '', href: '/', icon: Home, isHome: true },
+  { label: 'All sports', href: '/sports', isLive: false },
+  { label: 'In-play', href: '/live', isLive: true },
+  { label: 'Casino', href: '/casino', isLive: false },
 ];
 
 // ---------------------------------------------------------------------------
@@ -106,10 +109,33 @@ function CurrencyIcon({ currency, size = 16 }: { currency: string; size?: number
 }
 
 // ---------------------------------------------------------------------------
-// Cloudbet-style Logo: 4 vertical bars
+// Cloudbet-style Logo: )))|((( wave pattern - purple colored
 // ---------------------------------------------------------------------------
 
-function CloudbetLogo() {
+function CloudbetLogo({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    // Mobile: compact wave logo in purple
+    return (
+      <div className="flex items-center gap-[2px]">
+        {/* Left waves ))) */}
+        <div className="flex items-end gap-[1.5px]">
+          <div className="w-[2.5px] h-[10px] bg-[#8B5CF6]/50 rounded-full" />
+          <div className="w-[2.5px] h-[14px] bg-[#8B5CF6]/70 rounded-full" />
+          <div className="w-[2.5px] h-[18px] bg-[#8B5CF6]/90 rounded-full" />
+        </div>
+        {/* Divider */}
+        <div className="w-[1px] h-[18px] bg-[#8B5CF6]/30 mx-[1px]" />
+        {/* Right waves ((( */}
+        <div className="flex items-end gap-[1.5px]">
+          <div className="w-[2.5px] h-[18px] bg-[#8B5CF6]/90 rounded-full" />
+          <div className="w-[2.5px] h-[14px] bg-[#8B5CF6]/70 rounded-full" />
+          <div className="w-[2.5px] h-[10px] bg-[#8B5CF6]/50 rounded-full" />
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: standard logo
   return (
     <div className="flex items-center gap-[3px]">
       <div className="w-[3px] h-3 bg-white/60 rounded-full" />
@@ -154,6 +180,7 @@ export default function Header() {
   }>>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [hasLiveEvents, setHasLiveEvents] = useState(true); // Assume live events exist by default
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
@@ -288,6 +315,9 @@ export default function Header() {
     if (href === '/') return pathname === '/';
     return pathname === href || pathname?.startsWith(href + '/');
   };
+
+  // Check if we're on the "All sports" detail page (should show back arrow instead of home icon)
+  const isOnSportsDetail = pathname?.startsWith('/sports/') || pathname?.startsWith('/event/');
 
   return (
     <>
@@ -730,65 +760,76 @@ export default function Header() {
       </header>
 
       {/* ================================================================== */}
-      {/* MOBILE HEADER (below lg) - Cloudbet compact design                 */}
+      {/* MOBILE HEADER (below lg) - Cloudbet exact design                   */}
       {/* ================================================================== */}
-      <header className="sticky top-0 z-50 lg:hidden">
-        {/* ----- Top Bar (compact ~52px) ----- */}
-        <div className="h-[52px] flex items-center justify-between px-3" style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #16162a 100%)' }}>
-          {/* Left: Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0 px-1">
-            <CloudbetLogo />
-            <span className="text-sm font-bold text-white tracking-wide">
-              C<span className="text-accent-light">B</span>
-            </span>
+      <header className="sticky top-0 z-50 lg:hidden" style={{ background: '#0D0D1A' }}>
+
+        {/* ============================================================== */}
+        {/* ROW 1: Top Bar (~56px) - Logo | Balance Pill | Icons            */}
+        {/* ============================================================== */}
+        <div className="h-[56px] flex items-center justify-between px-3">
+
+          {/* -- LEFT: Compact wave logo -- */}
+          <Link href="/" className="shrink-0 flex items-center p-1.5">
+            <CloudbetLogo compact />
           </Link>
 
-          {/* Center: Balance (for authenticated users) */}
+          {/* -- CENTER: Balance Pill (authenticated) or Login/Register (guest) -- */}
           {isAuthenticated && user ? (
-            <div className="flex items-center gap-1.5 mx-2">
-              {/* Search icon */}
-              <button
-                onClick={() => setSearchExpanded(!searchExpanded)}
-                className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
-              >
-                <Search className="h-4 w-4" />
-              </button>
-
-              {/* Balance pill */}
-              <div className="relative" ref={mobileCurrencyDropdownRef}>
+            <div className="flex-1 flex items-center justify-center min-w-0 mx-2">
+              <div className="flex items-center gap-1.5" ref={mobileCurrencyDropdownRef}>
+                {/* Balance pill - dark rounded pill */}
                 <button
                   onClick={() => setMobileCurrencyDropdownOpen(!mobileCurrencyDropdownOpen)}
-                  className="flex items-center gap-1.5 h-8 pl-2.5 pr-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
+                  className="flex items-center gap-1.5 h-[36px] pl-3 pr-2 rounded-full transition-all duration-200"
+                  style={{ background: '#1E1E2E' }}
                 >
-                  <CurrencyIcon
-                    currency={primaryBalance?.currency || 'USDT'}
-                    size={16}
-                  />
-                  <span className="font-mono text-xs font-semibold text-white tabular-nums">
-                    {primaryBalance
+                  {/* Dollar amount */}
+                  <span className="font-mono text-[14px] font-semibold text-white tabular-nums whitespace-nowrap">
+                    ${primaryBalance
                       ? formatCurrency(primaryBalance.available, primaryBalance.currency, {
                           showSymbol: false,
                         })
                       : '0.00'}
                   </span>
+
+                  {/* Dropdown chevron */}
                   <ChevronDown
                     className={cn(
-                      'h-3 w-3 text-gray-400 transition-transform duration-200',
+                      'h-3 w-3 text-gray-500 transition-transform duration-200 shrink-0',
                       mobileCurrencyDropdownOpen && 'rotate-180',
                     )}
                   />
+
+                  {/* Tether green circle icon */}
+                  <CurrencyIcon
+                    currency={primaryBalance?.currency || 'USDT'}
+                    size={22}
+                  />
+                </button>
+
+                {/* Yellow-green "+" add funds button */}
+                <button
+                  onClick={() => setWalletModalOpen(true)}
+                  className="h-[28px] w-[28px] rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 shrink-0"
+                  style={{ background: '#BFFF00' }}
+                >
+                  <Plus className="h-3.5 w-3.5 text-black" strokeWidth={3} />
                 </button>
 
                 {/* Mobile Currency Dropdown */}
                 {mobileCurrencyDropdownOpen && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-64 rounded-xl shadow-2xl py-0 animate-fade-in z-50 overflow-hidden" style={{ background: '#1e1e3a', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 top-[52px] w-[280px] rounded-xl shadow-2xl py-0 animate-fade-in z-50 overflow-hidden"
+                    style={{ background: '#1E1E2E', border: '1px solid rgba(255,255,255,0.08)' }}
+                  >
                     <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
                         Active Balance
                       </p>
                     </div>
                     {primaryBalance && (
-                      <div className="flex items-center gap-3 px-4 py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         <CurrencyIcon currency={primaryBalance.currency} size={22} />
                         <span className="text-white font-medium text-sm flex-1">{primaryBalance.currency}</span>
                         <span className="font-mono text-sm text-white font-semibold">
@@ -798,10 +839,10 @@ export default function Header() {
                     )}
                     <div className="px-4 py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                        Available Balances
+                        All Balances
                       </p>
                     </div>
-                    <div className="max-h-48 overflow-y-auto">
+                    <div className="max-h-48 overflow-y-auto scrollbar-hide">
                       {fundedBalances.map((b) => (
                         <button
                           key={b.currency}
@@ -809,7 +850,7 @@ export default function Header() {
                           className={cn(
                             'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-150',
                             b.currency === primaryBalance?.currency
-                              ? 'bg-accent/10'
+                              ? 'bg-[#8B5CF6]/10'
                               : 'hover:bg-white/5',
                           )}
                         >
@@ -825,7 +866,7 @@ export default function Header() {
                             })}
                           </span>
                           {b.currency === primaryBalance?.currency && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6] shrink-0" />
                           )}
                         </button>
                       ))}
@@ -835,313 +876,383 @@ export default function Header() {
                         </div>
                       )}
                     </div>
+                    {/* Manage wallet link */}
+                    <div className="px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <button
+                        onClick={() => { setMobileCurrencyDropdownOpen(false); setWalletModalOpen(true); }}
+                        className="text-xs text-[#8B5CF6] hover:text-[#A78BFA] transition-colors font-medium"
+                      >
+                        Manage wallet
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* Add funds "+" button - Opens Wallet Modal */}
-              <button
-                onClick={() => setWalletModalOpen(true)}
-                className="h-8 w-8 rounded-lg flex items-center justify-center transition-all duration-200 active:scale-95"
-                style={{
-                  background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
-                  boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
-                }}
-              >
-                <Plus className="h-4 w-4 text-white" strokeWidth={3} />
-              </button>
             </div>
           ) : (
-            /* Non-authenticated: compact sign in / sign up */
-            <div className="flex items-center gap-1.5 mx-2">
+            /* Guest: compact login/register */
+            <div className="flex-1 flex items-center justify-center gap-1.5 mx-2">
               <button
                 onClick={() => router.push('/login')}
-                className="h-7 px-3 text-xs font-semibold text-gray-300 hover:text-white rounded-md hover:bg-white/5 transition-all duration-200"
+                className="h-[32px] px-3.5 text-[13px] font-semibold text-gray-300 hover:text-white rounded-full hover:bg-white/5 transition-all duration-200"
               >
                 Log in
               </button>
               <button
                 onClick={() => router.push('/register')}
-                className="h-7 px-3 text-xs font-bold text-white rounded-md transition-all duration-200"
-                style={{ background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' }}
+                className="h-[32px] px-4 text-[13px] font-bold text-black rounded-full transition-all duration-200 active:scale-95"
+                style={{ background: '#BFFF00' }}
               >
                 Register
               </button>
             </div>
           )}
 
-          {/* Right: Action icons */}
+          {/* -- RIGHT: Chat + Profile icons -- */}
           <div className="flex items-center gap-0.5 shrink-0">
-            {isAuthenticated && (
-              <>
-                {/* Notifications (Bell) */}
-                <button
-                  onClick={handleToggleNotifications}
-                  className={cn(
-                    'relative h-8 w-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200',
-                    notificationsOpen && 'text-white bg-white/10',
-                  )}
-                >
-                  <Bell className="h-4 w-4" />
-                  {notificationCount > 0 && (
-                    <span className="absolute top-0 right-0 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white" style={{ boxShadow: '0 0 0 2px #1a1a2e' }}>
-                      {notificationCount > 9 ? '9+' : notificationCount}
-                    </span>
-                  )}
-                </button>
-              </>
-            )}
-
-            {/* Hamburger / Menu */}
+            {/* Chat bubble icon */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
+              className="h-[36px] w-[36px] flex items-center justify-center rounded-full text-gray-500 hover:text-gray-300 transition-colors duration-200"
             >
-              {mobileMenuOpen ? (
-                <X className="h-4 w-4" />
-              ) : (
-                <Menu className="h-4 w-4" />
-              )}
+              <MessageCircle className="h-[18px] w-[18px]" />
             </button>
+
+            {/* User profile icon */}
+            {isAuthenticated && user ? (
+              <button
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="h-[32px] w-[32px] rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] flex items-center justify-center overflow-hidden"
+              >
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.username}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-4 w-4 text-white/80" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/login')}
+                className="h-[32px] w-[32px] rounded-full bg-[#1E1E2E] flex items-center justify-center"
+              >
+                <User className="h-4 w-4 text-gray-500" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ----- Mobile Navigation Row: Sports | Casino | Esports icons ----- */}
+        {/* ============================================================== */}
+        {/* ROW 2: Sticky Navigation Tabs (~44px)                           */}
+        {/* Home icon | All sports | In-play | Casino                        */}
+        {/* ============================================================== */}
         <div
           ref={mobileNavRef}
-          className="h-12 flex items-center justify-center gap-2 px-4"
-          style={{ background: '#14142a', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+          className="h-[44px] flex items-stretch"
+          style={{ background: '#0D0D1A' }}
         >
           {MOBILE_NAV_TABS.map((tab) => {
             const active = isActiveRoute(tab.href);
-            const Icon = tab.icon;
+            const isLiveTab = tab.isLive;
+            const isHomeTab = tab.isHome;
+
             return (
               <Link
                 key={tab.href}
-                href={tab.href}
+                href={isHomeTab && isOnSportsDetail ? '/sports' : tab.href}
                 className={cn(
-                  'relative flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition-all duration-200 flex-1 max-w-[100px]',
+                  'relative flex-1 flex items-center justify-center gap-1.5 text-[14px] font-medium transition-all duration-200',
                   active
-                    ? 'bg-accent/15 text-white'
-                    : 'text-gray-500 hover:text-gray-300',
+                    ? 'text-white'
+                    : 'text-[#6B7280] hover:text-gray-300',
                 )}
               >
-                <span className={cn(
-                  'flex items-center justify-center w-7 h-7 rounded-full transition-all duration-200',
-                  active
-                    ? 'bg-accent text-white shadow-md shadow-accent/30'
-                    : 'text-gray-500',
-                )}>
-                  <Icon className="h-3.5 w-3.5" />
-                </span>
-                <span className={cn(
-                  'text-[10px] font-semibold',
-                  active ? 'text-white' : 'text-gray-500',
-                )}>
-                  {tab.label}
-                </span>
+                {/* Home tab: show back arrow on sports detail or home icon */}
+                {isHomeTab && (
+                  isOnSportsDetail ? (
+                    <ArrowLeft className="h-[18px] w-[18px]" />
+                  ) : (
+                    <Home className="h-[18px] w-[18px]" />
+                  )
+                )}
+
+                {/* Text label (non-home tabs) */}
+                {!isHomeTab && (
+                  <span className="relative whitespace-nowrap">
+                    {tab.label}
+                    {/* Live dot indicator for In-play tab */}
+                    {isLiveTab && hasLiveEvents && (
+                      <span className="absolute -top-0.5 -right-2.5">
+                        <span className="relative flex h-[6px] w-[6px]">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-[6px] w-[6px] bg-emerald-400" />
+                        </span>
+                      </span>
+                    )}
+                  </span>
+                )}
+
+                {/* Active purple underline */}
+                {active && (
+                  <span
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] rounded-full"
+                    style={{
+                      width: isHomeTab ? '24px' : '70%',
+                      background: '#8B5CF6',
+                    }}
+                  />
+                )}
               </Link>
             );
           })}
         </div>
 
-        {/* ----- Mobile Expanded Search (slides down when triggered) ----- */}
-        {searchExpanded && (
-          <div className="px-3 py-2 animate-fade-in" style={{ background: '#14142a', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-white/5 border border-white/10">
-              <Search className="h-4 w-4 text-gray-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Search events, teams..."
-                className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 outline-none font-sans"
-                autoFocus
-                onBlur={() => setSearchExpanded(false)}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ----- Mobile Slide-out Menu (profile, settings, etc.) ----- */}
-        {mobileMenuOpen && (
+        {/* ============================================================== */}
+        {/* Mobile User Dropdown (profile menu overlay)                      */}
+        {/* ============================================================== */}
+        {userDropdownOpen && isAuthenticated && user && (
           <div className="fixed inset-0 z-[100] lg:hidden">
             {/* Backdrop */}
             <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
-              onClick={() => setMobileMenuOpen(false)}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setUserDropdownOpen(false)}
             />
 
             {/* Panel */}
             <div
               className="absolute right-0 top-0 bottom-0 w-72 flex flex-col shadow-2xl"
               style={{
-                background: 'linear-gradient(180deg, #1a1a2e 0%, #141428 100%)',
+                background: 'linear-gradient(180deg, #0D0D1A 0%, #0A0A16 100%)',
                 borderLeft: '1px solid rgba(255,255,255,0.06)',
                 animation: 'slideInRight 0.25s ease-out',
               }}
             >
               {/* Panel Header */}
-              <div className="h-[52px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <span className="text-sm font-semibold text-white">Menu</span>
+              <div className="h-[56px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <span className="text-sm font-semibold text-white">Account</span>
                 <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  onClick={() => setUserDropdownOpen(false)}
+                  className="h-8 w-8 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* User Info (if authenticated) */}
-              {isAuthenticated && user && (
-                <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="h-11 w-11 rounded-full bg-gradient-to-br from-accent to-purple-700 flex items-center justify-center overflow-hidden shrink-0 ring-2 ring-white/10">
-                      {user.avatar ? (
-                        <img
-                          src={user.avatar}
-                          alt={user.username}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <User className="h-5 w-5 text-white" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">
-                        {user.username}
-                      </p>
-                      <p className="text-xs text-gray-400 truncate">
-                        {user.email}
+              {/* User Info */}
+              <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] flex items-center justify-center overflow-hidden shrink-0 ring-2 ring-white/10">
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.username}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-5 w-5 text-white" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {user.username}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Balance in menu */}
+                {primaryBalance && (
+                  <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-xl" style={{ background: '#1E1E2E' }}>
+                    <CurrencyIcon
+                      currency={primaryBalance.currency}
+                      size={22}
+                    />
+                    <div className="flex-1">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance</p>
+                      <p className="font-mono text-sm font-bold text-white">
+                        {formatCurrency(primaryBalance.available, primaryBalance.currency, {
+                          showSymbol: false,
+                        })}{' '}
+                        <span className="text-gray-400 text-xs font-sans font-normal">
+                          {primaryBalance.currency}
+                        </span>
                       </p>
                     </div>
                   </div>
-
-                  {/* Balance in menu */}
-                  {primaryBalance && (
-                    <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-xl bg-white/5 border border-white/8">
-                      <CurrencyIcon
-                        currency={primaryBalance.currency}
-                        size={22}
-                      />
-                      <div className="flex-1">
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance</p>
-                        <p className="font-mono text-sm font-bold text-white">
-                          {formatCurrency(primaryBalance.available, primaryBalance.currency, {
-                            showSymbol: false,
-                          })}{' '}
-                          <span className="text-gray-400 text-xs font-sans font-normal">
-                            {primaryBalance.currency}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Menu Items */}
-              <div className="flex-1 overflow-y-auto py-2">
-                {isAuthenticated && user ? (
-                  <>
-                    <MobileMenuItem
-                      icon={<User className="h-4 w-4" />}
-                      label="Profile"
-                      href="/account"
-                      onClick={() => setMobileMenuOpen(false)}
-                    />
-                    <button
-                      onClick={() => { setMobileMenuOpen(false); setWalletModalOpen(true); }}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors duration-200 w-full text-left"
-                    >
-                      <span className="shrink-0 text-gray-500"><Wallet className="h-4 w-4" /></span>
-                      Wallet
-                    </button>
-                    <MobileMenuItem
-                      icon={<Ticket className="h-4 w-4" />}
-                      label="My Bets"
-                      href="/bets"
-                      onClick={() => setMobileMenuOpen(false)}
-                    />
-                    <MobileMenuItem
-                      icon={<Gift className="h-4 w-4" />}
-                      label="Rewards"
-                      href="/rewards"
-                      onClick={() => setMobileMenuOpen(false)}
-                      accent
-                    />
-                    <MobileMenuItem
-                      icon={<Crown className="h-4 w-4" />}
-                      label="VIP"
-                      href="/rewards"
-                      onClick={() => setMobileMenuOpen(false)}
-                      accent
-                    />
-                    <MobileMenuItem
-                      icon={<Settings className="h-4 w-4" />}
-                      label="Settings"
-                      href="/settings"
-                      onClick={() => setMobileMenuOpen(false)}
-                    />
+              <div className="flex-1 overflow-y-auto py-2 scrollbar-hide">
+                <MobileMenuItem
+                  icon={<User className="h-4 w-4" />}
+                  label="Profile"
+                  href="/account"
+                  onClick={() => setUserDropdownOpen(false)}
+                />
+                <button
+                  onClick={() => { setUserDropdownOpen(false); setWalletModalOpen(true); }}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors duration-200 w-full text-left"
+                >
+                  <span className="shrink-0 text-gray-500"><Wallet className="h-4 w-4" /></span>
+                  Wallet
+                </button>
+                <MobileMenuItem
+                  icon={<Ticket className="h-4 w-4" />}
+                  label="My Bets"
+                  href="/bets"
+                  onClick={() => setUserDropdownOpen(false)}
+                />
+                <MobileMenuItem
+                  icon={<Gift className="h-4 w-4" />}
+                  label="Rewards"
+                  href="/rewards"
+                  onClick={() => setUserDropdownOpen(false)}
+                  accent
+                />
+                <MobileMenuItem
+                  icon={<Crown className="h-4 w-4" />}
+                  label="VIP"
+                  href="/rewards"
+                  onClick={() => setUserDropdownOpen(false)}
+                  accent
+                />
+                <MobileMenuItem
+                  icon={<Bell className="h-4 w-4" />}
+                  label="Notifications"
+                  href="#"
+                  onClick={() => { setUserDropdownOpen(false); handleToggleNotifications(); }}
+                  badge={notificationCount > 0 ? notificationCount : undefined}
+                />
+                <MobileMenuItem
+                  icon={<Settings className="h-4 w-4" />}
+                  label="Settings"
+                  href="/settings"
+                  onClick={() => setUserDropdownOpen(false)}
+                />
 
-                    <div className="mx-4 my-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+                <div className="mx-4 my-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
 
+                <button
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 transition-colors duration-200"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* Mobile Notifications Panel (overlay)                            */}
+        {/* ============================================================== */}
+        {notificationsOpen && (
+          <div className="fixed inset-0 z-[100] lg:hidden">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setNotificationsOpen(false)}
+            />
+
+            {/* Panel */}
+            <div
+              className="absolute left-0 right-0 top-0 max-h-[80vh] flex flex-col shadow-2xl overflow-hidden"
+              style={{
+                background: '#0D0D1A',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                animation: 'slideInDown 0.25s ease-out',
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <h3 className="text-sm font-semibold text-white">Notifications</h3>
+                <div className="flex items-center gap-2">
+                  {notifications.some((n) => !n.isRead) && (
                     <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 transition-colors duration-200"
+                      onClick={handleMarkAllRead}
+                      className="flex items-center gap-1 text-[11px] text-[#8B5CF6] hover:text-[#A78BFA] transition-colors"
                     >
-                      <LogOut className="h-4 w-4" />
-                      Logout
+                      <CheckCheck className="h-3 w-3" />
+                      Mark all read
                     </button>
-                  </>
+                  )}
+                  <button
+                    onClick={() => setNotificationsOpen(false)}
+                    className="h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Notification List */}
+              <div className="flex-1 overflow-y-auto scrollbar-hide">
+                {notificationsLoading ? (
+                  <div className="py-8 text-center">
+                    <div className="h-5 w-5 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-xs text-[#484F58] mt-2">Loading...</p>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <Bell className="h-8 w-8 text-[#30363D] mx-auto mb-2" />
+                    <p className="text-sm text-[#484F58]">No notifications yet</p>
+                  </div>
                 ) : (
-                  <>
-                    {/* Navigation for non-authenticated */}
-                    {NAV_ITEMS.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={cn(
-                            'flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-200',
-                            isActiveRoute(item.href)
-                              ? 'text-white bg-accent/10'
-                              : 'text-gray-400 hover:text-white hover:bg-white/5',
-                          )}
-                        >
-                          <Icon className="h-4 w-4" />
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-
-                    <div className="mx-4 my-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
-
-                    <div className="px-4 py-2 space-y-2">
-                      <button
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          router.push('/register');
-                        }}
-                        className="w-full h-10 rounded-lg text-sm font-bold text-white transition-all duration-200"
-                        style={{ background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' }}
-                      >
-                        Register
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          router.push('/login');
-                        }}
-                        className="w-full h-10 rounded-lg text-sm font-semibold text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
-                      >
-                        Log in
-                      </button>
-                    </div>
-                  </>
+                  notifications.map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => { if (!n.isRead) handleMarkRead(n.id); }}
+                      className={cn(
+                        'w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors',
+                        !n.isRead && 'bg-[#8B5CF6]/[0.04]',
+                      )}
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                    >
+                      <div className={cn(
+                        'shrink-0 mt-0.5 h-8 w-8 rounded-full flex items-center justify-center',
+                        n.type === 'BET_WON' && 'bg-[#10B981]/10',
+                        n.type === 'BET_LOST' && 'bg-[#EF4444]/10',
+                        n.type === 'DEPOSIT_CONFIRMED' && 'bg-[#3B82F6]/10',
+                        n.type === 'WITHDRAWAL_APPROVED' && 'bg-[#8B5CF6]/10',
+                        n.type === 'VIP_LEVEL_UP' && 'bg-[#F59E0B]/10',
+                        n.type === 'PROMO_AVAILABLE' && 'bg-[#EC4899]/10',
+                        !['BET_WON','BET_LOST','DEPOSIT_CONFIRMED','WITHDRAWAL_APPROVED','VIP_LEVEL_UP','PROMO_AVAILABLE'].includes(n.type) && 'bg-white/5',
+                      )}>
+                        {n.type === 'BET_WON' && <TrendingUp className="h-4 w-4 text-[#10B981]" />}
+                        {n.type === 'BET_LOST' && <AlertCircle className="h-4 w-4 text-[#EF4444]" />}
+                        {n.type === 'DEPOSIT_CONFIRMED' && <ArrowDownCircle className="h-4 w-4 text-[#3B82F6]" />}
+                        {n.type === 'WITHDRAWAL_APPROVED' && <ArrowUpCircle className="h-4 w-4 text-[#8B5CF6]" />}
+                        {n.type === 'VIP_LEVEL_UP' && <Star className="h-4 w-4 text-[#F59E0B]" />}
+                        {n.type === 'PROMO_AVAILABLE' && <Zap className="h-4 w-4 text-[#EC4899]" />}
+                        {!['BET_WON','BET_LOST','DEPOSIT_CONFIRMED','WITHDRAWAL_APPROVED','VIP_LEVEL_UP','PROMO_AVAILABLE'].includes(n.type) && <Bell className="h-4 w-4 text-[#8B949E]" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn('text-[13px] leading-snug', n.isRead ? 'text-[#8B949E]' : 'text-[#E6EDF3] font-medium')}>
+                          {n.title}
+                        </p>
+                        <p className="text-[11px] text-[#484F58] mt-0.5 line-clamp-2">{n.message}</p>
+                        <p className="text-[10px] text-[#30363D] mt-1">
+                          {new Date(n.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          {' '}
+                          {new Date(n.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      {!n.isRead && (
+                        <div className="shrink-0 mt-2">
+                          <div className="h-2 w-2 rounded-full bg-[#8B5CF6]" />
+                        </div>
+                      )}
+                    </button>
+                  ))
                 )}
               </div>
             </div>
@@ -1150,14 +1261,19 @@ export default function Header() {
       </header>
 
       {/* ================================================================== */}
-      {/* GLOBAL: Inline keyframes for mobile slide-in animation             */}
+      {/* GLOBAL: Inline keyframes for animations                            */}
       {/* ================================================================== */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes slideInRight {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
         }
+        @keyframes slideInDown {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(0); }
+        }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
       {/* Wallet Modal */}
@@ -1179,12 +1295,14 @@ function MobileMenuItem({
   href,
   onClick,
   accent,
+  badge,
 }: {
   icon: React.ReactNode;
   label: string;
   href: string;
   onClick?: () => void;
   accent?: boolean;
+  badge?: number;
 }) {
   return (
     <Link
@@ -1200,7 +1318,12 @@ function MobileMenuItem({
       <span className={cn('shrink-0', accent ? 'text-yellow-400' : 'text-gray-500')}>
         {icon}
       </span>
-      {label}
+      <span className="flex-1">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1.5">
+          {badge > 9 ? '9+' : badge}
+        </span>
+      )}
     </Link>
   );
 }

@@ -6,7 +6,6 @@ import {
   Trophy,
   Zap,
   ChevronRight,
-  ChevronLeft,
   ChevronDown,
   Lock,
   Globe,
@@ -18,7 +17,7 @@ import {
   Dumbbell,
   Swords,
   Bike,
-  ArrowRight,
+  Search,
 } from 'lucide-react';
 import { cn, formatOdds, formatDate } from '@/lib/utils';
 import { get } from '@/lib/api';
@@ -64,7 +63,7 @@ interface FeaturedEvent {
   awayTeamCountry?: string | null;
   startTime: string;
   isLive?: boolean;
-  scores?: { home?: number; away?: number } | null;
+  scores?: { home?: number; away?: number; period?: string } | null;
   mainMarket?: MainMarket;
   spreadMarket?: MainMarket;
   totalMarket?: MainMarket;
@@ -134,24 +133,24 @@ interface SportCompetition {
 // Constants
 // ---------------------------------------------------------------------------
 
-const SPORT_ICON_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
-  football: { icon: <Trophy className="w-5 h-5" />, color: '#22C55E' },
-  soccer: { icon: <Trophy className="w-5 h-5" />, color: '#22C55E' },
-  basketball: { icon: <CircleDot className="w-5 h-5" />, color: '#F97316' },
-  tennis: { icon: <Target className="w-5 h-5" />, color: '#EAB308' },
-  esports: { icon: <Gamepad2 className="w-5 h-5" />, color: '#8B5CF6' },
-  baseball: { icon: <Dumbbell className="w-5 h-5" />, color: '#EF4444' },
-  cricket: { icon: <Target className="w-5 h-5" />, color: '#84CC16' },
-  mma: { icon: <Swords className="w-5 h-5" />, color: '#EF4444' },
-  boxing: { icon: <Dumbbell className="w-5 h-5" />, color: '#DC2626' },
-  'ice-hockey': { icon: <Swords className="w-5 h-5" />, color: '#06B6D4' },
-  rugby: { icon: <Dumbbell className="w-5 h-5" />, color: '#A855F7' },
-  volleyball: { icon: <CircleDot className="w-5 h-5" />, color: '#3B82F6' },
-  cycling: { icon: <Bike className="w-5 h-5" />, color: '#F59E0B' },
-  handball: { icon: <CircleDot className="w-5 h-5" />, color: '#14B8A6' },
-  'table-tennis': { icon: <Target className="w-5 h-5" />, color: '#10B981' },
-  'american-football': { icon: <Dumbbell className="w-5 h-5" />, color: '#8B5CF6' },
-  darts: { icon: <Target className="w-5 h-5" />, color: '#F59E0B' },
+const SPORT_ICON_CONFIG: Record<string, { icon: React.ReactNode; emoji: string; color: string }> = {
+  football: { icon: <Trophy className="w-5 h-5" />, emoji: '\u26BD', color: '#22C55E' },
+  soccer: { icon: <Trophy className="w-5 h-5" />, emoji: '\u26BD', color: '#22C55E' },
+  basketball: { icon: <CircleDot className="w-5 h-5" />, emoji: '\uD83C\uDFC0', color: '#F97316' },
+  tennis: { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFBE', color: '#EAB308' },
+  esports: { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#8B5CF6' },
+  baseball: { icon: <Dumbbell className="w-5 h-5" />, emoji: '\u26BE', color: '#EF4444' },
+  cricket: { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFCF', color: '#84CC16' },
+  mma: { icon: <Swords className="w-5 h-5" />, emoji: '\uD83E\uDD4A', color: '#EF4444' },
+  boxing: { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83E\uDD4B', color: '#DC2626' },
+  'ice-hockey': { icon: <Swords className="w-5 h-5" />, emoji: '\uD83C\uDFD2', color: '#06B6D4' },
+  rugby: { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83C\uDFC9', color: '#A855F7' },
+  volleyball: { icon: <CircleDot className="w-5 h-5" />, emoji: '\uD83C\uDFD0', color: '#3B82F6' },
+  cycling: { icon: <Bike className="w-5 h-5" />, emoji: '\uD83D\uDEB4', color: '#F59E0B' },
+  handball: { icon: <CircleDot className="w-5 h-5" />, emoji: '\uD83E\uDD3E', color: '#14B8A6' },
+  'table-tennis': { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFD3', color: '#10B981' },
+  'american-football': { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83C\uDFC8', color: '#8B5CF6' },
+  darts: { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFAF', color: '#F59E0B' },
 };
 
 const INDIVIDUAL_SPORTS = new Set([
@@ -165,41 +164,6 @@ const AVATAR_COLORS = [
   '#F59E0B', '#EAB308', '#84CC16', '#22C55E',
   '#10B981', '#14B8A6', '#06B6D4', '#0EA5E9',
   '#3B82F6', '#6366F1',
-];
-
-const LIVE_SPORT_PILLS = ['Tennis', 'FIFA', 'Ice Hockey', 'Basketball', 'Volleyball'];
-
-const LIVE_SPORT_PILL_SLUGS: Record<string, string> = {
-  'Tennis': 'tennis',
-  'FIFA': 'football',
-  'Ice Hockey': 'ice-hockey',
-  'Basketball': 'basketball',
-  'Volleyball': 'volleyball',
-};
-
-const SPORT_COLORS: Record<string, string> = {
-  football: '#10B981',
-  basketball: '#F59E0B',
-  'ice-hockey': '#3B82F6',
-  'american-football': '#8B5CF6',
-  handball: '#EC4899',
-  baseball: '#EF4444',
-  rugby: '#F97316',
-  volleyball: '#06B6D4',
-  tennis: '#84CC16',
-  cricket: '#A78BFA',
-};
-
-// ---------------------------------------------------------------------------
-// Mock data for sharpest bettors
-// ---------------------------------------------------------------------------
-
-const MOCK_SHARPEST_BETTORS = [
-  { rank: 1, username: 'CryptoKing99', roi: 24.5, profit: 12450, badge: '#F59E0B' },
-  { rank: 2, username: 'SharpEdge', roi: 19.2, profit: 8920, badge: '#C0C0C0' },
-  { rank: 3, username: 'BetWizard', roi: 16.8, profit: 7340, badge: '#CD7F32' },
-  { rank: 4, username: 'OddsHunter', roi: 14.1, profit: 5680, badge: '#8B5CF6' },
-  { rank: 5, username: 'ValuePlay', roi: 11.7, profit: 4210, badge: '#3B82F6' },
 ];
 
 // Mock Featured Events (fallback)
@@ -217,6 +181,13 @@ const MOCK_FEATURED: FeaturedEvent[] = [
     homeTeam: 'Arsenal', awayTeam: 'Tottenham',
     startTime: new Date(Date.now() + 90000000).toISOString(),
     mainMarket: { id: 'mkt-1b', name: 'Full Time Result', type: 'MONEYLINE', selections: [{ id: 's1b', name: '1', outcome: 'home', odds: '1.75', handicap: null, params: null, status: 'ACTIVE' }, { id: 's2b', name: 'X', outcome: 'draw', odds: '3.80', handicap: null, params: null, status: 'ACTIVE' }, { id: 's3b', name: '2', outcome: 'away', odds: '4.20', handicap: null, params: null, status: 'ACTIVE' }] },
+  },
+  {
+    id: 'evt-1c', sport: 'Football', sportSlug: 'football', sportIcon: '\u26BD',
+    competition: 'Premier League', competitionSlug: 'premier-league',
+    homeTeam: 'Aston Villa', awayTeam: 'Leeds United',
+    startTime: new Date(Date.now() + 54000000).toISOString(),
+    mainMarket: { id: 'mkt-1c', name: 'Full Time Result', type: 'MONEYLINE', selections: [{ id: 's1c', name: '1', outcome: 'home', odds: '1.85', handicap: null, params: null, status: 'ACTIVE' }, { id: 's2c', name: 'X', outcome: 'draw', odds: '3.64', handicap: null, params: null, status: 'ACTIVE' }, { id: 's3c', name: '2', outcome: 'away', odds: '4.46', handicap: null, params: null, status: 'ACTIVE' }] },
   },
   {
     id: 'evt-3', sport: 'Football', sportSlug: 'football', sportIcon: '\u26BD',
@@ -329,7 +300,7 @@ function formatMatchTime(startTime: string): { label: string; sublabel?: string 
 
   const isToday = date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
   const isTomorrow = date.getDate() === now.getDate() + 1 && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-  const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
   if (isToday) return { label: 'Today', sublabel: time };
   if (isTomorrow) return { label: 'Tomorrow', sublabel: time };
@@ -339,33 +310,34 @@ function formatMatchTime(startTime: string): { label: string; sublabel?: string 
   };
 }
 
+// Determine if a sport uses basketball-style layout (spread/total/moneyline columns)
+function isBasketballStyleSport(sportSlug: string): boolean {
+  return ['basketball', 'american-football', 'baseball', 'ice-hockey'].includes(sportSlug);
+}
+
 // ---------------------------------------------------------------------------
-// TeamIcon Component
+// TeamCrest Component (small 16px circle with logo or letter)
 // ---------------------------------------------------------------------------
 
-function TeamIcon({
+function TeamCrest({
   name,
   logo,
   country,
   sportSlug,
-  size = 'sm',
 }: {
   name: string;
   logo?: string | null;
   country?: string | null;
   sportSlug?: string;
-  size?: 'sm' | 'md';
 }) {
   const [imgError, setImgError] = useState(false);
-  const sizeClass = size === 'md' ? 'w-5 h-5' : 'w-4 h-4';
-  const textSize = size === 'md' ? 'text-[10px]' : 'text-[9px]';
 
   if (logo && !imgError) {
     return (
       <img
         src={logo}
         alt=""
-        className={`${sizeClass} object-contain flex-shrink-0 rounded-sm`}
+        className="w-4 h-4 object-contain flex-shrink-0 rounded-full"
         onError={() => setImgError(true)}
       />
     );
@@ -374,7 +346,7 @@ function TeamIcon({
   if (sportSlug && INDIVIDUAL_SPORTS.has(sportSlug) && country) {
     const flag = countryToFlag(country);
     if (flag) {
-      return <span className={`${sizeClass} flex items-center justify-center text-xs leading-none flex-shrink-0`}>{flag}</span>;
+      return <span className="w-4 h-4 flex items-center justify-center text-[10px] leading-none flex-shrink-0">{flag}</span>;
     }
   }
 
@@ -382,8 +354,8 @@ function TeamIcon({
   const bgColor = getAvatarColor(name || '');
 
   return (
-    <div className={`${sizeClass} rounded-full flex items-center justify-center flex-shrink-0`} style={{ backgroundColor: bgColor }}>
-      <span className={`${textSize} font-bold text-white leading-none`}>{letter}</span>
+    <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: bgColor }}>
+      <span className="text-[8px] font-bold text-white leading-none">{letter}</span>
     </div>
   );
 }
@@ -392,42 +364,37 @@ function TeamIcon({
 // Skeletons
 // ---------------------------------------------------------------------------
 
-function SportIconSkeleton() {
+function SportCircleSkeleton() {
   return (
-    <div className="flex flex-col items-center gap-1.5 flex-shrink-0 w-[72px]">
-      <div className="w-12 h-12 skeleton rounded-full" />
-      <div className="h-3 w-10 skeleton rounded" />
+    <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+      <div className="w-14 h-14 rounded-full bg-[#1A1A2E] animate-pulse" />
+      <div className="h-2.5 w-10 bg-[#1A1A2E] animate-pulse rounded" />
     </div>
   );
 }
 
 function CompetitionPillSkeleton() {
-  return <div className="flex-shrink-0 h-8 w-36 skeleton rounded-full" />;
+  return <div className="flex-shrink-0 h-8 w-32 bg-[#1A1A2E] animate-pulse rounded-full" />;
 }
 
 function EventGroupSkeleton() {
   return (
-    <div className="bg-[#161B22] border border-[#21262D] rounded-lg overflow-hidden">
-      <div className="px-3 py-2.5 flex items-center gap-2.5 border-b border-[#21262D]">
-        <div className="h-5 w-5 skeleton rounded" />
-        <div className="h-4 w-32 skeleton rounded" />
-      </div>
-      <div className="px-3 py-1.5 flex items-center justify-end gap-2 border-b border-[#21262D]/50">
-        <div className="h-3 w-8 skeleton rounded" />
-        <div className="h-3 w-8 skeleton rounded" />
-        <div className="h-3 w-8 skeleton rounded" />
+    <div className="bg-[#111127] overflow-hidden">
+      <div className="px-4 py-3 flex items-center gap-2.5 border-b border-[#1A1A2E]">
+        <div className="h-5 w-5 rounded-full bg-[#1A1A2E] animate-pulse" />
+        <div className="h-4 w-32 bg-[#1A1A2E] animate-pulse rounded" />
       </div>
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="px-3 py-2.5 border-b border-[#21262D]/30 last:border-0 flex items-center gap-3">
-          <div className="flex-1 space-y-1.5">
-            <div className="h-3.5 w-28 skeleton rounded" />
-            <div className="h-3.5 w-24 skeleton rounded" />
-            <div className="h-3 w-16 skeleton rounded" />
+        <div key={i} className="px-4 py-3 border-b border-[#1A1A2E]/50 flex items-center gap-3">
+          <div className="flex-1 space-y-2">
+            <div className="h-3.5 w-28 bg-[#1A1A2E] animate-pulse rounded" />
+            <div className="h-3.5 w-24 bg-[#1A1A2E] animate-pulse rounded" />
+            <div className="h-3 w-20 bg-[#1A1A2E] animate-pulse rounded" />
           </div>
           <div className="flex gap-1.5">
-            <div className="h-9 w-[52px] skeleton rounded-md" />
-            <div className="h-9 w-[52px] skeleton rounded-md" />
-            <div className="h-9 w-[52px] skeleton rounded-md" />
+            <div className="h-9 w-[56px] bg-[#1A1A2E] animate-pulse rounded" />
+            <div className="h-9 w-[56px] bg-[#1A1A2E] animate-pulse rounded" />
+            <div className="h-9 w-[56px] bg-[#1A1A2E] animate-pulse rounded" />
           </div>
         </div>
       ))}
@@ -436,7 +403,7 @@ function EventGroupSkeleton() {
 }
 
 // ---------------------------------------------------------------------------
-// OddsButton (Cloudbet style: green text on dark bg)
+// OddsButton (Cloudbet style: yellow-green text on dark bg)
 // ---------------------------------------------------------------------------
 
 function OddsButton({
@@ -452,6 +419,8 @@ function OddsButton({
   status,
   startTime,
   isLive,
+  label,
+  compact,
 }: {
   selectionId?: string;
   eventId: string;
@@ -465,6 +434,8 @@ function OddsButton({
   status?: string;
   startTime: string;
   isLive: boolean;
+  label?: string;
+  compact?: boolean;
 }) {
   const { addSelection, hasSelection } = useBetSlipStore();
   const isSelected = hasSelection(eventId, marketId, outcomeName);
@@ -472,8 +443,11 @@ function OddsButton({
 
   if (isSuspended) {
     return (
-      <div className="flex items-center justify-center w-[52px] sm:w-[60px] h-9 rounded-md bg-[#1C2128] border border-[#21262D]">
-        <Lock className="w-3.5 h-3.5 text-[#484F58]" />
+      <div className={cn(
+        'flex items-center justify-center rounded bg-[#0D0D1A]/80',
+        compact ? 'w-[56px] h-8' : 'w-[56px] sm:w-[62px] h-9'
+      )}>
+        <Lock className="w-3 h-3 text-[#484F58]" />
       </div>
     );
   }
@@ -498,22 +472,24 @@ function OddsButton({
         });
       }}
       className={cn(
-        'flex items-center justify-center w-[52px] sm:w-[60px] h-9 rounded-md border transition-all duration-150 font-mono text-[13px] font-semibold',
+        'flex flex-col items-center justify-center rounded transition-all duration-150 font-mono',
+        compact ? 'w-[56px] h-8' : 'w-[56px] sm:w-[62px] h-9',
         isSelected
-          ? 'border-[#F59E0B] bg-[#F59E0B]/15 text-[#F59E0B]'
-          : 'border-[#21262D] bg-[#1C2128] text-[#10B981] hover:border-[#10B981]/40 hover:bg-[#10B981]/5 active:scale-95'
+          ? 'bg-[#BFFF00]/15 text-[#BFFF00] ring-1 ring-[#BFFF00]/50'
+          : 'bg-[#0D0D1A]/80 text-[#BFFF00] hover:bg-[#BFFF00]/10 active:scale-95'
       )}
     >
-      {formatOdds(odds)}
+      {label && <span className="text-[9px] text-[#8B949E] leading-none mb-0.5">{label}</span>}
+      <span className="text-[13px] font-semibold leading-none">{formatOdds(odds)}</span>
     </button>
   );
 }
 
 // ---------------------------------------------------------------------------
-// MatchRow (Cloudbet-style: teams + time left, odds right)
+// Soccer-style MatchRow (Cloudbet mobile: teams left, 3 odds right)
 // ---------------------------------------------------------------------------
 
-function MatchRow({
+function SoccerMatchRow({
   event,
   sportSlug,
   sportName,
@@ -539,57 +515,62 @@ function MatchRow({
   return (
     <Link
       href={`/sports/${sportSlug}/${event.id}`}
-      className="flex items-stretch gap-2 px-3 py-2.5 border-b border-[#21262D]/40 last:border-0 hover:bg-[#1C2128]/50 transition-colors"
+      className="flex items-stretch gap-2 px-4 py-2.5 border-b border-[#1A1A2E]/60 last:border-0 hover:bg-[#1A1A2E]/30 transition-colors"
     >
       {/* Left column: Teams + time */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <TeamIcon logo={event.homeTeamLogo} name={event.homeTeam} country={event.homeTeamCountry} sportSlug={sportSlug} />
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-[3px]">
+        {/* Home team */}
+        <div className="flex items-center gap-2 min-w-0">
+          <TeamCrest logo={event.homeTeamLogo} name={event.homeTeam} country={event.homeTeamCountry} sportSlug={sportSlug} />
           <span className={cn(
             'text-[13px] truncate leading-tight',
             isLive && scores && typeof scores.home === 'number' && scores.home > (scores.away ?? 0)
-              ? 'text-[#E6EDF3] font-semibold' : 'text-[#C9D1D9]'
+              ? 'text-white font-semibold' : 'text-[#C9D1D9]'
           )}>
             {event.homeTeam}
           </span>
+          {isLive && scores && typeof scores.home === 'number' && (
+            <span className="text-[13px] font-mono font-bold text-white ml-auto mr-2 flex-shrink-0">{scores.home}</span>
+          )}
         </div>
-        <div className="flex items-center gap-1.5 min-w-0">
-          <TeamIcon logo={event.awayTeamLogo} name={event.awayTeam} country={event.awayTeamCountry} sportSlug={sportSlug} />
+        {/* Away team */}
+        <div className="flex items-center gap-2 min-w-0">
+          <TeamCrest logo={event.awayTeamLogo} name={event.awayTeam} country={event.awayTeamCountry} sportSlug={sportSlug} />
           <span className={cn(
             'text-[13px] truncate leading-tight',
             isLive && scores && typeof scores.away === 'number' && scores.away > (scores.home ?? 0)
-              ? 'text-[#E6EDF3] font-semibold' : 'text-[#C9D1D9]'
+              ? 'text-white font-semibold' : 'text-[#C9D1D9]'
           )}>
             {event.awayTeam}
           </span>
+          {isLive && scores && typeof scores.away === 'number' && (
+            <span className="text-[13px] font-mono font-bold text-white ml-auto mr-2 flex-shrink-0">{scores.away}</span>
+          )}
         </div>
+        {/* Time / Live badge */}
         <div className="flex items-center gap-1.5 mt-0.5">
           {isLive ? (
             <div className="flex items-center gap-1">
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8B5CF6] opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#8B5CF6]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#10B981]" />
               </span>
-              <span className="text-[11px] font-semibold text-[#8B5CF6]">
+              <span className="text-[11px] font-semibold text-[#10B981]">
                 {liveMinute !== null ? `${liveMinute}'` : 'Live'}
               </span>
             </div>
           ) : (
-            <span className="text-[11px] text-[#8B949E]">
-              {timeInfo.label}
-              {timeInfo.sublabel && <> <span className="text-[#8B949E]/70">{timeInfo.sublabel}</span></>}
-            </span>
+            <>
+              <span className="text-[11px] text-[#6B7280]">
+                {timeInfo.label}{timeInfo.sublabel && ` \u2022 ${timeInfo.sublabel}`}
+              </span>
+              <span className="text-[9px] font-bold text-[#6B7280] bg-[#1A1A2E] px-1 py-0.5 rounded ml-1">
+                BB
+              </span>
+            </>
           )}
         </div>
       </div>
-
-      {/* Score column (live only) */}
-      {isLive && scores && typeof scores.home === 'number' && (
-        <div className="flex flex-col items-center justify-center w-8 flex-shrink-0 gap-0.5">
-          <span className="text-[13px] font-mono font-bold text-[#E6EDF3] leading-tight">{scores.home}</span>
-          <span className="text-[13px] font-mono font-bold text-[#E6EDF3] leading-tight">{scores.away}</span>
-        </div>
-      )}
 
       {/* Odds column */}
       <div className="flex items-center gap-1 flex-shrink-0">
@@ -620,6 +601,222 @@ function MatchRow({
 }
 
 // ---------------------------------------------------------------------------
+// Basketball-style MatchRow (Spread | Total | Money Line)
+// ---------------------------------------------------------------------------
+
+function BasketballMatchRow({
+  event,
+  sportSlug,
+  sportName,
+}: {
+  event: FeaturedEvent;
+  sportSlug: string;
+  sportName: string;
+}) {
+  const isLive = !!event.isLive;
+  const scores = event.scores;
+  const eventName = `${event.homeTeam} vs ${event.awayTeam}`;
+
+  const spread = event.spreadMarket;
+  const total = event.totalMarket;
+  const ml = event.mainMarket;
+
+  const homeSel = spread?.selections.find(s => s.outcome === 'home');
+  const awaySel = spread?.selections.find(s => s.outcome === 'away');
+  const overSel = total?.selections.find(s => s.outcome === 'over');
+  const underSel = total?.selections.find(s => s.outcome === 'under');
+  const homeML = ml?.selections.find(s => s.outcome === 'home');
+  const awayML = ml?.selections.find(s => s.outcome === 'away');
+
+  const timeInfo = formatMatchTime(event.startTime);
+
+  return (
+    <Link
+      href={`/sports/${sportSlug}/${event.id}`}
+      className="block px-4 py-2.5 border-b border-[#1A1A2E]/60 last:border-0 hover:bg-[#1A1A2E]/30 transition-colors"
+    >
+      {/* Home team row */}
+      <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <TeamCrest logo={event.homeTeamLogo} name={event.homeTeam} country={event.homeTeamCountry} sportSlug={sportSlug} />
+          <span className="text-[13px] text-[#C9D1D9] truncate">{event.homeTeam}</span>
+          {isLive && scores && typeof scores.home === 'number' && (
+            <span className="text-[13px] font-mono font-bold text-white ml-1 flex-shrink-0">{scores.home}</span>
+          )}
+        </div>
+        <div className="flex gap-1 flex-shrink-0">
+          {/* Spread home */}
+          {homeSel ? (
+            <div className="flex flex-col items-center" onClick={e => e.preventDefault()}>
+              <span className="text-[9px] text-[#8B949E] mb-0.5">{homeSel.handicap || ''}</span>
+              <OddsButton
+                selectionId={homeSel.id}
+                eventId={event.id}
+                eventName={eventName}
+                sportId={sportSlug}
+                sportName={sportName}
+                marketId={spread!.id}
+                marketName={spread!.name}
+                outcomeName={homeSel.name}
+                odds={typeof homeSel.odds === 'string' ? parseFloat(homeSel.odds) : homeSel.odds}
+                status={homeSel.status}
+                startTime={event.startTime}
+                isLive={isLive}
+                compact
+              />
+            </div>
+          ) : <div className="w-[56px]" />}
+
+          {/* Total over */}
+          {overSel ? (
+            <div className="flex flex-col items-center" onClick={e => e.preventDefault()}>
+              <span className="text-[9px] text-[#8B949E] mb-0.5">O {overSel.handicap || ''}</span>
+              <OddsButton
+                selectionId={overSel.id}
+                eventId={event.id}
+                eventName={eventName}
+                sportId={sportSlug}
+                sportName={sportName}
+                marketId={total!.id}
+                marketName={total!.name}
+                outcomeName={overSel.name}
+                odds={typeof overSel.odds === 'string' ? parseFloat(overSel.odds) : overSel.odds}
+                status={overSel.status}
+                startTime={event.startTime}
+                isLive={isLive}
+                compact
+              />
+            </div>
+          ) : <div className="w-[56px]" />}
+
+          {/* ML home */}
+          {homeML ? (
+            <div className="flex flex-col items-center" onClick={e => e.preventDefault()}>
+              <span className="text-[9px] text-[#8B949E] mb-0.5">&nbsp;</span>
+              <OddsButton
+                selectionId={homeML.id}
+                eventId={event.id}
+                eventName={eventName}
+                sportId={sportSlug}
+                sportName={sportName}
+                marketId={ml!.id}
+                marketName={ml!.name}
+                outcomeName={homeML.name}
+                odds={typeof homeML.odds === 'string' ? parseFloat(homeML.odds) : homeML.odds}
+                status={homeML.status}
+                startTime={event.startTime}
+                isLive={isLive}
+                compact
+              />
+            </div>
+          ) : <div className="w-[56px]" />}
+        </div>
+      </div>
+
+      {/* Away team row */}
+      <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <TeamCrest logo={event.awayTeamLogo} name={event.awayTeam} country={event.awayTeamCountry} sportSlug={sportSlug} />
+          <span className="text-[13px] text-[#C9D1D9] truncate">{event.awayTeam}</span>
+          {isLive && scores && typeof scores.away === 'number' && (
+            <span className="text-[13px] font-mono font-bold text-white ml-1 flex-shrink-0">{scores.away}</span>
+          )}
+        </div>
+        <div className="flex gap-1 flex-shrink-0">
+          {/* Spread away */}
+          {awaySel ? (
+            <div className="flex flex-col items-center" onClick={e => e.preventDefault()}>
+              <span className="text-[9px] text-[#8B949E] mb-0.5">{awaySel.handicap || ''}</span>
+              <OddsButton
+                selectionId={awaySel.id}
+                eventId={event.id}
+                eventName={eventName}
+                sportId={sportSlug}
+                sportName={sportName}
+                marketId={spread!.id}
+                marketName={spread!.name}
+                outcomeName={awaySel.name}
+                odds={typeof awaySel.odds === 'string' ? parseFloat(awaySel.odds) : awaySel.odds}
+                status={awaySel.status}
+                startTime={event.startTime}
+                isLive={isLive}
+                compact
+              />
+            </div>
+          ) : <div className="w-[56px]" />}
+
+          {/* Total under */}
+          {underSel ? (
+            <div className="flex flex-col items-center" onClick={e => e.preventDefault()}>
+              <span className="text-[9px] text-[#8B949E] mb-0.5">U {underSel.handicap || ''}</span>
+              <OddsButton
+                selectionId={underSel.id}
+                eventId={event.id}
+                eventName={eventName}
+                sportId={sportSlug}
+                sportName={sportName}
+                marketId={total!.id}
+                marketName={total!.name}
+                outcomeName={underSel.name}
+                odds={typeof underSel.odds === 'string' ? parseFloat(underSel.odds) : underSel.odds}
+                status={underSel.status}
+                startTime={event.startTime}
+                isLive={isLive}
+                compact
+              />
+            </div>
+          ) : <div className="w-[56px]" />}
+
+          {/* ML away */}
+          {awayML ? (
+            <div className="flex flex-col items-center" onClick={e => e.preventDefault()}>
+              <span className="text-[9px] text-[#8B949E] mb-0.5">&nbsp;</span>
+              <OddsButton
+                selectionId={awayML.id}
+                eventId={event.id}
+                eventName={eventName}
+                sportId={sportSlug}
+                sportName={sportName}
+                marketId={ml!.id}
+                marketName={ml!.name}
+                outcomeName={awayML.name}
+                odds={typeof awayML.odds === 'string' ? parseFloat(awayML.odds) : awayML.odds}
+                status={awayML.status}
+                startTime={event.startTime}
+                isLive={isLive}
+                compact
+              />
+            </div>
+          ) : <div className="w-[56px]" />}
+        </div>
+      </div>
+
+      {/* Time row */}
+      <div className="flex items-center gap-1.5 mt-0.5 pl-6">
+        {isLive ? (
+          <div className="flex items-center gap-1">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#10B981]" />
+            </span>
+            <span className="text-[11px] font-semibold text-[#10B981]">
+              {scores?.period || 'Live'}
+            </span>
+          </div>
+        ) : (
+          <>
+            <span className="text-[11px] text-[#6B7280]">
+              {timeInfo.label}{timeInfo.sublabel && ` \u2022 ${timeInfo.sublabel}`}
+            </span>
+            <span className="text-[9px] font-bold text-[#6B7280] bg-[#1A1A2E] px-1 py-0.5 rounded ml-1">BB</span>
+          </>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // CompetitionGroup (Cloudbet-style: header + market labels + event rows)
 // ---------------------------------------------------------------------------
 
@@ -640,54 +837,61 @@ function CompetitionGroup({
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const flag = countryCodeToFlag(country);
+  const isBball = isBasketballStyleSport(sportSlug);
 
   if (events.length === 0) return null;
 
   const firstMarket = events[0]?.mainMarket;
   const marketHeaders = useMemo(() => {
+    if (isBball) return ['Spread', 'Total', 'Money Line'];
     if (!firstMarket?.selections) return [];
     const len = firstMarket.selections.length;
     if (len === 3) return ['1', 'X', '2'];
     if (len === 2) return ['1', '2'];
     return firstMarket.selections.map((s) => s.name?.length <= 4 ? s.name : s.name?.charAt(0) || '');
-  }, [firstMarket]);
+  }, [firstMarket, isBball]);
 
-  const marketName = firstMarket?.name || 'Full Time Result';
+  const marketName = isBball ? '' : (firstMarket?.name || 'Full Time Result');
 
   return (
-    <div className="bg-[#161B22] border border-[#21262D] rounded-lg overflow-hidden">
+    <div className="bg-[#111127] overflow-hidden">
       {/* Competition header */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full flex items-center gap-2 px-3 py-2.5 bg-[#161B22] hover:bg-[#1C2128]/60 transition-colors"
+        className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#1A1A2E]/40 transition-colors"
       >
         {logo ? (
-          <img src={logo} alt="" className="w-5 h-5 object-contain flex-shrink-0 rounded-sm" />
+          <img src={logo} alt="" className="w-5 h-5 object-contain flex-shrink-0 rounded-full" />
         ) : flag ? (
           <span className="text-sm flex-shrink-0">{flag}</span>
         ) : (
-          <Globe className="w-4 h-4 text-[#8B949E] flex-shrink-0" />
+          <Globe className="w-4 h-4 text-[#6B7280] flex-shrink-0" />
         )}
-        <span className="text-[13px] font-semibold text-[#E6EDF3] truncate">{name}</span>
-        <span className="text-[10px] text-[#8B949E] bg-[#0D0D1A] px-1.5 py-0.5 rounded-sm flex-shrink-0 font-medium">
-          {events.length}
-        </span>
+        <span className="text-[14px] font-bold text-white truncate">{name}</span>
         <ChevronDown className={cn(
-          'w-4 h-4 text-[#484F58] ml-auto flex-shrink-0 transition-transform duration-200',
+          'w-4 h-4 text-[#6B7280] ml-auto flex-shrink-0 transition-transform duration-200',
           isCollapsed && '-rotate-90'
         )} />
       </button>
 
       {/* Market header row */}
       {!isCollapsed && (
-        <div className="flex items-center px-3 py-1.5 border-t border-b border-[#21262D]/50 bg-[#0D0D1A]/50">
+        <div className="flex items-center px-4 py-1.5 border-t border-b border-[#1A1A2E]/60">
           <div className="flex-1 flex items-center gap-1.5">
-            <span className="text-[11px] text-[#8B949E] font-medium truncate">{marketName}</span>
-            <BarChart3 className="w-3 h-3 text-[#484F58] flex-shrink-0" />
+            {marketName && (
+              <>
+                <span className="text-[11px] text-[#6B7280] font-medium truncate">{marketName}</span>
+                <ChevronDown className="w-3 h-3 text-[#484F58] flex-shrink-0" />
+                <BarChart3 className="w-3 h-3 text-[#484F58] flex-shrink-0 ml-0.5" />
+              </>
+            )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             {marketHeaders.map((h, i) => (
-              <span key={i} className="w-[52px] sm:w-[60px] text-center text-[11px] text-[#8B949E] font-semibold">{h}</span>
+              <span key={i} className={cn(
+                'text-center text-[11px] text-[#6B7280] font-semibold',
+                isBball ? 'w-[56px]' : 'w-[56px] sm:w-[62px]'
+              )}>{h}</span>
             ))}
           </div>
         </div>
@@ -697,7 +901,11 @@ function CompetitionGroup({
       {!isCollapsed && (
         <div>
           {events.map((event) => (
-            <MatchRow key={event.id} event={event} sportSlug={sportSlug} sportName={sportName} />
+            isBball ? (
+              <BasketballMatchRow key={event.id} event={event} sportSlug={sportSlug} sportName={sportName} />
+            ) : (
+              <SoccerMatchRow key={event.id} event={event} sportSlug={sportSlug} sportName={sportName} />
+            )
           ))}
         </div>
       )}
@@ -706,289 +914,34 @@ function CompetitionGroup({
 }
 
 // ---------------------------------------------------------------------------
-// SharpestBettors Widget (right sidebar)
+// Bet Builder Promo Banner (inline between competition groups)
 // ---------------------------------------------------------------------------
 
-function SharpestBettorsWidget({ activeSportName }: { activeSportName: string }) {
+function BetBuilderBanner() {
   return (
-    <div className="bg-[#161B22] border border-[#21262D] rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-[#21262D] flex items-center gap-2">
-        <div className="w-6 h-6 rounded-full bg-[#F59E0B]/20 flex items-center justify-center">
-          <Trophy className="w-3.5 h-3.5 text-[#F59E0B]" />
-        </div>
-        <span className="text-xs font-bold uppercase tracking-wider text-[#E6EDF3]">Sharpest Bettors</span>
-      </div>
-
-      {/* Rankings */}
-      <div className="py-1">
-        {MOCK_SHARPEST_BETTORS.map((bettor) => (
-          <div key={bettor.rank} className="flex items-center gap-2.5 px-4 py-2 hover:bg-[#1C2128]/50 transition-colors">
-            {/* Rank badge */}
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-              style={{ backgroundColor: bettor.badge }}
-            >
-              {bettor.rank}
-            </div>
-            {/* Username */}
-            <div className="flex-1 min-w-0">
-              <span className="text-[12px] font-medium text-[#E6EDF3] truncate block">{bettor.username}</span>
-            </div>
-            {/* Stats */}
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <span className="text-[11px] font-mono font-semibold text-[#10B981]">+{bettor.roi}%</span>
-              <span className="text-[11px] font-mono text-[#8B949E]">${bettor.profit.toLocaleString()}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Footer link */}
-      <div className="px-4 py-2.5 border-t border-[#21262D]">
-        <Link href="/sports/live" className="text-[11px] font-semibold text-[#8B5CF6] hover:text-[#A78BFA] flex items-center gap-1 transition-colors">
-          {activeSportName || 'Sports'} Pulse
-          <ArrowRight className="w-3 h-3" />
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Bet Builder Promo (right sidebar)
-// ---------------------------------------------------------------------------
-
-function BetBuilderPromo() {
-  return (
-    <div className="bg-gradient-to-br from-[#8B5CF6]/20 via-[#161B22] to-[#161B22] border border-[#8B5CF6]/30 rounded-lg overflow-hidden p-4 relative">
-      {/* Decorative background */}
-      <div className="absolute top-2 right-2 opacity-10">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-          <rect x="4" y="4" width="24" height="24" rx="4" stroke="#8B5CF6" strokeWidth="2" />
-          <rect x="36" y="4" width="24" height="24" rx="4" stroke="#8B5CF6" strokeWidth="2" />
-          <rect x="20" y="36" width="24" height="24" rx="12" stroke="#8B5CF6" strokeWidth="2" />
-        </svg>
-      </div>
-
-      <div className="relative z-10">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-[#8B5CF6] mb-1">Bet Builder</div>
-        <p className="text-[13px] font-semibold text-[#E6EDF3] leading-snug mb-3">
-          Build bigger odds with same game parlays.
-        </p>
-        <Link
-          href="/sports"
-          className="text-[12px] font-semibold text-[#8B5CF6] hover:text-[#A78BFA] flex items-center gap-1 transition-colors"
-        >
-          Browse now
-          <ChevronRight className="w-3 h-3" />
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// InPlay Sidebar Widget (right sidebar)
-// ---------------------------------------------------------------------------
-
-function InPlaySidebarWidget({ liveEvents }: { liveEvents: LiveEventRaw[] }) {
-  const [activePill, setActivePill] = useState<string | null>(null);
-  const { addSelection, hasSelection } = useBetSlipStore();
-
-  // Group live events by sport
-  const grouped = useMemo(() => {
-    const groups: Record<string, { sportName: string; sportSlug: string; events: LiveEventRaw[] }> = {};
-    for (const evt of liveEvents) {
-      const key = evt.sportSlug || 'other';
-      if (!groups[key]) {
-        groups[key] = { sportName: evt.sport || key, sportSlug: key, events: [] };
-      }
-      groups[key].events.push(evt);
-    }
-    return groups;
-  }, [liveEvents]);
-
-  // Filter by active pill
-  const filteredEvents = useMemo(() => {
-    if (!activePill) return liveEvents.slice(0, 8);
-    const slugFilter = LIVE_SPORT_PILL_SLUGS[activePill];
-    if (!slugFilter) return liveEvents.slice(0, 8);
-    return liveEvents.filter(e => e.sportSlug === slugFilter).slice(0, 8);
-  }, [liveEvents, activePill]);
-
-  // Re-group filtered events
-  const filteredGrouped = useMemo(() => {
-    const groups: Record<string, { sportName: string; sportSlug: string; competition: string; events: LiveEventRaw[] }> = {};
-    for (const evt of filteredEvents) {
-      const comp = evt.competition || evt.sport || 'Other';
-      const key = `${evt.sportSlug}-${comp}`;
-      if (!groups[key]) {
-        groups[key] = { sportName: evt.sport || '', sportSlug: evt.sportSlug, competition: comp, events: [] };
-      }
-      groups[key].events.push(evt);
-    }
-    return Object.values(groups);
-  }, [filteredEvents]);
-
-  return (
-    <div className="bg-[#161B22] border border-[#21262D] rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#21262D]">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#EF4444]" />
+    <Link
+      href="/sports"
+      className="block mx-0 my-0 relative overflow-hidden"
+    >
+      <div className="bg-gradient-to-r from-[#1A1035] via-[#15112B] to-[#111127] px-4 py-4 relative">
+        {/* Decorative 3D text background */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20 pointer-events-none">
+          <span className="text-4xl font-black text-[#8B5CF6] tracking-tight" style={{ textShadow: '2px 2px 0 #6D28D9, 4px 4px 0 #4C1D95' }}>
+            BET BUILDER
           </span>
-          <span className="text-xs font-bold uppercase tracking-wider text-[#E6EDF3]">In-play</span>
-          {liveEvents.length > 0 && (
-            <span className="text-[10px] font-medium text-[#EF4444] bg-[#EF4444]/10 px-1.5 py-0.5 rounded-full">
-              {liveEvents.length}
-            </span>
-          )}
         </div>
-        <Link href="/sports/live" className="text-[11px] text-[#8B5CF6] hover:text-[#A78BFA] font-medium flex items-center gap-0.5 transition-colors">
-          View all <ChevronRight className="w-3 h-3" />
-        </Link>
+        <div className="relative z-10">
+          <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#A78BFA] mb-1">BET BUILDER</div>
+          <p className="text-[13px] text-[#C9D1D9] leading-snug mb-2">
+            Build bigger odds with same game parlays
+          </p>
+          <span className="text-[12px] font-semibold text-[#BFFF00] flex items-center gap-1">
+            Browse now
+            <ChevronRight className="w-3.5 h-3.5" />
+          </span>
+        </div>
       </div>
-
-      {/* Sport filter pills */}
-      <div className="flex items-center gap-1.5 px-3 py-2 border-b border-[#21262D]/50 overflow-x-auto scrollbar-hide">
-        {LIVE_SPORT_PILLS.map((pill) => {
-          const isActive = activePill === pill;
-          return (
-            <button
-              key={pill}
-              onClick={() => setActivePill(isActive ? null : pill)}
-              className={cn(
-                'flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-150 border',
-                isActive
-                  ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/40'
-                  : 'bg-transparent text-[#8B949E] border-[#21262D] hover:text-[#C9D1D9] hover:border-[#484F58]'
-              )}
-            >
-              {pill}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Live event rows */}
-      <div className="py-1">
-        {filteredEvents.length === 0 ? (
-          <div className="px-4 py-6 text-center">
-            <p className="text-[11px] text-[#8B949E]">No live events</p>
-          </div>
-        ) : (
-          filteredGrouped.map((group) => (
-            <div key={`${group.sportSlug}-${group.competition}`}>
-              {/* Competition header */}
-              <div className="flex items-center gap-2 px-4 py-1.5">
-                <span
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: SPORT_COLORS[group.sportSlug] || '#8B949E' }}
-                />
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8B949E] truncate">
-                  {group.competition}
-                </span>
-              </div>
-
-              {/* Market header */}
-              <div className="flex items-center px-4 py-0.5">
-                <div className="flex-1">
-                  <span className="text-[10px] text-[#484F58] font-medium">Winner</span>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {group.events[0]?.mainMarket?.selections.length === 3 ? (
-                    <>
-                      <span className="w-10 text-center text-[10px] text-[#484F58] font-semibold">1</span>
-                      <span className="w-10 text-center text-[10px] text-[#484F58] font-semibold">X</span>
-                      <span className="w-10 text-center text-[10px] text-[#484F58] font-semibold">2</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="w-10 text-center text-[10px] text-[#484F58] font-semibold">1</span>
-                      <span className="w-10 text-center text-[10px] text-[#484F58] font-semibold">2</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Event rows */}
-              {group.events.map((event) => {
-                const homeScore = event.scores?.home ?? 0;
-                const awayScore = event.scores?.away ?? 0;
-                const eventName = `${event.homeTeam} vs ${event.awayTeam}`;
-
-                return (
-                  <Link
-                    key={event.id}
-                    href={`/sports/${event.sportSlug}/${event.id}`}
-                    className="flex items-center gap-1.5 px-4 py-2 hover:bg-[#1C2128]/50 transition-colors"
-                  >
-                    {/* Live dot */}
-                    <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75" />
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#10B981]" />
-                    </span>
-
-                    {/* Teams + scores */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between text-[12px]">
-                        <span className="text-[#E6EDF3] truncate pr-1 max-w-[100px]">{event.homeTeam}</span>
-                        <span className="font-mono font-bold text-[#E6EDF3] flex-shrink-0 text-[11px]">{homeScore}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[12px] mt-0.5">
-                        <span className="text-[#E6EDF3] truncate pr-1 max-w-[100px]">{event.awayTeam}</span>
-                        <span className="font-mono font-bold text-[#E6EDF3] flex-shrink-0 text-[11px]">{awayScore}</span>
-                      </div>
-                    </div>
-
-                    {/* Odds */}
-                    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.preventDefault()}>
-                      {event.mainMarket?.selections.map((sel) => {
-                        const oddsVal = typeof sel.odds === 'string' ? parseFloat(sel.odds) : sel.odds;
-                        const selected = hasSelection(event.id, event.mainMarket!.id, sel.name);
-                        return (
-                          <button
-                            key={sel.id || sel.name}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              addSelection({
-                                id: sel.id || `${event.id}-${event.mainMarket!.id}-${sel.name}`,
-                                eventId: event.id,
-                                eventName,
-                                marketId: event.mainMarket!.id,
-                                marketName: event.mainMarket!.name,
-                                outcomeName: sel.name,
-                                odds: oddsVal,
-                                sportId: event.sportSlug,
-                                sportName: event.sport,
-                                startTime: event.startTime,
-                                isLive: true,
-                              });
-                            }}
-                            className={cn(
-                              'w-10 h-8 rounded text-[11px] font-mono font-semibold transition-all duration-150 border',
-                              selected
-                                ? 'border-[#F59E0B] bg-[#F59E0B]/15 text-[#F59E0B]'
-                                : 'border-[#21262D] bg-[#0D0D1A] text-[#10B981] hover:border-[#10B981]/30'
-                            )}
-                          >
-                            {formatOdds(oddsVal)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+    </Link>
   );
 }
 
@@ -1004,8 +957,9 @@ export default function HomePage() {
   const [popularCompetitions, setPopularCompetitions] = useState<Competition[]>([]);
   const [sportCompetitions, setSportCompetitions] = useState<SportCompetition[]>([]);
 
-  const [selectedSportSlug, setSelectedSportSlug] = useState<string>('all');
+  const [selectedSportSlug, setSelectedSportSlug] = useState<string>('football');
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingSportEvents, setIsLoadingSportEvents] = useState(false);
@@ -1208,95 +1162,94 @@ export default function HomePage() {
     if (compScrollRef.current) compScrollRef.current.scrollLeft = 0;
   }, []);
 
-  // --- Competition scroll helpers ---
-  const scrollCompLeft = () => {
-    if (compScrollRef.current) compScrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
-  };
-  const scrollCompRight = () => {
-    if (compScrollRef.current) compScrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
-  };
-
   // --- Render ---
   return (
-    <div className="min-h-screen pb-8" style={{ backgroundColor: '#0D0D1A' }}>
+    <div className="min-h-screen pb-20" style={{ backgroundColor: '#0D0D1A' }}>
 
       {/* ================================================================== */}
-      {/* SPORT ICON CAROUSEL                                                */}
+      {/* SECTION 1: SEARCH BAR                                              */}
       {/* ================================================================== */}
-      <div className="sticky top-0 z-20 border-b border-[#21262D]/60" style={{ backgroundColor: 'rgba(13,13,26,0.95)', backdropFilter: 'blur(12px)' }}>
+      <div className="px-3 pt-3 pb-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-[#1A1A2E] text-[#C9D1D9] text-[14px] pl-10 pr-4 py-2.5 rounded-lg border-none outline-none focus:ring-1 focus:ring-[#BFFF00]/30 placeholder-[#6B7280] transition-all"
+          />
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* SECTION 2: SPORT ICON CIRCLES (horizontal scroll)                  */}
+      {/* ================================================================== */}
+      <div className="px-1 pb-2">
         <div
           ref={sportScrollRef}
-          className="flex items-start gap-1 py-3 overflow-x-auto scrollbar-hide px-1"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="flex items-start gap-3 py-2 overflow-x-auto scrollbar-hide px-2"
+          style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {isLoading ? (
-            Array.from({ length: 8 }).map((_, i) => <SportIconSkeleton key={i} />)
+            Array.from({ length: 8 }).map((_, i) => <SportCircleSkeleton key={i} />)
           ) : (
             <>
               {/* All Sports */}
               <button
                 onClick={() => handleSelectSport('all')}
-                className="flex flex-col items-center gap-1 flex-shrink-0 w-[72px] group"
+                className="flex flex-col items-center gap-1 flex-shrink-0 w-[64px] group"
               >
                 <div className={cn(
-                  'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border-2',
+                  'w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 border-2',
                   selectedSportSlug === 'all'
-                    ? 'border-[#F59E0B] bg-[#8B5CF6]/20 text-[#8B5CF6] shadow-lg shadow-[#8B5CF6]/20'
-                    : 'border-transparent bg-[#1C2128] text-[#8B949E] group-hover:bg-[#1C2128]/80 group-hover:text-[#E6EDF3]'
+                    ? 'border-[#BFFF00] bg-[#BFFF00]/10 shadow-[0_0_12px_rgba(191,255,0,0.2)]'
+                    : 'border-transparent bg-[#1A1A2E] group-hover:bg-[#1A1A2E]/80'
                 )}>
-                  <Zap className="w-5 h-5" />
+                  <Zap className={cn(
+                    'w-6 h-6',
+                    selectedSportSlug === 'all' ? 'text-[#BFFF00]' : 'text-[#8B949E]'
+                  )} />
                 </div>
                 <span className={cn(
                   'text-[10px] font-medium truncate max-w-full leading-tight text-center',
-                  selectedSportSlug === 'all' ? 'text-[#F59E0B]' : 'text-[#8B949E]'
+                  selectedSportSlug === 'all' ? 'text-[#BFFF00]' : 'text-[#8B949E]'
                 )}>
                   All
                 </span>
-                {totalLive > 0 && (
-                  <span className="text-[9px] font-bold text-[#EF4444] -mt-0.5 flex items-center gap-0.5">
-                    <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
-                    {totalLive}
-                  </span>
-                )}
               </button>
 
-              {/* Individual sport icons */}
+              {/* Individual sports */}
               {(sports.length > 0 ? sports : DEFAULT_SPORTS).map((sport) => {
-                const config = SPORT_ICON_CONFIG[sport.slug] || { icon: <Trophy className="w-5 h-5" />, color: '#8B5CF6' };
+                const config = SPORT_ICON_CONFIG[sport.slug];
                 const isActive = selectedSportSlug === sport.slug;
+                const emoji = config?.emoji || sport.icon || '\u26BD';
 
                 return (
                   <button
                     key={sport.id}
                     onClick={() => handleSelectSport(sport.slug)}
-                    className="flex flex-col items-center gap-1 flex-shrink-0 w-[72px] group"
+                    className="flex flex-col items-center gap-1 flex-shrink-0 w-[64px] group"
                   >
                     <div
                       className={cn(
-                        'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 border-2',
-                        isActive ? 'shadow-lg' : 'border-transparent group-hover:scale-105'
+                        'w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 border-2',
+                        isActive
+                          ? 'border-[#BFFF00] shadow-[0_0_12px_rgba(191,255,0,0.2)]'
+                          : 'border-transparent group-hover:scale-105'
                       )}
                       style={{
-                        backgroundColor: isActive ? `${config.color}30` : `${config.color}15`,
-                        borderColor: isActive ? '#F59E0B' : 'transparent',
-                        color: config.color,
-                        boxShadow: isActive ? `0 4px 14px ${config.color}30` : undefined,
+                        backgroundColor: isActive ? `${config?.color || '#8B5CF6'}25` : '#1A1A2E',
                       }}
                     >
-                      {config.icon}
+                      <span className="text-2xl leading-none">{emoji}</span>
                     </div>
                     <span className={cn(
                       'text-[10px] font-medium truncate max-w-full leading-tight text-center',
-                      isActive ? 'text-[#F59E0B]' : 'text-[#8B949E] group-hover:text-[#C9D1D9]'
+                      isActive ? 'text-[#BFFF00]' : 'text-[#8B949E] group-hover:text-[#C9D1D9]'
                     )}>
                       {sport.name}
                     </span>
-                    {sport.liveEventCount > 0 && (
-                      <span className="text-[9px] font-bold text-[#EF4444] -mt-0.5 flex items-center gap-0.5">
-                        <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
-                        {sport.liveEventCount}
-                      </span>
-                    )}
                   </button>
                 );
               })}
@@ -1306,29 +1259,13 @@ export default function HomePage() {
       </div>
 
       {/* ================================================================== */}
-      {/* COMPETITION TABS (with scroll arrows)                              */}
+      {/* SECTION 3: COMPETITION TABS (horizontal scroll pills)              */}
       {/* ================================================================== */}
-      <div className="mt-2 mb-3 relative">
-        {/* Left scroll arrow */}
-        <button
-          onClick={scrollCompLeft}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[#0D0D1A]/90 border border-[#21262D] flex items-center justify-center text-[#8B949E] hover:text-[#E6EDF3] hover:border-[#484F58] transition-colors shadow-lg"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
-        {/* Right scroll arrow */}
-        <button
-          onClick={scrollCompRight}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[#0D0D1A]/90 border border-[#21262D] flex items-center justify-center text-[#8B949E] hover:text-[#E6EDF3] hover:border-[#484F58] transition-colors shadow-lg"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-
+      <div className="mb-2">
         <div
           ref={compScrollRef}
-          className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 px-8"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-3 py-1"
+          style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {isLoading || isLoadingSportEvents ? (
             Array.from({ length: 6 }).map((_, i) => <CompetitionPillSkeleton key={i} />)
@@ -1338,155 +1275,116 @@ export default function HomePage() {
               <button
                 onClick={() => setSelectedCompetitionId(null)}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 border',
+                  'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0',
                   selectedCompetitionId === null
-                    ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/40'
-                    : 'bg-transparent text-[#8B949E] border-[#21262D] hover:border-[#484F58] hover:text-[#C9D1D9]'
+                    ? 'text-[#BFFF00] bg-transparent'
+                    : 'text-[#6B7280] bg-transparent hover:text-[#C9D1D9]'
                 )}
               >
                 <Star className="w-3 h-3" />
                 Popular
+                {selectedCompetitionId === null && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#BFFF00] rounded-full" />
+                )}
               </button>
 
               {competitionTabs.map((comp) => {
-                const flag = countryCodeToFlag(comp.country);
                 const isActive = selectedCompetitionId === comp.id;
                 return (
                   <button
                     key={comp.id}
                     onClick={() => setSelectedCompetitionId(isActive ? null : comp.id)}
                     className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 border',
+                      'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 relative',
                       isActive
-                        ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/40'
-                        : 'bg-transparent text-[#8B949E] border-[#21262D] hover:border-[#484F58] hover:text-[#C9D1D9]'
+                        ? 'text-[#BFFF00]'
+                        : 'text-[#6B7280] hover:text-[#C9D1D9]'
                     )}
                   >
                     {comp.logo ? (
-                      <img src={comp.logo} alt="" className="w-4 h-4 object-contain rounded-sm" />
-                    ) : flag ? (
-                      <span className="text-xs leading-none">{flag}</span>
+                      <img src={comp.logo} alt="" className="w-4 h-4 object-contain rounded-full" />
                     ) : null}
-                    <span className="truncate max-w-[120px]">{comp.name}</span>
-                    {comp.eventCount > 0 && (
-                      <span className={cn(
-                        'text-[10px] font-semibold px-1 rounded-sm',
-                        isActive ? 'text-[#10B981]/70' : 'text-[#484F58]'
-                      )}>
-                        {comp.eventCount}
-                      </span>
+                    <span className="truncate max-w-[140px]">{comp.name}</span>
+                    {isActive && (
+                      <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#BFFF00] rounded-full" />
                     )}
                   </button>
                 );
               })}
 
               {competitionTabs.length === 0 && !isLoadingSportEvents && (
-                <span className="text-[11px] text-[#484F58] px-2 italic">No competitions available</span>
+                <span className="text-[11px] text-[#484F58] px-2 italic">No competitions</span>
               )}
             </>
           )}
         </div>
+        {/* Subtle separator line */}
+        <div className="h-px bg-[#1A1A2E] mx-3" />
       </div>
 
       {/* ================================================================== */}
-      {/* MAIN LAYOUT: Content + Right Sidebar                               */}
+      {/* Live Score Ticker                                                   */}
       {/* ================================================================== */}
-      <div className="flex gap-4">
-
-        {/* ================================================================ */}
-        {/* MAIN CONTENT AREA                                                 */}
-        {/* ================================================================ */}
-        <div className="flex-1 min-w-0 space-y-2.5">
-          {/* Live banner (if viewing all sports) */}
-          {totalLive > 0 && selectedSportSlug === 'all' && !isLoading && (
-            <Link
-              href="/sports/live"
-              className="flex items-center gap-2.5 px-3 py-2.5 bg-gradient-to-r from-[#EF4444]/10 to-transparent border border-[#EF4444]/20 rounded-lg hover:from-[#EF4444]/15 transition-all group"
-            >
-              <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#EF4444]" />
-              </span>
-              <span className="text-[13px] font-bold text-[#EF4444]">{totalLive} Live</span>
-              <span className="text-[12px] text-[#8B949E]">events happening now</span>
-              <ChevronRight className="w-4 h-4 text-[#EF4444]/50 ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-            </Link>
-          )}
-
-          {/* Live Score Ticker — horizontal scrolling bar of live matches */}
-          {!isLoading && tickerEvents.length > 0 && (
-            <LiveScoreTicker
-              events={tickerEvents}
-              cardVariant="compact"
-              className="rounded-lg border border-[#21262D] overflow-hidden"
-            />
-          )}
-
-          {/* Event groups */}
-          {isLoading || isLoadingSportEvents ? (
-            Array.from({ length: 3 }).map((_, i) => <EventGroupSkeleton key={i} />)
-          ) : groupedEvents.length > 0 ? (
-            <>
-              {groupedEvents.map((group, idx) => (
-                <React.Fragment key={`${group.competitionName}-${idx}`}>
-                  <CompetitionGroup
-                    name={group.competitionName}
-                    country={group.country}
-                    logo={group.competitionLogo}
-                    sportSlug={group.sportSlug}
-                    sportName={group.sportName}
-                    events={group.events}
-                  />
-                  {/* Insert Pulse banner after 2nd competition group */}
-                  {idx === 1 && groupedEvents.length > 2 && (
-                    <Link
-                      href="/sports/live"
-                      className="flex items-center gap-3 px-3 py-3 bg-[#161B22] border border-[#21262D] rounded-lg overflow-hidden hover:bg-[#1C2128]/60 transition-colors group relative"
-                    >
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#8B5CF6] to-[#6D28D9]" />
-                      <div className="pl-2 flex-1 min-w-0">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#8B5CF6]">CryptoBet Pulse</div>
-                        <div className="text-[13px] font-semibold text-[#E6EDF3] truncate">
-                          {selectedSportSlug !== 'all' && selectedSport
-                            ? `${selectedSport.name.toUpperCase()} -- `
-                            : ''}SEE WHO&apos;S WINNING
-                        </div>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-[#8B5CF6] flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-                  )}
-                </React.Fragment>
-              ))}
-            </>
-          ) : (
-            /* Empty state */
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#161B22] border border-[#21262D] flex items-center justify-center mb-4">
-                <Trophy className="w-8 h-8 text-[#21262D]" />
-              </div>
-              <h3 className="text-base font-semibold text-[#E6EDF3] mb-1">No events available</h3>
-              <p className="text-[13px] text-[#8B949E] max-w-xs">
-                {selectedSportSlug === 'all'
-                  ? 'There are no featured events at the moment. Check back soon.'
-                  : `No events found for ${selectedSport?.name || selectedSportSlug}. Try selecting a different sport.`}
-              </p>
-            </div>
-          )}
+      {!isLoading && tickerEvents.length > 0 && (
+        <div className="mb-2">
+          <LiveScoreTicker
+            events={tickerEvents}
+            cardVariant="compact"
+            className="rounded-none border-0 overflow-hidden"
+          />
         </div>
+      )}
 
-        {/* ================================================================ */}
-        {/* RIGHT SIDEBAR WIDGETS (desktop only)                              */}
-        {/* ================================================================ */}
-        <aside className="hidden xl:flex flex-col w-[280px] flex-shrink-0 gap-3">
-          {/* Sharpest Bettors */}
-          <SharpestBettorsWidget activeSportName={selectedSport?.name || 'Sports'} />
+      {/* ================================================================== */}
+      {/* SECTION 4+: COMPETITION EVENTS                                     */}
+      {/* ================================================================== */}
+      <div className="space-y-0">
+        {isLoading || isLoadingSportEvents ? (
+          <div className="space-y-2 px-0">
+            {Array.from({ length: 3 }).map((_, i) => <EventGroupSkeleton key={i} />)}
+          </div>
+        ) : groupedEvents.length > 0 ? (
+          <>
+            {groupedEvents.map((group, idx) => (
+              <React.Fragment key={`${group.competitionName}-${idx}`}>
+                <CompetitionGroup
+                  name={group.competitionName}
+                  country={group.country}
+                  logo={group.competitionLogo}
+                  sportSlug={group.sportSlug}
+                  sportName={group.sportName}
+                  events={group.events}
+                />
 
-          {/* Bet Builder Promo */}
-          <BetBuilderPromo />
+                {/* Insert Bet Builder banner after 2nd group */}
+                {idx === 1 && groupedEvents.length > 2 && (
+                  <BetBuilderBanner />
+                )}
 
-          {/* In-play widget */}
-          <InPlaySidebarWidget liveEvents={liveEvents} />
-        </aside>
+                {/* Thin separator between groups */}
+                {idx < groupedEvents.length - 1 && idx !== 1 && (
+                  <div className="h-1.5 bg-[#0D0D1A]" />
+                )}
+                {idx === 1 && groupedEvents.length > 2 && (
+                  <div className="h-1.5 bg-[#0D0D1A]" />
+                )}
+              </React.Fragment>
+            ))}
+          </>
+        ) : (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+            <div className="w-16 h-16 rounded-full bg-[#1A1A2E] flex items-center justify-center mb-4">
+              <Trophy className="w-8 h-8 text-[#2A2A40]" />
+            </div>
+            <h3 className="text-base font-semibold text-white mb-1">No events available</h3>
+            <p className="text-[13px] text-[#6B7280] max-w-xs">
+              {selectedSportSlug === 'all'
+                ? 'There are no featured events at the moment. Check back soon.'
+                : `No events found for ${selectedSport?.name || selectedSportSlug}. Try selecting a different sport.`}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

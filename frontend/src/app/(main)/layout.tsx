@@ -28,7 +28,7 @@ export default function MainLayout({
 
         {/* Main Content */}
         <main className="flex-1 min-w-0 flex flex-col">
-          <div className="flex-1 p-4 lg:p-6 pb-16 lg:pb-6">{children}</div>
+          <div className="flex-1 p-4 lg:p-6 pb-4 lg:pb-6">{children}</div>
           <Footer />
         </main>
 
