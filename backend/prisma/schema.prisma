@@ -1,0 +1,1497 @@
+// ============================================================================
+// CryptoBet Platform - Prisma Schema
+// PostgreSQL provider | All money fields: Decimal(18,8) | IDs: cuid()
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum KycLevel {
+  UNVERIFIED
+  BASIC
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum VipTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+  ELITE
+  BLACK_DIAMOND
+  BLUE_DIAMOND
+}
+
+enum Theme {
+  DARK
+  LIGHT
+  CLASSIC
+}
+
+enum OddsFormat {
+  DECIMAL
+  FRACTIONAL
+  AMERICAN
+}
+
+enum CurrencyType {
+  CRYPTO
+  FIAT
+  STABLECOIN
+}
+
+enum TxType {
+  DEPOSIT
+  WITHDRAWAL
+  BET
+  WIN
+  BONUS
+  RAKEBACK
+  REWARD
+  REFERRAL
+  ADJUSTMENT
+  SWAP
+}
+
+enum TxStatus {
+  PENDING
+  CONFIRMING
+  COMPLETED
+  FAILED
+  CANCELLED
+  APPROVED
+  REJECTED
+}
+
+enum AdminWalletType {
+  HOT
+  COLD
+  MULTISIG
+}
+
+enum EventStatus {
+  UPCOMING
+  LIVE
+  ENDED
+  CANCELLED
+  POSTPONED
+}
+
+enum MarketType {
+  MONEYLINE
+  SPREAD
+  TOTAL
+  PROP
+  OUTRIGHT
+}
+
+enum MarketStatus {
+  OPEN
+  SUSPENDED
+  SETTLED
+  CANCELLED
+  VOIDED
+}
+
+enum SelectionStatus {
+  ACTIVE
+  SUSPENDED
+  WON
+  LOST
+  VOID
+  PUSH
+}
+
+enum SelectionResult {
+  WIN
+  LOSE
+  VOID
+  PUSH
+  HALF_WIN
+  HALF_LOSE
+}
+
+enum BetType {
+  SINGLE
+  PARLAY
+  SYSTEM
+}
+
+enum BetStatus {
+  PENDING
+  ACCEPTED
+  WON
+  LOST
+  VOID
+  CASHOUT
+  PARTIALLY_SETTLED
+}
+
+enum BetLegStatus {
+  PENDING
+  WON
+  LOST
+  VOID
+  PUSH
+  HALF_WIN
+  HALF_LOSE
+}
+
+enum GameType {
+  SLOT
+  TABLE
+  LIVE
+  CRASH
+  DICE
+  COINFLIP
+  MINES
+  PLINKO
+  ROULETTE
+  BLACKJACK
+  HILO
+  WHEEL
+  TOWER
+  LIMBO
+  KENO
+  VIDEO_POKER
+  BACCARAT
+  VIRTUAL
+}
+
+enum NotifType {
+  BET_WON
+  BET_LOST
+  BET_SETTLED
+  DEPOSIT_CONFIRMED
+  WITHDRAWAL_APPROVED
+  WITHDRAWAL_REJECTED
+  VIP_LEVEL_UP
+  PROMO_AVAILABLE
+  REWARD_AVAILABLE
+  SYSTEM
+  WELCOME
+}
+
+enum KycDocType {
+  PASSPORT
+  DRIVERS_LICENSE
+  NATIONAL_ID
+  PROOF_OF_ADDRESS
+  SELFIE
+}
+
+enum KycDocStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RewardType {
+  RAKEBACK
+  DAILY
+  WEEKLY
+  MONTHLY
+  LEVEL_UP
+  TURBO
+  WELCOME
+  CASH_VAULT
+  REFERRAL
+}
+
+enum RewardStatus {
+  PENDING
+  CLAIMABLE
+  CLAIMED
+  EXPIRED
+}
+
+enum PromoType {
+  DEPOSIT_BONUS
+  FREE_BET
+  ODDS_BOOST
+  CASHBACK
+  TOURNAMENT
+  CUSTOM
+}
+
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ChatStatus {
+  OPEN
+  CLOSED
+  WAITING
+}
+
+enum OddsProviderType {
+  REST
+  WEBSOCKET
+}
+
+// ============================================================================
+// CORE - USERS & AUTH
+// ============================================================================
+
+model User {
+  id                    String      @id @default(cuid())
+  email                 String      @unique
+  username              String      @unique
+  passwordHash          String
+  avatar                String?
+  dateOfBirth           DateTime?
+  role                  UserRole    @default(USER)
+  kycLevel              KycLevel    @default(UNVERIFIED)
+  vipTier               VipTier     @default(BRONZE)
+  totalWagered          Decimal     @default(0) @db.Decimal(18, 8)
+  twoFactorSecret       String?
+  twoFactorEnabled      Boolean     @default(false)
+  backupCodes           Json?
+  preferredCurrency     String      @default("USDT")
+  preferredOddsFormat   OddsFormat  @default(DECIMAL)
+  theme                 Theme       @default(DARK)
+  language              String      @default("en")
+  isActive              Boolean     @default(true)
+  isBanned              Boolean     @default(false)
+  banReason             String?
+  depositLimit          Json?
+  lossLimit             Json?
+  selfExcludedUntil     DateTime?
+  timeoutUntil          DateTime?
+  sessionTimeout        Int?
+  realityCheckInterval  Int?
+  coolingOffUntil       DateTime?
+  referralCode          String      @unique @default(cuid())
+  referredBy            String?
+  googleId              String?     @unique
+  githubId              String?     @unique
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
+  createdAt             DateTime    @default(now()) @db.Timestamptz
+  updatedAt             DateTime    @updatedAt @db.Timestamptz
+
+  // Relations
+  sessions              Session[]
+  wallets               Wallet[]
+  bets                  Bet[]
+  casinoSessions        CasinoSession[]
+  provablyFairSeeds     ProvablyFairSeed[]
+  casinoRounds          CasinoRound[]
+  crashBets             CrashBet[]
+  userSeeds             UserSeed[]
+  rewards               Reward[]
+  turboSessions         TurboSession[]
+  welcomePackage        WelcomePackage?
+  promoClaims           PromoClaim[]
+  referralsMade         Referral[]         @relation("Referrer")
+  referralsReceived     Referral[]         @relation("Referred")
+  notifications         Notification[]
+  kycDocuments          KycDocument[]
+  apiKeys               ApiKey[]
+  auditLogs             AuditLog[]         @relation("UserAuditLogs")
+  adminAuditLogs        AuditLog[]         @relation("AdminAuditLogs")
+  riskProfile           UserRiskProfile?
+  adminNotes            AdminUserNote[]    @relation("UserNotes")
+  adminNotesWritten     AdminUserNote[]    @relation("AdminNotes")
+  blogPosts             BlogPost[]
+  courseProgress         UserCourseProgress[]
+  affiliate             Affiliate?         @relation("AffiliateUser")
+  affiliatePlayer       AffiliatePlayer?   @relation("AffiliatePlayerUser")
+  chatRooms             ChatRoom[]         @relation("ChatRoomUser")
+  assignedChats         ChatRoom[]         @relation("ChatRoomAssigned")
+  chatMessages          ChatMessage[]
+  alertsRelated         AdminAlert[]       @relation("AlertUser")
+
+  @@index([email])
+  @@index([username])
+  @@index([vipTier])
+  @@index([kycLevel])
+  @@index([referralCode])
+  @@index([referredBy])
+  @@index([googleId])
+  @@index([githubId])
+  @@index([createdAt])
+  @@index([isActive, isBanned])
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime @db.Timestamptz
+  isRevoked    Boolean  @default(false)
+  createdAt    DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([refreshToken])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// ============================================================================
+// PAYMENT & WALLETS
+// ============================================================================
+
+model Currency {
+  id                 String       @id @default(cuid())
+  symbol             String       @unique
+  name               String
+  type               CurrencyType
+  decimals           Int
+  icon               String?
+  isActive           Boolean      @default(true)
+  isDepositEnabled   Boolean      @default(true)
+  isWithdrawEnabled  Boolean      @default(true)
+  minWithdrawal      Decimal      @db.Decimal(18, 8)
+  withdrawalFee      Decimal      @db.Decimal(18, 8)
+  exchangeRateUsd    Decimal      @db.Decimal(18, 8)
+  sortOrder          Int          @default(0)
+  createdAt          DateTime     @default(now()) @db.Timestamptz
+
+  // Relations
+  networks CurrencyNetwork[]
+  wallets  Wallet[]
+
+  @@index([symbol])
+  @@index([type])
+  @@index([isActive])
+  @@map("currencies")
+}
+
+model CurrencyNetwork {
+  id              String   @id @default(cuid())
+  currencyId      String
+  networkName     String
+  networkLabel    String
+  contractAddress String?
+  confirmations   Int      @default(1)
+  isActive        Boolean  @default(true)
+  estimatedTime   String?
+  rpcUrl          String?
+  explorerUrl     String?
+
+  // Relations
+  currency Currency @relation(fields: [currencyId], references: [id], onDelete: Cascade)
+
+  @@index([currencyId])
+  @@index([networkName])
+  @@map("currency_networks")
+}
+
+model Wallet {
+  id             String   @id @default(cuid())
+  userId         String
+  currencyId     String
+  balance        Decimal  @default(0) @db.Decimal(18, 8)
+  lockedBalance  Decimal  @default(0) @db.Decimal(18, 8)
+  bonusBalance   Decimal  @default(0) @db.Decimal(18, 8)
+  depositAddress String?
+  networkId      String?
+  createdAt      DateTime @default(now()) @db.Timestamptz
+  updatedAt      DateTime @updatedAt @db.Timestamptz
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency     Currency      @relation(fields: [currencyId], references: [id])
+  transactions Transaction[]
+
+  @@unique([userId, currencyId])
+  @@index([userId])
+  @@index([currencyId])
+  @@map("wallets")
+}
+
+model Transaction {
+  id             String   @id @default(cuid())
+  walletId       String
+  type           TxType
+  amount         Decimal  @db.Decimal(18, 8)
+  fee            Decimal  @default(0) @db.Decimal(18, 8)
+  txHash         String?
+  fromAddress    String?
+  toAddress      String?
+  networkId      String?
+  status         TxStatus @default(PENDING)
+  confirmations  Int      @default(0)
+  approvedBy     String?
+  rejectedReason String?
+  metadata       Json?
+  createdAt      DateTime @default(now()) @db.Timestamptz
+  updatedAt      DateTime @updatedAt @db.Timestamptz
+
+  // Relations
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([type])
+  @@index([status])
+  @@index([txHash])
+  @@index([createdAt])
+  @@index([walletId, type])
+  @@index([walletId, status])
+  @@map("transactions")
+}
+
+model AdminWallet {
+  id             String          @id @default(cuid())
+  label          String
+  type           AdminWalletType
+  currencySymbol String
+  address        String
+  network        String
+  balance        Decimal         @default(0) @db.Decimal(18, 8)
+  minThreshold   Decimal?        @db.Decimal(18, 8)
+  maxThreshold   Decimal?        @db.Decimal(18, 8)
+  isActive       Boolean         @default(true)
+  lastSyncAt     DateTime?       @db.Timestamptz
+  createdAt      DateTime        @default(now()) @db.Timestamptz
+
+  @@index([type])
+  @@index([currencySymbol])
+  @@index([isActive])
+  @@map("admin_wallets")
+}
+
+model FiatOnRampProvider {
+  id              String   @id @default(cuid())
+  name            String
+  apiKey          String
+  secretKey       String?
+  webhookSecret   String?
+  isActive        Boolean  @default(true)
+  supportedFiats  Json
+  supportedCryptos Json
+  dailyLimit      Decimal? @db.Decimal(18, 8)
+  monthlyLimit    Decimal? @db.Decimal(18, 8)
+  feePercent      Decimal? @db.Decimal(18, 8)
+  config          Json?
+
+  @@map("fiat_on_ramp_providers")
+}
+
+// ============================================================================
+// SPORTSBOOK
+// ============================================================================
+
+model Sport {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  slug         String        @unique
+  icon         String?
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  eventCount   Int           @default(0)
+
+  // Relations
+  competitions Competition[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("sports")
+}
+
+model Competition {
+  id         String  @id @default(cuid())
+  sportId    String
+  name       String
+  country    String?
+  slug       String
+  logo       String?
+  externalId String?
+  isActive   Boolean @default(true)
+
+  // Relations
+  sport  Sport   @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@unique([sportId, slug])
+  @@index([sportId])
+  @@index([isActive])
+  @@index([externalId])
+  @@map("competitions")
+}
+
+model Event {
+  id            String      @id @default(cuid())
+  externalId    String?
+  competitionId String
+  name          String
+  homeTeam      String?
+  awayTeam      String?
+  homeTeamLogo  String?
+  awayTeamLogo  String?
+  startTime     DateTime    @db.Timestamptz
+  status        EventStatus @default(UPCOMING)
+  scores        Json?
+  metadata      Json?
+  isLive        Boolean     @default(false)
+  isFeatured    Boolean     @default(false)
+  streamUrl     String?
+  createdAt     DateTime    @default(now()) @db.Timestamptz
+  updatedAt     DateTime    @updatedAt @db.Timestamptz
+
+  // Relations
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  markets     Market[]
+
+  @@index([competitionId])
+  @@index([status])
+  @@index([startTime])
+  @@index([isLive])
+  @@index([isFeatured])
+  @@index([externalId])
+  @@index([competitionId, status])
+  @@index([startTime, status])
+  @@map("events")
+}
+
+model Market {
+  id        String       @id @default(cuid())
+  eventId   String
+  name      String
+  marketKey String
+  type      MarketType
+  period    String       @default("FT")
+  status    MarketStatus @default(OPEN)
+  sortOrder Int          @default(0)
+
+  // Relations
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  selections Selection[]
+
+  @@index([eventId])
+  @@index([type])
+  @@index([status])
+  @@index([marketKey])
+  @@index([eventId, status])
+  @@map("markets")
+}
+
+model Selection {
+  id          String           @id @default(cuid())
+  marketId    String
+  name        String
+  outcome     String
+  odds        Decimal          @db.Decimal(18, 8)
+  probability Decimal?         @db.Decimal(18, 8)
+  maxStake    Decimal?         @db.Decimal(18, 8)
+  handicap    Decimal?         @db.Decimal(18, 8)
+  params      String?
+  status      SelectionStatus  @default(ACTIVE)
+  result      SelectionResult?
+
+  // Relations
+  market   Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  betLegs  BetLeg[]
+
+  @@index([marketId])
+  @@index([status])
+  @@index([marketId, status])
+  @@map("selections")
+}
+
+// ============================================================================
+// BETTING
+// ============================================================================
+
+model Bet {
+  id                  String    @id @default(cuid())
+  userId              String
+  referenceId         String    @unique @default(uuid())
+  type                BetType
+  stake               Decimal   @db.Decimal(18, 8)
+  currencySymbol      String
+  potentialWin        Decimal   @db.Decimal(18, 8)
+  actualWin           Decimal?  @db.Decimal(18, 8)
+  cashoutAmount       Decimal?  @db.Decimal(18, 8)
+  cashoutAt           DateTime? @db.Timestamptz
+  odds                Decimal   @db.Decimal(18, 8)
+  status              BetStatus @default(PENDING)
+  settledAt           DateTime? @db.Timestamptz
+  isLive              Boolean   @default(false)
+  isCashoutAvailable  Boolean   @default(false)
+  shareCode           String?
+  placedVia           String    @default("WEB")
+  ipAddress           String?
+  createdAt           DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  legs          BetLeg[]
+  alertsRelated AdminAlert[]  @relation("AlertBet")
+
+  @@index([userId])
+  @@index([referenceId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([isLive])
+  @@index([shareCode])
+  @@map("bets")
+}
+
+model BetLeg {
+  id               String       @id @default(cuid())
+  betId            String
+  selectionId      String
+  eventName        String?
+  marketName       String?
+  selectionName    String?
+  oddsAtPlacement  Decimal      @db.Decimal(18, 8)
+  status           BetLegStatus @default(PENDING)
+
+  // Relations
+  bet       Bet       @relation(fields: [betId], references: [id], onDelete: Cascade)
+  selection Selection @relation(fields: [selectionId], references: [id])
+
+  @@index([betId])
+  @@index([selectionId])
+  @@index([status])
+  @@map("bet_legs")
+}
+
+// ============================================================================
+// CASINO
+// ============================================================================
+
+model CasinoGame {
+  id              String    @id @default(cuid())
+  providerId      String?
+  name            String
+  slug            String    @unique
+  type            GameType
+  category        String?
+  rtp             Decimal?  @db.Decimal(18, 8)
+  volatility      String?
+  houseEdge       Decimal?  @db.Decimal(18, 8)
+  thumbnail       String?
+  description     String?
+  tags            String[]
+  isActive        Boolean   @default(true)
+  isDemoAvailable Boolean   @default(true)
+  isProvablyFair  Boolean   @default(false)
+  launchUrl       String?
+  sortOrder       Int       @default(0)
+  playCount       Int       @default(0)
+
+  // Relations
+  provider GameProvider?  @relation(fields: [providerId], references: [id])
+  sessions CasinoSession[]
+
+  @@index([slug])
+  @@index([type])
+  @@index([category])
+  @@index([providerId])
+  @@index([isActive])
+  @@index([type, isActive])
+  @@index([playCount])
+  @@map("casino_games")
+}
+
+model GameProvider {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  slug     String  @unique
+  logo     String?
+  apiUrl   String?
+  apiKey   String?
+  isActive Boolean @default(true)
+
+  // Relations
+  games CasinoGame[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("game_providers")
+}
+
+model CasinoSession {
+  id             String    @id @default(cuid())
+  userId         String
+  gameId         String
+  currency       String
+  totalBet       Decimal   @default(0) @db.Decimal(18, 8)
+  totalWin       Decimal   @default(0) @db.Decimal(18, 8)
+  rounds         Int       @default(0)
+  serverSeed     String?
+  clientSeed     String?
+  nonce          Int?
+  startedAt      DateTime  @default(now()) @db.Timestamptz
+  endedAt        DateTime? @db.Timestamptz
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game         CasinoGame    @relation(fields: [gameId], references: [id])
+  casinoRounds CasinoRound[]
+
+  @@index([userId])
+  @@index([gameId])
+  @@index([userId, gameId])
+  @@index([startedAt])
+  @@map("casino_sessions")
+}
+
+model ProvablyFairSeed {
+  id             String    @id @default(cuid())
+  userId         String
+  serverSeed     String
+  serverSeedHash String
+  clientSeed     String
+  nonce          Int       @default(0)
+  isRevealed     Boolean   @default(false)
+  revealedAt     DateTime? @db.Timestamptz
+  createdAt      DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([serverSeedHash])
+  @@map("provably_fair_seeds")
+}
+
+model CasinoRound {
+  id             String   @id @default(cuid())
+  sessionId      String?
+  userId         String
+  gameSlug       String
+  betAmount      Decimal  @db.Decimal(18, 8)
+  payout         Decimal  @db.Decimal(18, 8)
+  multiplier     Decimal  @db.Decimal(18, 8)
+  result         Json
+  serverSeedHash String
+  clientSeed     String
+  nonce          Int
+  isWin          Boolean
+  createdAt      DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  session CasinoSession? @relation(fields: [sessionId], references: [id])
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([gameSlug])
+  @@index([createdAt])
+  @@index([userId, gameSlug])
+  @@map("casino_rounds")
+}
+
+model CrashRound {
+  id             String    @id @default(cuid())
+  crashPoint     Decimal   @db.Decimal(18, 8)
+  serverSeed     String
+  serverSeedHash String
+  clientSeed     String
+  nonce          Int
+  status         String    @default("WAITING")
+  startedAt      DateTime? @db.Timestamptz
+  crashedAt      DateTime? @db.Timestamptz
+  createdAt      DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  bets CrashBet[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("crash_rounds")
+}
+
+model CrashBet {
+  id          String   @id @default(cuid())
+  roundId     String
+  userId      String
+  amount      Decimal  @db.Decimal(18, 8)
+  autoCashout Decimal? @db.Decimal(18, 8)
+  cashoutAt   Decimal? @db.Decimal(18, 8)
+  payout      Decimal? @db.Decimal(18, 8)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  round CrashRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roundId])
+  @@index([userId])
+  @@index([roundId, userId])
+  @@map("crash_bets")
+}
+
+model JackpotPool {
+  id            String    @id @default(cuid())
+  tier          String
+  amount        Decimal   @default(0) @db.Decimal(18, 8)
+  seedAmount    Decimal   @db.Decimal(18, 8)
+  lastWonAt     DateTime? @db.Timestamptz
+  lastWonBy     String?
+  lastWonAmount Decimal?  @db.Decimal(18, 8)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz
+
+  @@index([tier])
+  @@map("jackpot_pools")
+}
+
+model CasinoGameConfig {
+  id                  String  @id @default(cuid())
+  gameSlug            String  @unique
+  houseEdge           Decimal @db.Decimal(18, 8)
+  minBet              Decimal @db.Decimal(18, 8)
+  maxBet              Decimal @db.Decimal(18, 8)
+  isActive            Boolean @default(true)
+  jackpotContribution Decimal @default(0) @db.Decimal(18, 8)
+  config              Json?
+  updatedAt           DateTime @updatedAt @db.Timestamptz
+
+  @@index([gameSlug])
+  @@index([isActive])
+  @@map("casino_game_configs")
+}
+
+model UserSeed {
+  id         String   @id @default(cuid())
+  userId     String
+  gameSlug   String
+  clientSeed String
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, gameSlug])
+  @@map("user_seeds")
+}
+
+// ============================================================================
+// ODDS & RISK
+// ============================================================================
+
+model OddsProvider {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  slug            String           @unique
+  type            OddsProviderType
+  apiKey          String?
+  apiUrl          String?
+  priority        Int              @default(1)
+  isActive        Boolean          @default(true)
+  rateLimitPerMin Int?
+  quotaUsed       Int              @default(0)
+  quotaLimit      Int?
+  lastSyncAt      DateTime?        @db.Timestamptz
+  config          Json?
+  createdAt       DateTime         @default(now()) @db.Timestamptz
+
+  // Relations
+  syncLogs OddsSyncLog[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("odds_providers")
+}
+
+model OddsSyncLog {
+  id           String   @id @default(cuid())
+  providerId   String
+  sportKey     String?
+  eventsCount  Int      @default(0)
+  marketsCount Int      @default(0)
+  status       String   @default("SUCCESS")
+  error        String?
+  duration     Int?
+  createdAt    DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  provider OddsProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([createdAt])
+  @@index([status])
+  @@map("odds_sync_logs")
+}
+
+model MarketLiability {
+  id              String   @id @default(cuid())
+  marketId        String
+  selectionId     String?
+  totalStake      Decimal  @default(0) @db.Decimal(18, 8)
+  potentialPayout Decimal  @default(0) @db.Decimal(18, 8)
+  netExposure     Decimal  @default(0) @db.Decimal(18, 8)
+  updatedAt       DateTime @updatedAt @db.Timestamptz
+
+  @@index([marketId])
+  @@index([selectionId])
+  @@index([marketId, selectionId])
+  @@map("market_liabilities")
+}
+
+model UserRiskProfile {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  riskLevel    String    @default("NORMAL")
+  totalBets    Int       @default(0)
+  totalWon     Decimal   @default(0) @db.Decimal(18, 8)
+  totalLost    Decimal   @default(0) @db.Decimal(18, 8)
+  winRate      Decimal   @default(0) @db.Decimal(18, 8)
+  avgStake     Decimal   @default(0) @db.Decimal(18, 8)
+  maxStake     Decimal   @default(0) @db.Decimal(18, 8)
+  flags        Json?
+  lastReviewAt DateTime? @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([riskLevel])
+  @@map("user_risk_profiles")
+}
+
+model AdminAlert {
+  id            String    @id @default(cuid())
+  type          String
+  severity      String    @default("LOW")
+  title         String
+  message       String
+  relatedUserId String?
+  relatedBetId  String?
+  isResolved    Boolean   @default(false)
+  resolvedBy    String?
+  resolvedAt    DateTime? @db.Timestamptz
+  createdAt     DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  relatedUser User? @relation("AlertUser", fields: [relatedUserId], references: [id])
+  relatedBet  Bet?  @relation("AlertBet", fields: [relatedBetId], references: [id])
+
+  @@index([type])
+  @@index([severity])
+  @@index([isResolved])
+  @@index([relatedUserId])
+  @@index([relatedBetId])
+  @@index([createdAt])
+  @@map("admin_alerts")
+}
+
+model AdminUserNote {
+  id        String   @id @default(cuid())
+  userId    String
+  adminId   String
+  note      String
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  user  User @relation("UserNotes", fields: [userId], references: [id], onDelete: Cascade)
+  admin User @relation("AdminNotes", fields: [adminId], references: [id])
+
+  @@index([userId])
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("admin_user_notes")
+}
+
+// ============================================================================
+// VIP & REWARDS
+// ============================================================================
+
+model VipTierConfig {
+  id                   String  @id @default(cuid())
+  tier                 VipTier @unique
+  name                 String
+  minWagered           Decimal @db.Decimal(18, 8)
+  rakebackPercent      Decimal @db.Decimal(18, 8)
+  turboBoostPercent    Decimal @db.Decimal(18, 8)
+  turboDurationMin     Int
+  dailyBonusMax        Decimal @db.Decimal(18, 8)
+  weeklyBonusMax       Decimal? @db.Decimal(18, 8)
+  monthlyBonusMax      Decimal? @db.Decimal(18, 8)
+  levelUpReward        Decimal @db.Decimal(18, 8)
+  calendarSplitPercent Decimal @db.Decimal(18, 8)
+  maxLevelUpReward     Decimal? @db.Decimal(18, 8)
+  sortOrder            Int
+  benefits             Json
+
+  @@index([tier])
+  @@index([sortOrder])
+  @@map("vip_tier_configs")
+}
+
+model Reward {
+  id           String       @id @default(cuid())
+  userId       String
+  type         RewardType
+  amount       Decimal      @db.Decimal(18, 8)
+  currency     String       @default("USDT")
+  source       String?
+  status       RewardStatus @default(PENDING)
+  claimableAt  DateTime?    @db.Timestamptz
+  expiresAt    DateTime?    @db.Timestamptz
+  claimedAt    DateTime?    @db.Timestamptz
+  calendarDay  Int?
+  calendarSlot Int?
+  createdAt    DateTime     @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([userId, type])
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@map("rewards")
+}
+
+model TurboSession {
+  id           String   @id @default(cuid())
+  userId       String
+  boostPercent Decimal  @db.Decimal(18, 8)
+  startedAt    DateTime @default(now()) @db.Timestamptz
+  endsAt       DateTime @db.Timestamptz
+  isActive     Boolean  @default(true)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([endsAt])
+  @@map("turbo_sessions")
+}
+
+model WelcomePackage {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  activatedAt       DateTime @default(now()) @db.Timestamptz
+  expiresAt         DateTime @db.Timestamptz
+  totalEarned       Decimal  @default(0) @db.Decimal(18, 8)
+  maxReward         Decimal  @default(2500) @db.Decimal(18, 8)
+  rakebackPercent   Decimal  @default(10) @db.Decimal(18, 8)
+  dailyDropsClaimed Int      @default(0)
+  cashVaultAmount   Decimal  @default(0) @db.Decimal(18, 8)
+  cashVaultClaimed  Boolean  @default(false)
+  isActive          Boolean  @default(true)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("welcome_packages")
+}
+
+model Promotion {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  type        PromoType
+  code        String?   @unique
+  image       String?
+  conditions  Json
+  reward      Json
+  startDate   DateTime  @db.Timestamptz
+  endDate     DateTime  @db.Timestamptz
+  isActive    Boolean   @default(true)
+  maxClaims   Int?
+  claimCount  Int       @default(0)
+  createdBy   String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  claims PromoClaim[]
+
+  @@index([type])
+  @@index([code])
+  @@index([isActive])
+  @@index([startDate, endDate])
+  @@map("promotions")
+}
+
+model PromoClaim {
+  id          String   @id @default(cuid())
+  userId      String
+  promotionId String
+  amount      Decimal? @db.Decimal(18, 8)
+  status      String   @default("CLAIMED")
+  claimedAt   DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([promotionId])
+  @@index([userId, promotionId])
+  @@map("promo_claims")
+}
+
+model Referral {
+  id              String         @id @default(cuid())
+  referrerId      String
+  referredId      String
+  bonusAmount     Decimal        @default(0) @db.Decimal(18, 8)
+  referredWagered Decimal        @default(0) @db.Decimal(18, 8)
+  status          ReferralStatus @default(PENDING)
+  qualifiedAt     DateTime?      @db.Timestamptz
+  createdAt       DateTime       @default(now()) @db.Timestamptz
+
+  // Relations
+  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred User @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([status])
+  @@index([referrerId, status])
+  @@map("referrals")
+}
+
+// ============================================================================
+// USERS & ADMIN
+// ============================================================================
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      NotifType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean   @default(false)
+  channel   String    @default("IN_APP")
+  createdAt DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([isRead])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model KycDocument {
+  id         String       @id @default(cuid())
+  userId     String
+  type       KycDocType
+  fileUrl    String
+  fileName   String?
+  status     KycDocStatus @default(PENDING)
+  reviewedBy String?
+  reviewNote String?
+  reviewedAt DateTime?    @db.Timestamptz
+  createdAt  DateTime     @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([userId, status])
+  @@map("kyc_documents")
+}
+
+model ApiKey {
+  id              String    @id @default(cuid())
+  userId          String
+  key             String    @unique
+  name            String?
+  permissions     Json
+  isActive        Boolean   @default(true)
+  lastUsedAt      DateTime? @db.Timestamptz
+  rateLimitPerSec Int       @default(1)
+  createdAt       DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([key])
+  @@index([isActive])
+  @@map("api_keys")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  adminId    String?
+  action     String
+  resource   String?
+  resourceId String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  user  User? @relation("UserAuditLogs", fields: [userId], references: [id])
+  admin User? @relation("AdminAuditLogs", fields: [adminId], references: [id])
+
+  @@index([userId])
+  @@index([adminId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@index([userId, action])
+  @@map("audit_logs")
+}
+
+model SiteConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  description String?
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@index([key])
+  @@map("site_configs")
+}
+
+model GeoRestriction {
+  id          String   @id @default(cuid())
+  countryCode String   @unique
+  countryName String
+  isBlocked   Boolean  @default(true)
+  reason      String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@index([countryCode])
+  @@index([isBlocked])
+  @@map("geo_restrictions")
+}
+
+// ============================================================================
+// CONTENT
+// ============================================================================
+
+model BlogPost {
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  content       String
+  excerpt       String?
+  featuredImage String?
+  category      String?
+  tags          String[]
+  authorId      String?
+  isPublished   Boolean   @default(false)
+  publishedAt   DateTime? @db.Timestamptz
+  views         Int       @default(0)
+  createdAt     DateTime  @default(now()) @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @db.Timestamptz
+
+  // Relations
+  author User? @relation(fields: [authorId], references: [id])
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([isPublished])
+  @@index([category])
+  @@index([publishedAt])
+  @@map("blog_posts")
+}
+
+model HelpArticle {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String
+  category    String
+  tags        String[]
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  helpfulYes  Int      @default(0)
+  helpfulNo   Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@index([slug])
+  @@index([category])
+  @@index([isPublished])
+  @@map("help_articles")
+}
+
+model AcademyCourse {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String
+  thumbnail   String?
+  category    String?
+  difficulty  String?
+  lessonCount Int      @default(0)
+  isPublished Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  // Relations
+  lessons AcademyLesson[]
+
+  @@index([slug])
+  @@index([category])
+  @@index([isPublished])
+  @@map("academy_courses")
+}
+
+model AcademyLesson {
+  id        String   @id @default(cuid())
+  courseId   String
+  title     String
+  slug      String
+  content   String
+  videoUrl  String?
+  sortOrder Int
+  duration  Int?
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  // Relations
+  course AcademyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([courseId, slug])
+  @@index([sortOrder])
+  @@map("academy_lessons")
+}
+
+model UserCourseProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  courseId     String
+  lessonId    String
+  completed   Boolean   @default(false)
+  completedAt DateTime? @db.Timestamptz
+  createdAt   DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId, lessonId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([userId, courseId])
+  @@map("user_course_progress")
+}
+
+// ============================================================================
+// AFFILIATE
+// ============================================================================
+
+model Affiliate {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  code              String  @unique
+  commissionPercent Decimal @default(25) @db.Decimal(18, 8)
+  totalEarned       Decimal @default(0) @db.Decimal(18, 8)
+  totalReferred     Int     @default(0)
+  isActive          Boolean @default(true)
+  createdAt         DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  user    User              @relation("AffiliateUser", fields: [userId], references: [id], onDelete: Cascade)
+  players AffiliatePlayer[]
+
+  @@index([userId])
+  @@index([code])
+  @@index([isActive])
+  @@map("affiliates")
+}
+
+model AffiliatePlayer {
+  id              String   @id @default(cuid())
+  affiliateId     String
+  userId          String   @unique
+  totalWagered    Decimal  @default(0) @db.Decimal(18, 8)
+  totalCommission Decimal  @default(0) @db.Decimal(18, 8)
+  createdAt       DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  user      User      @relation("AffiliatePlayerUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([userId])
+  @@map("affiliate_players")
+}
+
+// ============================================================================
+// CHAT
+// ============================================================================
+
+model ChatRoom {
+  id         String     @id @default(cuid())
+  userId     String
+  status     ChatStatus @default(OPEN)
+  subject    String?
+  assignedTo String?
+  createdAt  DateTime   @default(now()) @db.Timestamptz
+  updatedAt  DateTime   @updatedAt @db.Timestamptz
+
+  // Relations
+  user     User          @relation("ChatRoomUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignee User?         @relation("ChatRoomAssigned", fields: [assignedTo], references: [id])
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([assignedTo])
+  @@index([createdAt])
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  roomId     String
+  senderId   String
+  senderType String   @default("USER")
+  message    String
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User     @relation(fields: [senderId], references: [id])
+
+  @@index([roomId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([roomId, createdAt])
+  @@map("chat_messages")
+}

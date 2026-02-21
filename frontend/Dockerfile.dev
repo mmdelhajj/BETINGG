@@ -1,0 +1,24 @@
+# =============================================================================
+# CryptoBet Frontend — Development Dockerfile
+# =============================================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy dependency manifests
+COPY package*.json ./
+
+# Install all dependencies
+RUN npm ci
+
+# Copy source code (will be overridden by volume mount)
+COPY . .
+
+EXPOSE 3000
+
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV WATCHPACK_POLLING=true
+
+# Start Next.js in development mode
+CMD ["npx", "next", "dev"]

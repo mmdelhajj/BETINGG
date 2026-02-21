@@ -1,0 +1,29 @@
+# =============================================================================
+# CryptoBet Backend — Development Dockerfile
+# =============================================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
+# Copy dependency manifests
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies)
+RUN npm ci
+
+# Copy Prisma schema and generate client
+COPY prisma ./prisma
+RUN npx prisma generate
+
+# Copy source code (will be overridden by volume mount)
+COPY . .
+
+EXPOSE 3001
+EXPOSE 9229
+
+# Start in development mode with hot reload and debugger
+CMD ["npx", "tsx", "watch", "--inspect=0.0.0.0:9229", "src/index.ts"]
