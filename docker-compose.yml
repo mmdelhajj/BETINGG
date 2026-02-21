@@ -87,6 +87,7 @@ services:
       GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:3001/api/auth/github/callback}
       COINGECKO_API_URL: ${COINGECKO_API_URL:-https://api.coingecko.com/api/v3}
       THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-}
+      BETSAPI_TOKEN: ${BETSAPI_TOKEN:-}
       GOALSERVE_API_KEY: ${GOALSERVE_API_KEY:-}
       MOONPAY_API_KEY: ${MOONPAY_API_KEY:-}
       MOONPAY_SECRET: ${MOONPAY_SECRET:-}

@@ -30,8 +30,8 @@ The fastest way to get the entire platform running:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/cryptobet.git
-cd cryptobet
+git clone https://github.com/mmdelhajj/BETINGG.git
+cd BETINGG
 
 # 2. Configure environment
 cp .env.example .env
