@@ -165,7 +165,7 @@ const SPORTS_NAV_ITEMS: SidebarItem[] = [
   },
   {
     label: 'Tournaments',
-    href: '/tournaments',
+    href: '/promotions',
     icon: <Trophy className="w-4 h-4" />,
   },
   {
@@ -208,7 +208,7 @@ const CASINO_NAV_ITEMS: SidebarItem[] = [
   },
   {
     label: 'Tournaments',
-    href: '/tournaments',
+    href: '/promotions',
     icon: <Trophy className="w-4 h-4" />,
   },
   {
