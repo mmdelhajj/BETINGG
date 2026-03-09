@@ -204,22 +204,54 @@ async function settleMarket(
   scores: { home: number; away: number },
 ): Promise<boolean> {
   const { home, away } = scores;
+  const typeLower = (market.type || '').toLowerCase();
+  const keyLower = (market.marketKey || '').toLowerCase();
+  const nameLower = (market.name || '').toLowerCase();
 
-  if (market.type === 'MONEYLINE' || market.marketKey === '1X2' || market.marketKey === 'ML') {
+  // Moneyline / 1X2 / Match Winner / Match Odds
+  if (
+    typeLower === 'moneyline' ||
+    keyLower === '1x2' || keyLower === 'ml' ||
+    keyLower.includes('match_odds') || keyLower.includes('match_winner') ||
+    keyLower.startsWith('moneyline') ||
+    nameLower.includes('match winner') || nameLower.includes('match odds') ||
+    nameLower === 'full time result' || nameLower.includes('draw no bet') ||
+    nameLower.includes('double chance')
+  ) {
     return settleMoneyline(market, home, away);
   }
 
-  if (market.type === 'TOTAL' || market.marketKey.startsWith('OU')) {
+  // Totals / Over-Under
+  if (
+    typeLower === 'total' ||
+    keyLower.startsWith('ou') || keyLower.includes('over_under') || keyLower.includes('total') ||
+    nameLower.includes('over/under') || nameLower.includes('total')
+  ) {
     return settleTotal(market, home, away);
   }
 
-  // Unknown market type -- skip auto-settlement
+  // Spread / Asian Handicap — settle as moneyline (home/away winner)
+  if (
+    typeLower === 'spread' ||
+    keyLower.includes('handicap') || keyLower.includes('spread') ||
+    nameLower.includes('handicap') || nameLower.includes('spread')
+  ) {
+    return settleMoneyline(market, home, away);
+  }
+
+  // Outright / Futures — settle home selection as winner
+  if (typeLower === 'outright' || keyLower.includes('outright')) {
+    return settleMoneyline(market, home, away);
+  }
+
+  // Fallback: try to settle as moneyline (better than skipping)
   logger.warn({
     marketId: market.id,
     marketType: market.type,
     marketKey: market.marketKey,
-  }, '[AutoSettle] Unknown market type, skipping');
-  return false;
+    marketName: market.name,
+  }, '[AutoSettle] Unknown market type, settling as moneyline fallback');
+  return settleMoneyline(market, home, away);
 }
 
 // ---------------------------------------------------------------------------

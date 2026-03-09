@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 @layer base {
   * {
     box-sizing: border-box;
@@ -87,7 +85,7 @@
 
   /* Glass effect */
   .glass {
-    @apply bg-background-card/80 backdrop-blur-md border border-border/50;
+    @apply bg-background-card/80 border border-border/50;
   }
 
   /* Glow effect */
@@ -135,6 +133,15 @@
     @apply animate-flash-red;
   }
 
+  /* Odds flash animations — green glow for odds up, red glow for odds down */
+  .odds-flash-up {
+    animation: oddsFlashUp 1.5s ease-out;
+  }
+
+  .odds-flash-down {
+    animation: oddsFlashDown 1.5s ease-out;
+  }
+
   /* Skeleton loader */
   .skeleton {
     @apply bg-background-elevated rounded animate-pulse;
@@ -146,6 +153,7 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   .scrollbar-hide::-webkit-scrollbar {
@@ -165,5 +173,46 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  /* Touch-optimized scrollable containers */
+  .touch-scroll-x {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+  }
+
+  .touch-scroll-y {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* BetSlip open — prevent background scroll on mobile */
+body.betslip-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  overscroll-behavior: contain;
+}
+
+/* Odds flash keyframes — must be outside @layer for animation-name resolution */
+@keyframes oddsFlashUp {
+  0% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0.7; transform: scale(1); }
+}
+
+@keyframes oddsFlashDown {
+  0% { opacity: 1; transform: scale(0.98); }
+  100% { opacity: 0.7; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

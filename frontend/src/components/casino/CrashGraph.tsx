@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -47,6 +47,15 @@ export default function CrashGraph({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>(0);
+  const dimensionsRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [isVisible, setIsVisible] = useState(true);
+
+  const updateDimensions = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    dimensionsRef.current = { width: rect.width, height: rect.height };
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -56,17 +65,22 @@ export default function CrashGraph({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Handle HiDPI displays
-    const dpr = window.devicePixelRatio || 1;
-    const rect = container.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
-    ctx.scale(dpr, dpr);
+    // Use cached dimensions instead of reading getBoundingClientRect() every frame
+    const { width, height } = dimensionsRef.current;
+    if (width === 0 || height === 0) {
+      // Initialize dimensions on first draw
+      updateDimensions();
+      const rect = dimensionsRef.current;
+      if (rect.width === 0 || rect.height === 0) return;
+    }
 
-    const width = rect.width;
-    const height = rect.height;
+    // Handle HiDPI displays — cap at 2x for non-GPU devices
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    ctx.scale(dpr, dpr);
     const padding = { top: 20, right: 20, bottom: 40, left: 60 };
     const graphWidth = width - padding.left - padding.right;
     const graphHeight = height - padding.top - padding.bottom;
@@ -257,10 +271,23 @@ export default function CrashGraph({
       ctx.font = 'bold 48px JetBrains Mono, monospace';
       ctx.fillText(`${(crashPoint || multiplier).toFixed(2)}x`, centerX, centerY + 12);
     }
-  }, [multiplier, status, crashPoint]);
+  }, [multiplier, status, crashPoint, updateDimensions]);
+
+  // IntersectionObserver to pause animation when not visible
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Animation loop
   useEffect(() => {
+    if (!isVisible) return; // Skip animation when not visible
+
     const animate = () => {
       draw();
       animationRef.current = requestAnimationFrame(animate);
@@ -273,14 +300,29 @@ export default function CrashGraph({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [draw]);
+  }, [draw, isVisible]);
 
-  // Handle resize
+  // Initialize dimensions on mount
   useEffect(() => {
-    const handleResize = () => draw();
+    updateDimensions();
+  }, [updateDimensions]);
+
+  // Handle resize with debouncing
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    const handleResize = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        updateDimensions();
+        draw();
+      }, 150);
+    };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [draw]);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [draw, updateDimensions]);
 
   return (
     <div className={cn('relative', className)}>

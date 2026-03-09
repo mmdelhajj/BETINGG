@@ -31,7 +31,7 @@ export interface OddsButtonProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function OddsButton({
+function OddsButton({
   selectionId,
   eventId,
   eventName,
@@ -167,3 +167,5 @@ export default function OddsButton({
     </motion.button>
   );
 }
+
+export default React.memo(OddsButton);

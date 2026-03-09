@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -22,6 +22,7 @@ import {
   Check,
   CheckCircle,
   Lock,
+  Zap,
 } from 'lucide-react';
 import { cn, formatOdds, formatDate } from '@/lib/utils';
 import { get } from '@/lib/api';
@@ -100,14 +101,16 @@ interface QuickBetState {
 
 const MARKET_CATEGORIES = [
   { key: 'favorites', label: '', icon: true },
+  { key: 'betBuilder', label: 'Bet Builder', betBuilder: true },
   { key: 'all', label: 'Main' },
-  { key: 'handicap', label: 'Asian lines' },
+  { key: 'handicap', label: 'Asian Lines' },
   { key: 'half', label: 'Half' },
   { key: 'totals', label: 'Goals' },
   { key: 'players', label: 'Players' },
   { key: 'corners', label: 'Corners' },
   { key: 'cards', label: 'Cards' },
   { key: 'specials', label: 'Specials' },
+  { key: '_all', label: 'All' },
 ];
 
 const INDIVIDUAL_SPORTS = new Set([
@@ -147,6 +150,65 @@ function getShortName(name: string): string {
   const parts = name.split(' ');
   if (parts.length <= 1) return name.slice(0, 3).toUpperCase();
   return parts[parts.length - 1].slice(0, 3).toUpperCase();
+}
+
+/**
+ * Classify a market into a tab category based on its name and type.
+ * Categories: all (main), handicap, half, totals, players, corners, cards, specials
+ */
+function classifyMarketCategory(name: string, type: string): string {
+  const n = (name || '').toLowerCase();
+  const t = (type || '').toLowerCase();
+
+  // Corners
+  if (n.includes('corner')) return 'corners';
+
+  // Cards / Bookings
+  if (n.includes('card') || n.includes('booking')) return 'cards';
+
+  // Player markets
+  if (
+    n.includes('goalscorer') || n.includes('goal scorer') ||
+    n.includes('player') || n.includes('anytime') ||
+    n.includes('first goal') || n.includes('last goal') ||
+    n.includes('milestone')
+  ) return 'players';
+
+  // Half-time markets (period-specific)
+  if (
+    n.includes('period first half') || n.includes('period second half') ||
+    n.includes('period 1h') || n.includes('period 2h') ||
+    n.includes('1st half') || n.includes('2nd half') ||
+    n.includes('halftime') || n.includes('half time') ||
+    n.includes('half-time') ||
+    /period\s+\d/.test(n)
+  ) return 'half';
+
+  // Asian handicap / Spread
+  if (
+    t === 'spread' ||
+    n.includes('handicap') || n.includes('spread')
+  ) return 'handicap';
+
+  // Goals / Totals
+  if (
+    t === 'total' ||
+    n.includes('total') || n.includes('over/under') || n.includes('over under') ||
+    n.includes('exact goals') || n.includes('odd even')
+  ) return 'totals';
+
+  // Specials (props that aren't categorized above)
+  if (
+    n.includes('correct score') || n.includes('winning margin') ||
+    n.includes('half time full time') || n.includes('halftime fulltime') ||
+    n.includes('interval') || n.includes('when will') ||
+    n.includes('highest scoring') || n.includes('race to') ||
+    n.includes('clean sheet') || n.includes('win to nil') ||
+    t === 'outright'
+  ) return 'specials';
+
+  // Main: match winner, match odds, moneyline, 1x2, double chance, draw no bet, BTTS
+  return 'all';
 }
 
 function deriveMatchTime(metadata: any, sportSlug: string): string | undefined {
@@ -930,8 +992,11 @@ function QuickBetSheet({
 export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
   const eventId = params.eventId as string;
+
+  const { enterBetBuilder, exitBetBuilder, betType: currentBetType } = useBetSlipStore();
 
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -999,7 +1064,7 @@ export default function EventDetailPage() {
           markets: (apiEvent.markets ?? []).map((m: any) => ({
             id: m.id,
             name: m.name,
-            category: m.type?.toLowerCase() ?? 'main',
+            category: classifyMarketCategory(m.name, m.type),
             suspended: m.status === 'SUSPENDED',
             selections: (m.selections ?? []).map((s: any) => ({
               id: s.id,
@@ -1033,11 +1098,15 @@ export default function EventDetailPage() {
           if (m.id !== data.marketId) return m;
           return {
             ...m,
-            selections: m.selections.map((s) => ({
-              ...s,
-              previousOdds: s.odds,
-              odds: data.odds[s.name] ?? s.odds,
-            })),
+            selections: m.selections.map((s) => {
+              const newOdds = data.odds[s.name] ?? s.odds;
+              const currentOdds = typeof s.odds === 'string' ? parseFloat(s.odds) : s.odds;
+              const incoming = typeof newOdds === 'string' ? parseFloat(newOdds) : newOdds;
+              if (incoming !== currentOdds) {
+                return { ...s, previousOdds: s.odds, odds: newOdds };
+              }
+              return s;
+            }),
           };
         }),
       };
@@ -1091,6 +1160,14 @@ export default function EventDetailPage() {
   const isEventEnded = event?.status?.toLowerCase() === 'ended' || event?.status?.toLowerCase() === 'finished';
   const isLive = event?.status?.toLowerCase() === 'live';
 
+  // Auto-activate Bet Builder from query param
+  useEffect(() => {
+    if (searchParams.get('mode') === 'betbuilder' && event) {
+      setActiveCategory('betBuilder');
+      enterBetBuilder(event.id, `${event.homeTeam} v ${event.awayTeam}`);
+    }
+  }, [searchParams, event?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleMarket = useCallback((id: string) => {
     setExpandedMarkets((prev) => {
       const next = new Set(prev);
@@ -1120,7 +1197,12 @@ export default function EventDetailPage() {
 
     if (activeCategory === 'favorites') {
       markets = markets.filter((m) => favoriteMarkets.has(m.id));
-    } else if (activeCategory !== 'all') {
+    } else if (activeCategory === 'betBuilder' || activeCategory === '_all') {
+      // Bet Builder and "All" tab show every market
+    } else if (activeCategory === 'all') {
+      // "Main" tab: show main markets (match winner, BTTS, double chance, DNB, 1x2)
+      markets = markets.filter((m) => m.category === 'all');
+    } else {
       markets = markets.filter((m) => m.category === activeCategory);
     }
 
@@ -1404,15 +1486,37 @@ export default function EventDetailPage() {
         >
           {MARKET_CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat.key;
+            // Count markets per category
+            const catCount = !event ? 0 :
+              cat.key === 'favorites' ? event.markets.filter((m) => favoriteMarkets.has(m.id)).length :
+              cat.key === 'betBuilder' || cat.key === '_all' ? event.markets.length :
+              cat.key === 'all' ? event.markets.filter((m) => m.category === 'all').length :
+              event.markets.filter((m) => m.category === cat.key).length;
+            const isEmpty = catCount === 0 && cat.key !== 'favorites' && cat.key !== 'betBuilder';
+
             return (
               <button
                 key={cat.key}
-                onClick={() => setActiveCategory(cat.key)}
+                onClick={() => {
+                  if (cat.key === 'betBuilder') {
+                    setActiveCategory('betBuilder');
+                    enterBetBuilder(event.id, eventName);
+                  } else {
+                    setActiveCategory(cat.key);
+                    if (currentBetType === 'betBuilder') {
+                      exitBetBuilder();
+                    }
+                  }
+                }}
                 className={cn(
                   'whitespace-nowrap px-4 py-3 text-xs font-medium transition-all shrink-0 relative border-b-2',
-                  isActive
-                    ? 'text-[#E6EDF3] border-[#8B5CF6]'
-                    : 'text-[#8B949E] border-transparent hover:text-[#E6EDF3]',
+                  isActive && cat.key === 'betBuilder'
+                    ? 'text-[#A78BFA] border-[#8B5CF6]'
+                    : isActive
+                      ? 'text-[#E6EDF3] border-[#8B5CF6]'
+                      : isEmpty
+                        ? 'text-[#484F58] border-transparent'
+                        : 'text-[#8B949E] border-transparent hover:text-[#E6EDF3]',
                 )}
               >
                 {cat.icon ? (
@@ -1420,8 +1524,23 @@ export default function EventDetailPage() {
                     'w-3.5 h-3.5',
                     isActive ? 'text-[#F59E0B] fill-[#F59E0B]' : 'text-[#8B949E]',
                   )} />
+                ) : cat.key === 'betBuilder' ? (
+                  <span className="flex items-center gap-1.5">
+                    <Zap className="w-3 h-3" />
+                    {cat.label}
+                  </span>
                 ) : (
-                  cat.label
+                  <span className="flex items-center gap-1.5">
+                    {cat.label}
+                    {catCount > 0 && cat.key !== '_all' && (
+                      <span className={cn(
+                        'text-[9px] font-mono',
+                        isActive ? 'text-[#8B949E]' : 'text-[#484F58]',
+                      )}>
+                        {catCount}
+                      </span>
+                    )}
+                  </span>
                 )}
               </button>
             );
@@ -1459,6 +1578,21 @@ export default function EventDetailPage() {
           )}
         </div>
       </div>
+
+      {/* ================================================================ */}
+      {/* BET BUILDER BANNER                                               */}
+      {/* ================================================================ */}
+      {activeCategory === 'betBuilder' && (
+        <div className="mx-3 mb-2 p-3 rounded-lg bg-gradient-to-r from-[#8B5CF6]/15 to-[#6D28D9]/10 border border-[#8B5CF6]/20">
+          <div className="flex items-center gap-2 mb-1">
+            <Zap className="w-4 h-4 text-[#A78BFA]" />
+            <span className="text-xs font-bold text-[#A78BFA] uppercase tracking-wider">Bet Builder</span>
+          </div>
+          <p className="text-[11px] text-[#8B949E] leading-relaxed">
+            Combine multiple selections from this match into one bet. Select from different markets below to build your bet.
+          </p>
+        </div>
+      )}
 
       {/* ================================================================ */}
       {/* MARKET CARDS - Cloudbet collapsible sections                     */}
@@ -1780,18 +1914,20 @@ export default function EventDetailPage() {
           scrollbar-width: none;
         }
         .flash-increase {
-          animation: flash-green 0.6s ease-out;
+          animation: flash-green 1.5s ease-out;
         }
         .flash-decrease {
-          animation: flash-red 0.6s ease-out;
+          animation: flash-red 1.5s ease-out;
         }
         @keyframes flash-green {
-          0%, 100% { background-color: inherit; }
-          50% { background-color: rgba(16, 185, 129, 0.2); }
+          0% { background-color: rgba(16, 185, 129, 0.35); box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
+          40% { background-color: rgba(16, 185, 129, 0.15); box-shadow: 0 0 4px rgba(16, 185, 129, 0.15); }
+          100% { background-color: inherit; box-shadow: none; }
         }
         @keyframes flash-red {
-          0%, 100% { background-color: inherit; }
-          50% { background-color: rgba(239, 68, 68, 0.2); }
+          0% { background-color: rgba(239, 68, 68, 0.35); box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+          40% { background-color: rgba(239, 68, 68, 0.15); box-shadow: 0 0 4px rgba(239, 68, 68, 0.15); }
+          100% { background-color: inherit; box-shadow: none; }
         }
         .skeleton {
           background: linear-gradient(90deg, #1C2128 25%, #272D36 50%, #1C2128 75%);

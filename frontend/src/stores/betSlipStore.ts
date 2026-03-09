@@ -21,7 +21,7 @@ export interface BetSelection {
   isLive: boolean;
 }
 
-export type BetType = 'single' | 'parlay' | 'system';
+export type BetType = 'single' | 'parlay' | 'system' | 'betBuilder';
 export type OddsChangePolicy = 'accept_any' | 'accept_higher' | 'reject';
 
 export interface SystemBetType {
@@ -31,7 +31,7 @@ export interface SystemBetType {
 }
 
 interface PlaceBetPayload {
-  type: 'SINGLE' | 'PARLAY';
+  type: 'SINGLE' | 'PARLAY' | 'BET_BUILDER';
   selections: Array<{
     selectionId: string;
     odds: number;
@@ -43,15 +43,31 @@ interface PlaceBetPayload {
 }
 
 interface PlaceBetResponse {
-  betId: string;
-  status: 'accepted' | 'pending';
-  totalStake: number;
-  potentialWin: number;
+  betId?: string;
+  status?: 'accepted' | 'pending' | string;
+  totalStake?: number;
+  potentialWin?: number;
   newBalance?: number;
   bet?: {
     id: string;
+    referenceId?: string;
+    type?: string;
     stake: string;
     currency: string;
+    odds?: string;
+    potentialWin?: string;
+    status?: string;
+    isLive?: boolean;
+    legs?: Array<{
+      id: string;
+      selectionId: string;
+      eventName: string;
+      marketName: string;
+      selectionName: string;
+      oddsAtPlacement: string;
+      status: string;
+    }>;
+    createdAt?: string;
   };
 }
 
@@ -90,12 +106,14 @@ interface BetSlipState {
   // State
   selections: BetSelection[];
   betType: BetType;
-  stakes: Record<string, number>; // Key: selection id for singles, 'parlay' for parlay, 'system' for system
+  stakes: Record<string, number>; // Key: selection id for singles, 'parlay' for parlay, 'system' for system, 'betBuilder' for bet builder
   currency: string;
   oddsChangePolicy: OddsChangePolicy;
   systemSize: number; // For system bets: size of each combination
   isPlacing: boolean;
   isOpen: boolean; // Bet slip visibility on mobile
+  betBuilderEventId: string | null;
+  betBuilderEventName: string | null;
 
   // Computed getters (implemented as actions that compute)
   getTotalOdds: () => number;
@@ -118,6 +136,8 @@ interface BetSlipState {
   setOpen: (open: boolean) => void;
   updateOdds: (selectionId: string, newOdds: number) => void;
   placeBet: () => Promise<PlaceBetResponse>;
+  enterBetBuilder: (eventId: string, eventName: string) => void;
+  exitBetBuilder: () => void;
 }
 
 const MAX_SELECTIONS = 20;
@@ -136,6 +156,8 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
   systemSize: 2,
   isPlacing: false,
   isOpen: false,
+  betBuilderEventId: null,
+  betBuilderEventName: null,
 
   // ---- Computed getters ----
 
@@ -149,6 +171,7 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
         return selections.length === 1 ? selections[0].odds : 0;
 
       case 'parlay':
+      case 'betBuilder':
         return (selections || []).reduce((acc, sel) => acc * sel.odds, 1);
 
       case 'system': {
@@ -181,8 +204,10 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
         return total;
       }
 
-      case 'parlay': {
-        const parlayStake = stakes['parlay'] || 0;
+      case 'parlay':
+      case 'betBuilder': {
+        const stakeKey = betType === 'betBuilder' ? 'betBuilder' : 'parlay';
+        const parlayStake = stakes[stakeKey] || 0;
         const combinedOdds = (selections || []).reduce((acc, sel) => acc * sel.odds, 1);
         return parlayStake * combinedOdds;
       }
@@ -219,6 +244,9 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
 
       case 'parlay':
         return stakes['parlay'] || 0;
+
+      case 'betBuilder':
+        return stakes['betBuilder'] || 0;
 
       case 'system': {
         const numCombos = calculateCombinations(selections.length, systemSize);
@@ -260,10 +288,15 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
   // ---- Actions ----
 
   addSelection: (selection: BetSelection) => {
-    const { selections } = getState();
+    const { selections, betType, betBuilderEventId } = getState();
 
     // Max selections check
     if (selections.length >= MAX_SELECTIONS) return;
+
+    // In betBuilder mode, enforce same-event constraint
+    if (betType === 'betBuilder' && betBuilderEventId && selection.eventId !== betBuilderEventId) {
+      return; // Silently reject selections from other events
+    }
 
     // Check for duplicate (same event + market + outcome)
     const exists = selections.some(
@@ -306,8 +339,8 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
     }
 
     // Auto-switch to parlay if multiple selections
-    const { selections: updated, betType } = getState();
-    if (updated.length > 1 && betType === 'single') {
+    const { selections: updated, betType: currentBetType } = getState();
+    if (updated.length > 1 && currentBetType === 'single') {
       // Keep as single, but user can switch
     }
   },
@@ -318,8 +351,10 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
       const newStakes = { ...state.stakes };
       delete newStakes[selectionId];
 
-      // Reset bet type if only 1 selection remains
-      const betType = newSelections.length <= 1 ? 'single' : state.betType;
+      // Don't auto-switch bet type if in betBuilder mode
+      const betType = state.betType === 'betBuilder'
+        ? 'betBuilder'
+        : newSelections.length <= 1 ? 'single' : state.betType;
 
       return {
         selections: newSelections,
@@ -335,6 +370,8 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
       stakes: {},
       betType: 'single',
       systemSize: 2,
+      betBuilderEventId: null,
+      betBuilderEventName: null,
     });
   },
 
@@ -382,6 +419,30 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
     }));
   },
 
+  enterBetBuilder: (eventId: string, eventName: string) => {
+    const { betType, betBuilderEventId } = getState();
+    // If already in betBuilder for same event, do nothing
+    if (betType === 'betBuilder' && betBuilderEventId === eventId) return;
+    // Clear existing selections from other modes/events and enter betBuilder
+    set({
+      betType: 'betBuilder',
+      betBuilderEventId: eventId,
+      betBuilderEventName: eventName,
+      selections: [],
+      stakes: {},
+    });
+  },
+
+  exitBetBuilder: () => {
+    set({
+      betType: 'single',
+      betBuilderEventId: null,
+      betBuilderEventName: null,
+      selections: [],
+      stakes: {},
+    });
+  },
+
   placeBet: async (): Promise<PlaceBetResponse> => {
     const { selections, betType, stakes, currency, oddsChangePolicy, systemSize } =
       getState();
@@ -399,11 +460,13 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
         totalStake = selections.reduce((sum, sel) => sum + (stakes[sel.id] || 0), 0);
       } else if (betType === 'parlay') {
         totalStake = stakes['parlay'] || 0;
+      } else if (betType === 'betBuilder') {
+        totalStake = stakes['betBuilder'] || 0;
       } else {
         totalStake = stakes['system'] || 0;
       }
 
-      const backendType = betType === 'parlay' || betType === 'system' ? 'PARLAY' : 'SINGLE';
+      const backendType = betType === 'betBuilder' ? 'BET_BUILDER' : betType === 'parlay' || betType === 'system' ? 'PARLAY' : 'SINGLE';
       const backendOddsPolicy = oddsChangePolicy.toUpperCase().replace(/_/g, '_') as 'ACCEPT_ANY' | 'ACCEPT_HIGHER' | 'REJECT';
       const hasLive = selections.some((s) => s.isLive);
 
@@ -435,6 +498,8 @@ export const useBetSlipStore = create<BetSlipState>()((set, getState) => ({
         betType: 'single',
         systemSize: 2,
         isPlacing: false,
+        betBuilderEventId: null,
+        betBuilderEventName: null,
       });
 
       return response;

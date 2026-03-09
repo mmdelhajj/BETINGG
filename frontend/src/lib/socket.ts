@@ -240,6 +240,11 @@ export function useSocketEvent<K extends keyof SocketEvents>(
   useEffect(() => {
     const socket = getSocket();
 
+    // Ensure socket is connected when listening for events
+    if (!socket.connected) {
+      socket.connect();
+    }
+
     const eventHandler = (...args: unknown[]) => {
       (savedHandler.current as (...a: unknown[]) => void)(...args);
     };

@@ -254,7 +254,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#0D1117]">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -276,7 +276,7 @@ export default function SettingsPage() {
           <motion.nav
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:w-56 shrink-0"
+            className="relative z-10 lg:w-56 shrink-0"
           >
             <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible scrollbar-hide pb-1 lg:pb-0 bg-[#161B22] lg:bg-transparent border border-[#21262D] lg:border-0 rounded-lg lg:rounded-none p-1 lg:p-0">
               {TABS.map((tab) => {
@@ -310,7 +310,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex-1 min-w-0"
+            className="relative z-10 flex-1 min-w-0"
           >
             {/* ============================================== */}
             {/* GENERAL TAB */}

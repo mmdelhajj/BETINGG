@@ -653,18 +653,25 @@ export default function MyBetsPage() {
     }
   });
 
-  const filteredBets = useMemo(() => {
-    let result = bets;
-
-    // Tab filter
-    if (activeTab === 'open') {
-      result = result.filter((b) => b.status === 'open');
-    } else if (activeTab === 'settled') {
-      result = result.filter((b) => b.status !== 'open');
+  // Single pass: compute open/settled splits and counts together
+  const { openBets, settledBets, openCount, settledCount } = useMemo(() => {
+    const open: UserBet[] = [];
+    const settled: UserBet[] = [];
+    for (const b of bets) {
+      if (b.status === 'open') {
+        open.push(b);
+      } else {
+        settled.push(b);
+      }
     }
+    return { openBets: open, settledBets: settled, openCount: open.length, settledCount: settled.length };
+  }, [bets]);
 
-    return result;
-  }, [bets, activeTab]);
+  const filteredBets = useMemo(() => {
+    if (activeTab === 'open') return openBets;
+    if (activeTab === 'settled') return settledBets;
+    return bets;
+  }, [bets, activeTab, openBets, settledBets]);
 
   const handleCashOut = useCallback(async (betId: string) => {
     try {
@@ -700,8 +707,8 @@ export default function MyBetsPage() {
   }, []);
 
   const tabs: { key: BetTab; label: string; count: number }[] = [
-    { key: 'open', label: 'Active', count: bets.filter((b) => b.status === 'open').length },
-    { key: 'settled', label: 'Settled', count: bets.filter((b) => b.status !== 'open').length },
+    { key: 'open', label: 'Active', count: openCount },
+    { key: 'settled', label: 'Settled', count: settledCount },
     { key: 'all', label: 'All', count: bets.length },
   ];
 

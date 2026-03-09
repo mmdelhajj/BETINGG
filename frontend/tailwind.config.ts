@@ -62,6 +62,7 @@ const config: Config = {
         'bounce-in': 'bounceIn 0.5s ease-out',
         'flash-green': 'flashGreen 0.5s ease-out',
         'flash-red': 'flashRed 0.5s ease-out',
+        'fade-out': 'fadeOut 1.5s ease-out forwards',
         'score-flash': 'scoreFlash 1.5s ease-out',
         'score-pop': 'scorePop 1.5s ease-out',
         'live-pulse': 'livePulse 2s ease-in-out infinite',
@@ -93,6 +94,10 @@ const config: Config = {
         flashRed: {
           '0%': { backgroundColor: 'rgba(239,68,68,0.3)' },
           '100%': { backgroundColor: 'transparent' },
+        },
+        fadeOut: {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
         },
         scoreFlash: {
           '0%': { borderColor: 'rgba(16,185,129,0.8)', boxShadow: '0 0 12px rgba(16,185,129,0.4)' },

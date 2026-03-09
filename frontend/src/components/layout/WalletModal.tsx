@@ -801,7 +801,7 @@ export default function WalletModal({ isOpen, onClose, initialTab = 'deposit' }:
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]"
+            className="fixed inset-0 bg-black/60 z-[200]"
             onClick={onClose}
           />
 

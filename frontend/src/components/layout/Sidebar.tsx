@@ -165,7 +165,7 @@ const SPORTS_NAV_ITEMS: SidebarItem[] = [
   },
   {
     label: 'Tournaments',
-    href: '/promotions',
+    href: '/casino/tournaments',
     icon: <Trophy className="w-4 h-4" />,
   },
   {
@@ -208,7 +208,7 @@ const CASINO_NAV_ITEMS: SidebarItem[] = [
   },
   {
     label: 'Tournaments',
-    href: '/promotions',
+    href: '/casino/tournaments',
     icon: <Trophy className="w-4 h-4" />,
   },
   {
@@ -454,7 +454,7 @@ export default function Sidebar() {
   // Split sports into favorites and all
   const { favoriteSports, allSports } = useMemo(() => {
     const favs = sports.filter((s) => favorites.includes(s.slug));
-    const sorted = [...sports].sort((a, b) => a.name.localeCompare(b.name));
+    const sorted = [...sports].sort((a, b) => (b.eventCount - a.eventCount) || a.name.localeCompare(b.name));
     return { favoriteSports: favs, allSports: sorted };
   }, [sports, favorites]);
 

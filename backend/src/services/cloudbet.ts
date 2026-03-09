@@ -1117,18 +1117,31 @@ function emitOddsUpdate(eventId: string, marketKey: string, selections: Array<{
   outcome: string;
   odds: number;
   status: string;
-}>): void {
+}>, marketId?: string): void {
   try {
-    const { getIO } = require('../lib/socket.js') as { getIO: () => { of: (ns: string) => { emit: (ev: string, data: unknown) => void } } };
+    const { getIO } = require('../lib/socket.js') as { getIO: () => { emit: (ev: string, data: unknown) => void; of: (ns: string) => { emit: (ev: string, data: unknown) => void } } };
     const io = getIO();
-    const liveNsp = io.of('/live');
 
-    liveNsp.emit('odds:update', {
+    // Build odds dict: { "selectionName": odds } for frontend compatibility
+    const oddsDict: Record<string, number> = {};
+    for (const sel of selections) {
+      oddsDict[sel.outcome] = sel.odds;
+    }
+
+    const payload = {
       eventId,
+      marketId: marketId || marketKey,
       marketKey,
+      odds: oddsDict,
       selections,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    // Emit on default namespace (where frontend connects)
+    io.emit('odds:update', payload);
+
+    // Also emit on /live namespace for subscribers
+    io.of('/live').emit('odds:update', payload);
   } catch {
     // Socket.IO not initialized — ignore silently
   }
@@ -1187,7 +1200,7 @@ async function processEventMarkets(
       // Emit Socket.IO update if any selections changed
       if (changedSelections.length > 0) {
         const fullMarketKey = period !== 'FT' ? `${marketKey}:${period}` : marketKey;
-        emitOddsUpdate(dbEventId, fullMarketKey, changedSelections);
+        emitOddsUpdate(dbEventId, fullMarketKey, changedSelections, marketId);
       }
     }
   }

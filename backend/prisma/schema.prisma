@@ -127,6 +127,7 @@ enum BetType {
   SINGLE
   PARLAY
   SYSTEM
+  BET_BUILDER
 }
 
 enum BetStatus {
@@ -168,6 +169,8 @@ enum GameType {
   VIDEO_POKER
   BACCARAT
   VIRTUAL
+  INSTANT
+  CUSTOM
 }
 
 enum NotifType {
@@ -457,6 +460,7 @@ model Transaction {
   @@index([createdAt])
   @@index([walletId, type])
   @@index([walletId, status])
+  @@index([walletId, createdAt])
   @@map("transactions")
 }
 
@@ -570,6 +574,8 @@ model Event {
   @@index([externalId])
   @@index([competitionId, status])
   @@index([startTime, status])
+  @@index([status, startTime])
+  @@index([isLive, status])
   @@map("events")
 }
 
@@ -803,6 +809,7 @@ model CasinoRound {
   @@index([gameSlug])
   @@index([createdAt])
   @@index([userId, gameSlug])
+  @@index([userId, createdAt])
   @@map("casino_rounds")
 }
 

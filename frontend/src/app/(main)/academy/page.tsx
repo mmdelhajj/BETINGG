@@ -140,7 +140,7 @@ function CourseCard({ course }: { course: Course }) {
           </div>
           {/* Completion badge */}
           {isComplete && (
-            <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-[#10B981]/20 border border-[#10B981]/30 backdrop-blur-sm">
+            <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-[#10B981]/20 border border-[#10B981]/30">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
               <span className="text-[10px] font-semibold text-[#10B981]">Complete</span>
             </div>

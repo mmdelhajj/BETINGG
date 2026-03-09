@@ -641,7 +641,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#0D1117]">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -664,7 +664,7 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
-              <button className="absolute bottom-0 right-0 w-7 h-7 bg-[#8B5CF6] rounded-full flex items-center justify-center border-2 border-[#161B22] opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <button className="absolute bottom-0 right-0 w-7 h-7 bg-[#8B5CF6] rounded-full flex items-center justify-center border-2 border-[#161B22] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                 <Camera className="w-3 h-3 text-white" />
               </button>
             </div>
@@ -706,7 +706,7 @@ export default function ProfilePage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="flex gap-1 mb-6 bg-[#0D1117] border border-[#21262D] rounded-xl p-1"
+          className="relative z-10 flex gap-1 mb-6 bg-[#0D1117] border border-[#21262D] rounded-xl p-1"
         >
           {tabs.map((tab) => (
             <button
@@ -726,11 +726,13 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* Tab Content */}
-        <AnimatePresence mode="wait">
-          {activeTab === 'general' && <GeneralTab key="general" />}
-          {activeTab === 'security' && <SecurityTab key="security" />}
-          {activeTab === 'stats' && <StatsTab key="stats" />}
-        </AnimatePresence>
+        <div className="relative z-10">
+          <AnimatePresence mode="wait">
+            {activeTab === 'general' && <GeneralTab key="general" />}
+            {activeTab === 'security' && <SecurityTab key="security" />}
+            {activeTab === 'stats' && <StatsTab key="stats" />}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

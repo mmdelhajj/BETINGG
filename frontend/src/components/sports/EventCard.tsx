@@ -82,7 +82,7 @@ function TeamLogo({
 // Component
 // ---------------------------------------------------------------------------
 
-export default function EventCard({
+function EventCard({
   id,
   sportId,
   sportName,
@@ -203,3 +203,5 @@ export default function EventCard({
     </motion.div>
   );
 }
+
+export default React.memo(EventCard);

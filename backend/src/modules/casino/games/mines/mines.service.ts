@@ -33,7 +33,7 @@ export class MinesGame extends BaseGame {
   readonly name = 'Mines';
   readonly slug = 'mines';
   readonly houseEdge = 0.02;
-  readonly minBet = 0.01;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   private static REDIS_PREFIX = 'mines:session:';
@@ -77,6 +77,10 @@ export class MinesGame extends BaseGame {
     const existing = await this.getSession(userId);
     if (existing && existing.isActive) {
       throw new GameError('GAME_IN_PROGRESS', 'You already have an active Mines game. Cashout or finish first.');
+    }
+    // Clean up any stale completed session so it doesn't block a new game
+    if (existing) {
+      await this.deleteSession(userId);
     }
 
     await this.validateBet(userId, bet.amount, bet.currency);

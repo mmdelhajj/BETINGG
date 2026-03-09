@@ -50,7 +50,7 @@ export class BaccaratGame extends BaseGame {
   readonly name = 'Baccarat';
   readonly slug = 'baccarat';
   readonly houseEdge = 0.012;
-  readonly minBet = 0.1;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   private static readonly BANKER_COMMISSION = 0.05;
@@ -64,7 +64,7 @@ export class BaccaratGame extends BaseGame {
 
   async play(userId: string, bet: BetRequest): Promise<GameResult> {
     const { amount, currency, options } = bet;
-    const betOn = (options as { betOn?: BetOn })?.betOn;
+    const betOn = (options as any)?.betOn ?? (options as any)?.bet;
 
     // Validate bet type
     if (!betOn || !['player', 'banker', 'tie'].includes(betOn)) {

@@ -62,7 +62,7 @@ export class RouletteGame extends BaseGame {
   readonly name = 'Roulette';
   readonly slug = 'roulette';
   readonly houseEdge = 0.027; // European: 1/37 ≈ 2.7%
-  readonly minBet = 0.01;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   async play(userId: string, bet: BetRequest): Promise<GameResult> {

@@ -21,7 +21,7 @@ import { generateRandomScores } from './auto-settlement.js';
 const STALE_THRESHOLD_HOURS = 3;
 
 /** Maximum events to process per run to avoid overloading the queue */
-const MAX_EVENTS_PER_RUN = 100;
+const MAX_EVENTS_PER_RUN = 500;
 
 // ---------------------------------------------------------------------------
 // Main Functions
@@ -343,16 +343,26 @@ export function startStaleEventSettlement(): void {
 
   logger.info('[StaleSettlement] Starting periodic stale event check (every 5 minutes)');
 
-  // Run immediately
-  void settleStaleEvents().catch((err) => {
-    logger.error({ err }, '[StaleSettlement] Initial stale event check failed');
-  });
+  // Run immediately: stale events + ENDED events with unsettled markets
+  void (async () => {
+    try { await settleStaleEvents(); } catch (err) {
+      logger.error({ err }, '[StaleSettlement] Initial stale event check failed');
+    }
+    try { await settleAllEndedEvents(); } catch (err) {
+      logger.error({ err }, '[StaleSettlement] Initial ended-event settlement failed');
+    }
+  })();
 
   // Then run every 5 minutes
   staleCheckInterval = setInterval(() => {
-    void settleStaleEvents().catch((err) => {
-      logger.error({ err }, '[StaleSettlement] Periodic stale event check failed');
-    });
+    void (async () => {
+      try { await settleStaleEvents(); } catch (err) {
+        logger.error({ err }, '[StaleSettlement] Periodic stale event check failed');
+      }
+      try { await settleAllEndedEvents(); } catch (err) {
+        logger.error({ err }, '[StaleSettlement] Periodic ended-event settlement failed');
+      }
+    })();
   }, INTERVAL_MS);
 }
 

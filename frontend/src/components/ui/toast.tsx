@@ -18,6 +18,7 @@ function Toaster({ position = 'top-right' }: ToasterProps) {
     <HotToaster
       position={position}
       gutter={8}
+      containerStyle={{ maxHeight: '40vh', overflow: 'hidden' }}
       toastOptions={{
         duration: 4000,
         style: {

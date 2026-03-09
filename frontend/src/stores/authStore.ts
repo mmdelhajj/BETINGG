@@ -137,6 +137,19 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
 
+          // Auto-switch to a funded currency if current betSlip currency has 0 balance
+          if (typeof window !== 'undefined' && user.balances?.length) {
+            const { useBetSlipStore } = await import('./betSlipStore');
+            const currentCurrency = useBetSlipStore.getState().currency;
+            const currentBal = user.balances.find((b) => b.currency === currentCurrency);
+            if (!currentBal || currentBal.available <= 0) {
+              const funded = user.balances.find((b) => b.available > 0);
+              if (funded) {
+                useBetSlipStore.getState().setCurrency(funded.currency);
+              }
+            }
+          }
+
           return user;
         } catch (error) {
           set({ isLoading: false });

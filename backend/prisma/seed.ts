@@ -235,6 +235,8 @@ async function main() {
     { name: 'Cross Country Skiing', slug: 'cross-country-skiing', icon: '\uD83C\uDFBF', sortOrder: 33 },
     { name: 'Surfing',             slug: 'surfing',              icon: '\uD83C\uDFC4', sortOrder: 34 },
     { name: 'Aussie Rules',        slug: 'aussie-rules',         icon: '\uD83C\uDFC9', sortOrder: 35 },
+    { name: 'eSoccer',             slug: 'esoccer',              icon: '\uD83C\uDFAE', sortOrder: 36 },
+    { name: 'eBasketball',         slug: 'ebasketball',          icon: '\uD83C\uDFAE', sortOrder: 37 },
   ];
 
   const sportMap: Record<string, string> = {};

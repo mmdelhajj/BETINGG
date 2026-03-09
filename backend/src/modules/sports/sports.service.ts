@@ -31,68 +31,46 @@ export async function getSports() {
   const cached = await redis.get(cacheKey);
   if (cached) return JSON.parse(cached);
 
+  // Query 1: Sports with their active competitions (includes sportId mapping)
   const sports = await prisma.sport.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     include: {
-      _count: {
-        select: {
-          competitions: { where: { isActive: true } },
-        },
+      competitions: {
+        where: { isActive: true },
+        select: { id: true },
       },
     },
   });
 
-  // Get live event counts per sport
-  const liveCountsRaw = await prisma.event.groupBy({
-    by: ['competitionId'],
-    where: { status: 'LIVE', isLive: true },
-    _count: { id: true },
-  });
-
-  // Map competition -> sport
+  // Build competition -> sport mapping from the already-fetched data
   const compToSport = new Map<string, string>();
-  const competitionIds = liveCountsRaw.map((c) => c.competitionId);
-  if (competitionIds.length > 0) {
-    const comps = await prisma.competition.findMany({
-      where: { id: { in: competitionIds } },
-      select: { id: true, sportId: true },
-    });
-    for (const c of comps) {
-      compToSport.set(c.id, c.sportId);
+  for (const sport of sports) {
+    for (const comp of sport.competitions) {
+      compToSport.set(comp.id, sport.id);
     }
   }
 
-  const sportLiveCounts = new Map<string, number>();
-  for (const lc of liveCountsRaw) {
-    const sportId = compToSport.get(lc.competitionId);
-    if (sportId) {
-      sportLiveCounts.set(sportId, (sportLiveCounts.get(sportId) ?? 0) + lc._count.id);
-    }
-  }
-
-  // Count total upcoming + live events per sport
-  const upcomingCountsRaw = await prisma.event.groupBy({
-    by: ['competitionId'],
+  // Query 2: Single groupBy for all upcoming+live events (covers both live and total counts)
+  const eventCountsRaw = await prisma.event.groupBy({
+    by: ['competitionId', 'status', 'isLive'],
     where: { status: { in: ['UPCOMING', 'LIVE'] } },
     _count: { id: true },
   });
 
+  // Single pass to compute both live and total event counts per sport
+  const sportLiveCounts = new Map<string, number>();
   const sportEventCounts = new Map<string, number>();
-  const upcomingCompIds = upcomingCountsRaw.map((c) => c.competitionId);
-  if (upcomingCompIds.length > 0) {
-    const comps2 = await prisma.competition.findMany({
-      where: { id: { in: upcomingCompIds } },
-      select: { id: true, sportId: true },
-    });
-    for (const c of comps2) {
-      compToSport.set(c.id, c.sportId);
-    }
-  }
-  for (const uc of upcomingCountsRaw) {
-    const sportId = compToSport.get(uc.competitionId);
-    if (sportId) {
-      sportEventCounts.set(sportId, (sportEventCounts.get(sportId) ?? 0) + uc._count.id);
+  for (const row of eventCountsRaw) {
+    const sportId = compToSport.get(row.competitionId);
+    if (!sportId) continue;
+
+    // All UPCOMING + LIVE rows count toward total events
+    sportEventCounts.set(sportId, (sportEventCounts.get(sportId) ?? 0) + row._count.id);
+
+    // Only LIVE + isLive rows count toward live events
+    if (row.status === 'LIVE' && row.isLive) {
+      sportLiveCounts.set(sportId, (sportLiveCounts.get(sportId) ?? 0) + row._count.id);
     }
   }
 
@@ -103,7 +81,7 @@ export async function getSports() {
     icon: s.icon,
     isActive: s.isActive,
     sortOrder: s.sortOrder,
-    competitionCount: s._count.competitions,
+    competitionCount: s.competitions.length,
     eventCount: sportEventCounts.get(s.id) ?? 0,
     liveEventCount: sportLiveCounts.get(s.id) ?? 0,
   }));
@@ -316,8 +294,16 @@ export async function getLiveEvents() {
   const cached = await redis.get(cacheKey);
   if (cached) return JSON.parse(cached);
 
-  const events = await prisma.event.findMany({
-    where: { status: 'LIVE', isLive: true, homeTeam: { not: null } },
+  const staleThreshold = new Date(Date.now() - 15 * 60 * 1000); // 15 minutes
+
+  const rawEvents = await prisma.event.findMany({
+    where: {
+      status: 'LIVE',
+      isLive: true,
+      homeTeam: { not: null },
+      awayTeam: { not: null },  // Exclude events with null away teams (horse racing, greyhounds)
+      updatedAt: { gt: staleThreshold }, // Only show recently updated events
+    },
     orderBy: { startTime: 'asc' },
     include: {
       competition: {
@@ -336,6 +322,17 @@ export async function getLiveEvents() {
       },
     },
   });
+
+  // Deduplicate by team matchup — same homeTeam + awayTeam keeps only the most recently updated
+  const seen = new Map<string, typeof rawEvents[0]>();
+  for (const event of rawEvents) {
+    const key = `${(event.homeTeam || '').toLowerCase()}-${(event.awayTeam || '').toLowerCase()}`;
+    const existing = seen.get(key);
+    if (!existing || event.updatedAt > existing.updatedAt) {
+      seen.set(key, event);
+    }
+  }
+  const events = Array.from(seen.values());
 
   // Group by sport
   const grouped = new Map<string, { sport: { id: string; name: string; slug: string; icon: string | null }; events: unknown[] }>();
@@ -677,14 +674,22 @@ export async function getCompetitionsWithEvents(sportSlug: string) {
       },
       events: {
         where: {
-          status: { in: ['UPCOMING', 'LIVE', 'ENDED'] },
+          status: { in: ['UPCOMING', 'LIVE'] },
           homeTeam: { not: null }, // Exclude outright/special events — they have their own tab
           startTime: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // include events from past 24h (live/ended)
+            gte: new Date(Date.now() - 6 * 60 * 60 * 1000), // include live events from past 6h
+            lte: new Date(Date.now() + 48 * 60 * 60 * 1000), // include events up to 48h ahead (today + tomorrow)
+          },
+          // Only include events that have at least one open market with active selections
+          markets: {
+            some: {
+              status: 'OPEN',
+              selections: { some: { status: 'ACTIVE' } },
+            },
           },
         },
         orderBy: { startTime: 'asc' },
-        take: 50,
+        take: 100,
         include: {
           competition: {
             select: { name: true, slug: true, country: true, logo: true, sport: { select: { name: true, slug: true, icon: true } } },
@@ -708,9 +713,10 @@ export async function getCompetitionsWithEvents(sportSlug: string) {
   const result = competitions
     .map((c) => {
       // Format events and filter out those without any odds
+      // Only show events that have at least a mainMarket with selections
       const formattedEvents = c.events
         .map(formatEventSummary)
-        .filter((e) => e.mainMarket !== null || e.status === 'ENDED' || e.isLive);
+        .filter((e) => e.mainMarket !== null && e.mainMarket.selections.length > 0);
       return {
         id: c.id,
         sportId: c.sportId,
@@ -1626,10 +1632,24 @@ function formatEventSummary(event: {
   };
 }
 
+/**
+ * Invalidate event-related caches by incrementing a version key.
+ *
+ * Instead of using `redis.keys('events:*')` — which is O(N) and blocks the
+ * Redis event loop — we bump a version counter. All cache reads incorporate
+ * this version into their cache key so stale entries are simply never hit and
+ * will expire naturally via their TTL.
+ *
+ * We also explicitly delete the well-known static cache keys that don't use
+ * the version prefix (sports:list, competitions:popular).
+ */
 async function invalidateEventCaches() {
-  const keys = await redis.keys('events:*');
-  if (keys.length > 0) {
-    await redis.del(...keys);
-  }
-  await redis.del('sports:list');
+  await Promise.all([
+    redis.incr('events:version'),
+    redis.del('sports:list'),
+    redis.del('competitions:popular'),
+    // Delete well-known event cache keys directly
+    redis.del('events:live:grouped'),
+    redis.del('events:featured'),
+  ]);
 }

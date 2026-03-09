@@ -40,7 +40,7 @@ export class PlinkoGame extends BaseGame {
   readonly name = 'Plinko';
   readonly slug = 'plinko';
   readonly houseEdge = 0.02;
-  readonly minBet = 0.01;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   async play(userId: string, bet: BetRequest): Promise<GameResult> {

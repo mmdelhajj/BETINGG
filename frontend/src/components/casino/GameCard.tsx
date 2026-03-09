@@ -3,9 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Play, Gamepad2, Star } from 'lucide-react';
+import { Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,88 +20,118 @@ export interface GameCardProps {
   rtp?: number;
   isPopular?: boolean;
   isNew?: boolean;
+  isHot?: boolean;
   category?: string;
   gradient?: string;
+  icon?: string;
   index?: number;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 // ---------------------------------------------------------------------------
 // Gradient map for game thumbnails
 // ---------------------------------------------------------------------------
 
-const GAME_GRADIENTS: Record<string, string> = {
-  crash: 'from-red-600/50 to-orange-500/40',
-  dice: 'from-blue-600/50 to-cyan-400/40',
-  mines: 'from-emerald-600/50 to-green-400/40',
-  plinko: 'from-yellow-600/50 to-amber-400/40',
-  coinflip: 'from-purple-600/50 to-pink-400/40',
-  roulette: 'from-red-600/50 to-rose-400/40',
-  blackjack: 'from-teal-600/50 to-emerald-400/40',
-  hilo: 'from-indigo-600/50 to-blue-400/40',
-  wheel: 'from-amber-600/50 to-yellow-400/40',
-  tower: 'from-sky-600/50 to-blue-400/40',
-  limbo: 'from-violet-600/50 to-purple-400/40',
-  keno: 'from-orange-600/50 to-red-400/40',
-  'video-poker': 'from-green-600/50 to-teal-400/40',
-  baccarat: 'from-rose-600/50 to-pink-400/40',
-  slots: 'from-fuchsia-600/50 to-violet-400/40',
+export const GAME_GRADIENTS: Record<string, string> = {
+  crash: 'from-red-600 to-orange-500',
+  dice: 'from-amber-600 to-yellow-400',
+  mines: 'from-pink-500 to-purple-600',
+  plinko: 'from-green-500 to-emerald-400',
+  coinflip: 'from-yellow-400 to-amber-500',
+  limbo: 'from-blue-600 to-cyan-400',
+  hilo: 'from-violet-600 to-purple-400',
+  tower: 'from-indigo-600 to-blue-500',
+  wheel: 'from-purple-500 to-pink-500',
+  keno: 'from-teal-500 to-green-400',
+  blackjack: 'from-emerald-700 to-green-500',
+  roulette: 'from-red-700 to-red-500',
+  baccarat: 'from-amber-700 to-yellow-500',
+  videopoker: 'from-blue-700 to-indigo-500',
+  sicbo: 'from-orange-600 to-red-400',
+  craps: 'from-green-600 to-lime-400',
+  faro: 'from-rose-600 to-pink-400',
+  poker: 'from-emerald-600 to-teal-400',
+  slots: 'from-purple-600 to-violet-400',
+  slots5: 'from-fuchsia-600 to-purple-400',
+  jackpotslots: 'from-yellow-500 to-orange-500',
+  rps: 'from-cyan-500 to-blue-400',
+  numberguess: 'from-sky-500 to-indigo-400',
+  scratchcard: 'from-lime-500 to-green-400',
+  thimbles: 'from-amber-500 to-orange-400',
+  dragontower: 'from-red-500 to-purple-600',
+  aviator: 'from-red-500 to-rose-400',
+  trenball: 'from-green-500 to-teal-400',
+  caseopening: 'from-yellow-500 to-amber-400',
+  bingo: 'from-blue-500 to-purple-400',
+  minesweeper: 'from-gray-500 to-slate-400',
+  wheelofmillions: 'from-yellow-400 to-amber-500',
+  horseracing: 'from-amber-700 to-orange-500',
+  ludo: 'from-red-400 to-blue-500',
+  virtualsports: 'from-green-400 to-emerald-600',
+};
+
+export const GAME_ICONS: Record<string, string> = {
+  crash: '🚀', dice: '🎲', mines: '💎', plinko: '⚡', coinflip: '🪙',
+  limbo: '🎯', hilo: '🃏', tower: '🏗️', wheel: '🎡', keno: '🔢',
+  blackjack: '♠️', roulette: '🎰', baccarat: '👑', videopoker: '🃏',
+  sicbo: '🎲', craps: '🎯', faro: '🂡', poker: '♣️', slots: '🍒',
+  slots5: '🎰', jackpotslots: '💰', rps: '✊', numberguess: '🔮',
+  scratchcard: '🎫', thimbles: '🏆', dragontower: '🐉', aviator: '✈️',
+  trenball: '⚽', caseopening: '📦', bingo: '🅱️', minesweeper: '💣',
+  wheelofmillions: '🏆', horseracing: '🏇', ludo: '🎲', virtualsports: '🏟️',
 };
 
 // ---------------------------------------------------------------------------
-// Game Icon map
+// Component — Cloudbet-style game card for horizontal scroll rows
 // ---------------------------------------------------------------------------
 
-const GAME_ICONS: Record<string, string> = {
-  crash: '\u{1F680}',
-  dice: '\u{1F3B2}',
-  mines: '\u{1F4A3}',
-  plinko: '\u{26AA}',
-  coinflip: '\u{1FA99}',
-  roulette: '\u{1F3B0}',
-  blackjack: '\u{1F0CF}',
-  hilo: '\u{2195}\u{FE0F}',
-  wheel: '\u{1F3A1}',
-  tower: '\u{1F3D7}\u{FE0F}',
-  limbo: '\u{267E}\u{FE0F}',
-  keno: '\u{1F522}',
-  'video-poker': '\u{1F0A1}',
-  baccarat: '\u{1F3B4}',
-  slots: '\u{1F3B0}',
-};
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-export default function GameCard({
+function GameCard({
   name,
   slug,
   thumbnail,
   provider,
-  houseEdge,
   rtp,
   isPopular,
   isNew,
+  isHot,
   gradient,
+  icon,
   index = 0,
+  size = 'md',
 }: GameCardProps) {
-  const gradientClass = gradient || GAME_GRADIENTS[slug] || 'from-gray-600/50 to-slate-400/40';
-  const gameIcon = GAME_ICONS[slug];
+  const gradientClass = gradient || GAME_GRADIENTS[slug] || 'from-gray-600 to-slate-500';
+  const gameIcon = icon || GAME_ICONS[slug];
   const [imgError, setImgError] = useState(false);
   const showFallback = !thumbnail || imgError;
 
+  const sizeClasses = {
+    sm: 'w-[100px]',
+    md: 'w-[130px]',
+    lg: 'w-[160px]',
+  };
+
+  const thumbSizeClasses = {
+    sm: 'h-[100px]',
+    md: 'h-[130px]',
+    lg: 'h-[160px]',
+  };
+
+  const iconSize = {
+    sm: 'text-3xl',
+    md: 'text-4xl',
+    lg: 'text-5xl',
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.04, ease: 'easeOut' }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2, delay: index * 0.03, ease: 'easeOut' }}
+      className={cn('flex-shrink-0', sizeClasses[size])}
     >
-      <Link
-        href={`/casino/${slug}`}
-        className="block bg-[#161B22] border border-[#30363D] rounded-card overflow-hidden group hover:border-[#8B5CF6]/40 hover:shadow-lg hover:shadow-[#8B5CF6]/5 transition-all duration-200"
-      >
-        {/* Thumbnail Area */}
-        <div className="relative aspect-[4/3] overflow-hidden">
+      <Link href={`/casino/${slug}`} className="block group">
+        {/* Thumbnail */}
+        <div className={cn('relative rounded-xl overflow-hidden', thumbSizeClasses[size])}>
           {!showFallback ? (
             <img
               src={thumbnail}
@@ -113,79 +142,61 @@ export default function GameCard({
           ) : (
             <div
               className={cn(
-                'w-full h-full bg-gradient-to-br flex flex-col items-center justify-center gap-2',
+                'w-full h-full bg-gradient-to-br flex flex-col items-center justify-center',
                 gradientClass
               )}
             >
               {gameIcon ? (
-                <span className="text-5xl drop-shadow-lg group-hover:scale-110 transition-transform duration-200">
+                <span className={cn('drop-shadow-lg group-hover:scale-110 transition-transform duration-200', iconSize[size])}>
                   {gameIcon}
                 </span>
               ) : (
-                <Gamepad2 className="w-10 h-10 text-white/30 group-hover:text-white/50 transition-colors duration-200" />
+                <Gamepad2 className="w-8 h-8 text-white/40" />
               )}
-              <span className="text-xs font-bold text-white/70 tracking-wider uppercase">
-                {name}
-              </span>
             </div>
           )}
 
           {/* Badges */}
-          <div className="absolute top-2 left-2 flex gap-1.5">
-            {isPopular && (
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-[#F59E0B]/90 rounded text-[10px] font-bold text-black">
-                <Star className="w-3 h-3" />
-                HOT
+          <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
+            {isHot && rtp && (
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[#EF4444]/90 rounded text-[9px] font-bold text-white">
+                🔥 {rtp}% RTP
               </span>
             )}
             {isNew && (
-              <span className="px-2 py-0.5 bg-[#10B981]/90 rounded text-[10px] font-bold text-white">
+              <span className="px-1.5 py-0.5 bg-[#10B981]/90 rounded text-[9px] font-bold text-white">
                 NEW
               </span>
             )}
-          </div>
-
-          {/* House Edge Badge */}
-          {(houseEdge !== undefined || rtp !== undefined) && (
-            <div className="absolute top-2 right-2">
-              <span className="px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[10px] font-mono text-[#8B949E]">
-                {rtp !== undefined ? `${rtp}%` : `${(100 - (houseEdge ?? 0)).toFixed(1)}%`}
-              </span>
-            </div>
-          )}
-
-          {/* Play Button Overlay */}
-          <motion.div
-            className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors duration-200"
-            initial={false}
-          >
-            <motion.div
-              className="w-12 h-12 rounded-full bg-[#8B5CF6] flex items-center justify-center shadow-lg shadow-[#8B5CF6]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Play className="w-6 h-6 text-white ml-0.5" />
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Card Info */}
-        <div className="p-3">
-          <p className="font-semibold text-sm text-[#E6EDF3] truncate group-hover:text-white transition-colors duration-200">
-            {name}
-          </p>
-          <div className="flex items-center justify-between mt-1">
-            <Badge variant="default" size="xs" className="text-[10px]">
-              {provider}
-            </Badge>
-            {houseEdge !== undefined && (
-              <span className="text-[10px] text-[#8B949E] font-mono">
-                {houseEdge}% edge
+            {isPopular && !isHot && (
+              <span className="px-1.5 py-0.5 bg-[#F59E0B]/90 rounded text-[9px] font-bold text-black">
+                HOT
               </span>
             )}
           </div>
+
+          {/* RTP badge (top-right, only if not already showing in hot badge) */}
+          {rtp && !isHot && rtp >= 98 && (
+            <div className="absolute top-1.5 right-1.5">
+              <span className="px-1.5 py-0.5 bg-black/70 rounded text-[9px] font-bold text-[#C8FF00]">
+                {rtp}% RTP
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Name + Provider */}
+        <div className="mt-1.5 px-0.5">
+          <p className="text-xs font-semibold text-[#E6EDF3] truncate leading-tight">
+            {name}
+          </p>
+          <p className="text-[10px] text-[#8B949E] truncate leading-tight mt-0.5">
+            {provider}
+          </p>
         </div>
       </Link>
     </motion.div>
   );
 }
+
+export default React.memo(GameCard);

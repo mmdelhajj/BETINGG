@@ -52,7 +52,7 @@ export class SlotsGame extends BaseGame {
   readonly name = 'Slots';
   readonly slug = 'slots';
   readonly houseEdge = 0.04;
-  readonly minBet = 0.1;
+  readonly minBet = 0.0001;
   readonly maxBet = 1000;
 
   async play(userId: string, bet: BetRequest): Promise<GameResult> {

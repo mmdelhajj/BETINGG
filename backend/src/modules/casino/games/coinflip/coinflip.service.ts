@@ -17,7 +17,7 @@ export class CoinflipGame extends BaseGame {
   readonly name = 'Coinflip';
   readonly slug = 'coinflip';
   readonly houseEdge = 0.03;
-  readonly minBet = 0.01;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   private static readonly WIN_MULTIPLIER = 1.94; // (1 - 0.03) * 2

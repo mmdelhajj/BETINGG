@@ -53,7 +53,7 @@ export class TowerGame extends BaseGame {
   readonly name = 'Tower';
   readonly slug = 'tower';
   readonly houseEdge = 0.02;
-  readonly minBet = 0.01;
+  readonly minBet = 0.0001;
   readonly maxBet = 5000;
 
   /**
@@ -80,7 +80,12 @@ export class TowerGame extends BaseGame {
     const existingKey = REDIS_KEY_PREFIX + userId;
     const existing = await redis.get(existingKey);
     if (existing) {
-      throw new GameError('GAME_IN_PROGRESS', 'You already have an active Tower game. Cashout or finish it first.');
+      const existingState: TowerState = JSON.parse(existing);
+      if (existingState.isActive) {
+        throw new GameError('GAME_IN_PROGRESS', 'You already have an active Tower game. Cashout or finish it first.');
+      }
+      // Clean up stale completed session so it doesn't block a new game
+      await redis.del(existingKey);
     }
 
     // Validate bet

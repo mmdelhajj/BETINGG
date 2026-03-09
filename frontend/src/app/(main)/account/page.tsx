@@ -197,7 +197,7 @@ export default function AccountSettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#0D1117]">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 space-y-6">
         {/* Page Header */}
         <div>
           <h1 className="text-2xl font-bold text-[#E6EDF3]">Account Settings</h1>
@@ -207,7 +207,7 @@ export default function AccountSettingsPage() {
         </div>
 
         {/* Tab Navigation - Underline style */}
-        <div className="border-b border-[#21262D]">
+        <div className="relative z-10 border-b border-[#21262D]">
           <nav className="flex gap-0 overflow-x-auto scrollbar-hide -mb-px">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -235,7 +235,7 @@ export default function AccountSettingsPage() {
         {/* PROFILE TAB                                                      */}
         {/* ================================================================ */}
         {activeTab === 'profile' && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="relative z-10 space-y-5 animate-fade-in">
             {/* Profile Header Card */}
             <SectionCard>
               <div className="p-6">
@@ -314,7 +314,7 @@ export default function AccountSettingsPage() {
         {/* SECURITY TAB                                                     */}
         {/* ================================================================ */}
         {activeTab === 'security' && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="relative z-10 space-y-5 animate-fade-in">
             {/* Change Password */}
             <SectionCard>
               <SectionHeader icon={Key} title="Change Password" description="Use a strong password with at least 8 characters" />
@@ -479,7 +479,7 @@ export default function AccountSettingsPage() {
         {/* PREFERENCES TAB                                                  */}
         {/* ================================================================ */}
         {activeTab === 'preferences' && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="relative z-10 space-y-5 animate-fade-in">
             {/* Theme */}
             <SectionCard>
               <SectionHeader icon={Palette} title="Appearance" description="Customize how the platform looks" />
@@ -598,7 +598,7 @@ export default function AccountSettingsPage() {
         {/* KYC / VERIFICATION TAB                                           */}
         {/* ================================================================ */}
         {activeTab === 'kyc' && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="relative z-10 space-y-5 animate-fade-in">
             {/* Verification Status Overview */}
             <SectionCard>
               <div className="p-5 flex items-center justify-between">
@@ -718,7 +718,7 @@ export default function AccountSettingsPage() {
         {/* RESPONSIBLE GAMBLING TAB                                          */}
         {/* ================================================================ */}
         {activeTab === 'responsible' && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="relative z-10 space-y-5 animate-fade-in">
             {/* Warning Banner */}
             <div className="p-4 bg-[#F59E0B]/5 border border-[#F59E0B]/20 rounded-lg flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-[#F59E0B]/10 flex items-center justify-center shrink-0">

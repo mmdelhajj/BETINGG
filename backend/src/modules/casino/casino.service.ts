@@ -271,7 +271,7 @@ export async function play(
   }
 
   // Check if game is stateful
-  const statefulGames = ['crash', 'mines', 'blackjack', 'hilo', 'tower', 'video-poker'];
+  const statefulGames = ['crash', 'mines', 'blackjack', 'hilo', 'tower', 'video-poker', 'minesweeper', 'ludo', 'poker'];
   if (statefulGames.includes(gameSlug)) {
     throw new GameError(
       'USE_SPECIFIC_ENDPOINT',

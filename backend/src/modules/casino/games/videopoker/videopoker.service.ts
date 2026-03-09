@@ -80,7 +80,7 @@ export class VideoPokerGame extends BaseGame {
   readonly name = 'Video Poker';
   readonly slug = 'video-poker';
   readonly houseEdge = 0.015;
-  readonly minBet = 0.1;
+  readonly minBet = 0.0001;
   readonly maxBet = 1000;
 
   /**
@@ -101,7 +101,12 @@ export class VideoPokerGame extends BaseGame {
     const key = REDIS_KEY_PREFIX + userId;
     const existing = await redis.get(key);
     if (existing) {
-      throw new GameError('GAME_IN_PROGRESS', 'You already have an active Video Poker hand. Complete it first.');
+      const existingState: VideoPokerState = JSON.parse(existing);
+      if (existingState.isActive) {
+        throw new GameError('GAME_IN_PROGRESS', 'You already have an active Video Poker hand. Complete it first.');
+      }
+      // Clean up stale completed session so it doesn't block a new game
+      await redis.del(key);
     }
 
     // Validate bet

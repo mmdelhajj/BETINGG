@@ -51,7 +51,7 @@ export class BlackjackGame extends BaseGame {
   readonly name = 'Blackjack';
   readonly slug = 'blackjack';
   readonly houseEdge = 0.005; // ~0.5% with basic strategy
-  readonly minBet = 0.1;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   private static REDIS_PREFIX = 'blackjack:session:';
@@ -141,6 +141,10 @@ export class BlackjackGame extends BaseGame {
     const existing = await this.getSession(userId);
     if (existing && !existing.isComplete) {
       throw new GameError('GAME_IN_PROGRESS', 'You already have an active Blackjack hand.');
+    }
+    // Clear any completed session
+    if (existing) {
+      await this.deleteSession(userId);
     }
 
     await this.validateBet(userId, bet.amount, bet.currency);
@@ -237,6 +241,24 @@ export class BlackjackGame extends BaseGame {
         clientSeed: seeds.clientSeed,
         nonce: seeds.nonce,
       });
+
+      // Game already complete — no need to save session
+      return {
+        playerHands: [
+          {
+            cards: playerHand.cards,
+            total: this.calculateHandValue(playerHand.cards).total,
+            soft: this.calculateHandValue(playerHand.cards).soft,
+          },
+        ],
+        dealerUpCard: state.dealerHand.cards[0],
+        dealerHand: { cards: state.dealerHand.cards, total: this.calculateHandValue(state.dealerHand.cards).total },
+        dealerTotal: this.calculateHandValue(state.dealerHand.cards).total,
+        isBlackjack: playerBJ,
+        isComplete: true,
+        payout,
+        serverSeedHash: seeds.serverSeedHash,
+      };
     }
 
     await this.saveSession(userId, state);
@@ -321,7 +343,10 @@ export class BlackjackGame extends BaseGame {
       }
     }
 
-    await this.saveSession(userId, state);
+    // Only save session if game is still in progress
+    if (!result.isComplete) {
+      await this.saveSession(userId, state);
+    }
     return result;
   }
 
@@ -344,7 +369,10 @@ export class BlackjackGame extends BaseGame {
     hand.isStanding = true;
 
     const resolved = await this.advanceOrComplete(state, userId);
-    await this.saveSession(userId, state);
+    // Only save session if game is still in progress
+    if (!resolved.isComplete) {
+      await this.saveSession(userId, state);
+    }
 
     const result: any = {
       isComplete: resolved.isComplete,
@@ -404,7 +432,9 @@ export class BlackjackGame extends BaseGame {
     hand.isStanding = true;
 
     const resolved = await this.advanceOrComplete(state, userId);
-    await this.saveSession(userId, state);
+    if (!resolved.isComplete) {
+      await this.saveSession(userId, state);
+    }
 
     const result: any = {
       card,
@@ -499,6 +529,7 @@ export class BlackjackGame extends BaseGame {
 
     return {
       isActive: true,
+      currency: state.currency,
       playerHands: state.playerHands.map((h) => {
         const val = this.calculateHandValue(h.cards);
         return {
@@ -632,6 +663,9 @@ export class BlackjackGame extends BaseGame {
       clientSeed: state.clientSeed,
       nonce: state.nonce,
     });
+
+    // Clean up session so player can start a new hand
+    await this.deleteSession(userId);
 
     return { isComplete: true, totalPayout, handResults };
   }

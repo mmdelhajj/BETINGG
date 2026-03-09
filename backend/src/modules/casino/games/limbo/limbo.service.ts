@@ -9,7 +9,7 @@ export class LimboGame extends BaseGame {
   readonly name = 'Limbo';
   readonly slug = 'limbo';
   readonly houseEdge = 0.01;
-  readonly minBet = 0.01;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   private static readonly MIN_TARGET = 1.01;

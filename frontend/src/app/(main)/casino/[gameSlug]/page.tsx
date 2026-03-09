@@ -864,6 +864,14 @@ function LimboGame() {
   const [lastResult, setLastResult] = useState<'win' | 'loss' | null>(null);
   const [payout, setPayout] = useState(0);
   const [animatingValue, setAnimatingValue] = useState<number | null>(null);
+  const animIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup animation interval on unmount
+  useEffect(() => {
+    return () => {
+      if (animIntervalRef.current) clearInterval(animIntervalRef.current);
+    };
+  }, []);
 
   const winChance = useMemo(() => {
     const t = parseFloat(targetMultiplier) || 2;
@@ -881,10 +889,14 @@ function LimboGame() {
     // Animate counting up
     let frame = 0;
     const totalFrames = 25;
-    const animInterval = setInterval(() => {
+    if (animIntervalRef.current) clearInterval(animIntervalRef.current);
+    animIntervalRef.current = setInterval(() => {
       setAnimatingValue(parseFloat((Math.random() * target * 2).toFixed(2)));
       frame++;
-      if (frame >= totalFrames) clearInterval(animInterval);
+      if (frame >= totalFrames) {
+        if (animIntervalRef.current) clearInterval(animIntervalRef.current);
+        animIntervalRef.current = null;
+      }
     }, 50);
 
     let result: number;
@@ -901,7 +913,7 @@ function LimboGame() {
       result = res.round?.result ?? res.result ?? res.round?.multiplier ?? parseFloat((Math.random() * 100).toFixed(2));
       won = res.round?.won ?? result >= target;
     } catch {
-      clearInterval(animInterval);
+      if (animIntervalRef.current) { clearInterval(animIntervalRef.current); animIntervalRef.current = null; }
       setAnimatingValue(null);
       setError('Failed to place bet. Please try again.');
       setIsPlaying(false);
@@ -910,7 +922,7 @@ function LimboGame() {
 
     // Wait for animation
     await new Promise(r => setTimeout(r, totalFrames * 50 + 200));
-    clearInterval(animInterval);
+    if (animIntervalRef.current) { clearInterval(animIntervalRef.current); animIntervalRef.current = null; }
     setAnimatingValue(null);
 
     setResultValue(result);
@@ -1693,6 +1705,14 @@ function SlotsGame() {
   useEffect(() => { setBetAmount(getDefaultBet(currency)); }, [currency]);
   const [error, setError] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
+  const spinTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup spin timer on unmount
+  useEffect(() => {
+    return () => {
+      if (spinTimerRef.current) clearInterval(spinTimerRef.current);
+    };
+  }, []);
   const [grid, setGrid] = useState<string[][]>([
     ['\uD83C\uDF52', '\uD83C\uDF4B', '\u2B50'],
     ['\uD83D\uDC8E', '7\uFE0F\u20E3', '\uD83C\uDF40'],
@@ -1761,7 +1781,7 @@ function SlotsGame() {
     const interval = 80;
     let elapsed = 0;
 
-    const spinTimer = setInterval(() => {
+    spinTimerRef.current = setInterval(() => {
       elapsed += interval;
       const newGrid = [
         [weightedRandomSymbol(), weightedRandomSymbol(), weightedRandomSymbol()],
@@ -1772,7 +1792,8 @@ function SlotsGame() {
       setGrid(newGrid);
 
       if (elapsed >= spinDuration) {
-        clearInterval(spinTimer);
+        if (spinTimerRef.current) clearInterval(spinTimerRef.current);
+        spinTimerRef.current = null;
         setGrid(finalGrid);
 
         // Check wins
@@ -2184,7 +2205,7 @@ export default function GamePage() {
                         >
                           {msg.username}
                         </span>
-                        <span className="text-[10px] text-[#6E7681] opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[10px] text-[#6E7681] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           {new Date(msg.timestamp).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',

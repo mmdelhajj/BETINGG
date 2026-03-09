@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
@@ -145,7 +146,7 @@ function FileUploadArea({
       <div className="relative">
         <p className="text-sm font-medium text-[#8B949E] mb-2">{label}</p>
         <div className="relative rounded-card overflow-hidden border border-[#30363D] bg-[#0D1117]">
-          <img src={preview} alt={label} className="w-full h-48 object-cover" />
+          <Image src={preview || '/placeholder.png'} alt={label} width={400} height={192} className="w-full h-48 object-cover" unoptimized />
           <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
             <button
               onClick={onRemove}

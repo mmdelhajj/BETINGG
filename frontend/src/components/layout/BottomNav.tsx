@@ -26,7 +26,7 @@ export default function BottomNav() {
   if (shouldHide) return null;
 
   return (
-    <div className="md:hidden fixed bottom-[20px] left-1/2 -translate-x-1/2 z-50">
+    <div className="md:hidden fixed bottom-[20px] left-1/2 -translate-x-1/2 z-50" style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}>
       <button
         onClick={toggleOpen}
         className="

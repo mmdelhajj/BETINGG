@@ -15,6 +15,11 @@ import { videoPokerGame } from './games/videopoker/videopoker.service.js';
 import { autoBetService } from './autobet.service.js';
 import { jackpotService } from './jackpot.service.js';
 import { liveFeedService } from './livefeed.service.js';
+import { dragonTowerGame } from './games/dragontower/dragontower.service.js';
+import { pokerGame } from './games/poker/poker.service.js';
+import { trenballGame } from './games/trenball/trenball.service.js';
+import { getActiveVirtualMatches } from './games/virtualsports/virtualsports.service.js';
+import { tournamentService } from './tournament.service.js';
 
 const fairService = new ProvablyFairService();
 
@@ -377,9 +382,17 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
     ) => {
       try {
         const { slug } = request.params;
-        const { currency, options } = request.body;
-        const amount = normalizeBetAmount(request.body);
+        const body = request.body as any;
+        const { currency } = body;
+        const amount = normalizeBetAmount(body);
         const userId = request.user!.id;
+
+        // Merge body-level fields into options for games that send them flat
+        let options = body.options || {};
+        if (body.team && !options.team) options = { ...options, team: body.team };
+        if (body.autoCashout && !options.autoCashout) options = { ...options, autoCashout: body.autoCashout };
+        if (body.betType && !options.betType) options = { ...options, betType: body.betType };
+        if (body.selection && !options.selection) options = { ...options, selection: body.selection };
 
         const game = gameRegistry.get(slug);
         if (!game) {
@@ -390,7 +403,7 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         }
 
         // Check if game is stateful and shouldn't use generic play
-        const statefulGames = ['crash', 'mines', 'blackjack', 'hilo'];
+        const statefulGames = ['crash', 'mines', 'blackjack', 'hilo', 'dragontower', 'poker'];
         if (statefulGames.includes(slug)) {
           return reply.status(400).send({
             success: false,
@@ -654,6 +667,106 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
   // BLACKJACK GAME
   // =========================================================================
 
+  // Helper to fetch all wallet balances for a user
+  async function getUserBalances(userId: string) {
+    const wallets = await prisma.wallet.findMany({
+      where: { userId },
+      include: { currency: { select: { symbol: true } } },
+    });
+    return wallets.map((w) => ({
+      currency: w.currency.symbol,
+      balance: w.balance.toNumber(),
+    }));
+  }
+
+  /**
+   * Build a unified blackjack response from raw service output.
+   * The service returns different shapes for deal/hit/stand/double/split,
+   * so we normalise everything into the frontend's expected format.
+   */
+  function buildBlackjackResponse(raw: any, opts: {
+    betAmount?: number;
+    currency?: string;
+    newBalance: number;
+    fairness?: any;
+  }) {
+    // ---- Player hand ----
+    const playerCards: any[] =
+      raw.hand?.cards              // hit/double returns hand.cards
+      || raw.playerHands?.[0]?.cards  // deal returns playerHands[]
+      || raw.results?.[0]?.hand?.cards // stand returns results[]
+      || [];
+
+    const playerTotal: number =
+      raw.hand?.total ?? raw.playerHands?.[0]?.total ?? raw.results?.[0]?.hand?.total ?? 0;
+
+    // ---- Dealer hand ----
+    // During play: show only the up card. When complete: show all cards.
+    let dealerCards: any[];
+    let dealerTotal: number;
+
+    if (raw.isComplete) {
+      // Game over — show full dealer hand
+      dealerCards = raw.dealerHand?.cards || (raw.dealerUpCard ? [raw.dealerUpCard] : []);
+      dealerTotal = raw.dealerHand?.total ?? raw.dealerTotal ?? 0;
+    } else {
+      // Still playing — show only the up card + a hidden placeholder
+      const upCard = raw.dealerUpCard || raw.dealerHand?.cards?.[0];
+      if (upCard) {
+        dealerCards = [upCard, { rank: '?', suit: 'back', value: 0, hidden: true }];
+        dealerTotal = upCard.value || 0;
+      } else {
+        dealerCards = [];
+        dealerTotal = 0;
+      }
+    }
+
+    // ---- Status ----
+    const betAmount = opts.betAmount || raw.playerHands?.[0]?.bet || raw.hand?.bet || 0;
+    const payout: number = raw.payout ?? 0;
+    let status = 'playing';
+
+    if (raw.isComplete) {
+      if (raw.isBlackjack) status = 'blackjack';
+      else if (raw.isBusted) status = 'bust';
+      else if (payout > betAmount) status = 'win';
+      else if (payout === betAmount && payout > 0) status = 'push';
+      else status = 'lose';
+    }
+
+    // ---- Actions ----
+    const playing = !raw.isComplete && !raw.isBusted;
+    const canHit = playing;
+    const canDouble = playing && playerCards.length === 2;
+    const canSplit = playing && playerCards.length === 2 &&
+      playerCards[0]?.rank === playerCards[1]?.rank;
+
+    const multiplier = betAmount > 0 && payout > 0 ? payout / betAmount : 0;
+
+    return {
+      roundId: raw.roundId || '',
+      result: {
+        playerHand: playerCards,
+        dealerHand: dealerCards,
+        playerTotal,
+        dealerTotal,
+        status,
+        canHit,
+        canDouble,
+        canSplit,
+        canInsurance: false,
+        payout,
+        multiplier,
+      },
+      fairness: opts.fairness || {
+        serverSeedHash: raw.serverSeedHash || '',
+        clientSeed: '',
+        nonce: 0,
+      },
+      newBalance: opts.newBalance,
+    };
+  }
+
   /**
    * POST /api/v1/casino/blackjack/deal — deal a new hand
    */
@@ -671,30 +784,64 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
 
         const result = await blackjackGame.deal(userId, { amount, currency });
 
-        // Include updated balance
         const bjWallet = await prisma.wallet.findFirst({
           where: { userId, currency: { symbol: currency } },
           select: { balance: true },
         });
         const bjNewBalance = bjWallet ? bjWallet.balance.toNumber() : 0;
 
-        return { success: true, data: { ...result, newBalance: bjNewBalance } };
+        const resp = buildBlackjackResponse(result, {
+          betAmount: amount,
+          currency,
+          newBalance: bjNewBalance,
+          fairness: { serverSeedHash: result.serverSeedHash, clientSeed: '', nonce: 0 },
+        });
+
+        return { success: true, data: resp };
       } catch (err) {
         errorResponse(reply, err);
       }
     },
   );
 
-  // Helper to fetch all wallet balances for a user
-  async function getUserBalances(userId: string) {
-    const wallets = await prisma.wallet.findMany({
-      where: { userId },
-      include: { currency: { select: { symbol: true } } },
-    });
-    return wallets.map((w) => ({
-      currency: w.currency.symbol,
-      balance: w.balance.toNumber(),
-    }));
+  /** Helper: run a blackjack action and return transformed response.
+   *  We snapshot the session BEFORE the action to capture dealerUpCard,
+   *  currency, and player hand — since the session may be deleted on completion.
+   */
+  async function handleBlackjackAction(userId: string, actionFn: () => Promise<any>, reply: FastifyReply) {
+    try {
+      // Snapshot session state before the action
+      const session = await blackjackGame.getActiveGame(userId);
+      const currency = session?.currency || 'USDT';
+      const dealerUpCard = session?.dealerUpCard;
+      const betAmount = session?.playerHands?.[0]?.bet || 0;
+      const playerCardsBefore = session?.playerHands?.[0]?.cards || [];
+
+      const result = await actionFn();
+
+      // Inject dealerUpCard so the transform can show it during play
+      if (!result.dealerHand && !result.dealerUpCard && dealerUpCard) {
+        result.dealerUpCard = dealerUpCard;
+      }
+
+      // For actions that don't return player hand (stand), inject from snapshot
+      if (!result.hand && !result.playerHands && !result.results) {
+        const ptotal = session?.playerHands?.[0]?.total || 0;
+        result.playerHands = [{ cards: playerCardsBefore, total: ptotal }];
+      }
+
+      // Fetch balance in the correct currency
+      const wallet = await prisma.wallet.findFirst({
+        where: { userId, currency: { symbol: currency } },
+        select: { balance: true },
+      });
+      const newBalance = wallet ? wallet.balance.toNumber() : 0;
+
+      const resp = buildBlackjackResponse(result, { betAmount, currency, newBalance });
+      return { success: true, data: resp };
+    } catch (err) {
+      errorResponse(reply, err);
+    }
   }
 
   /**
@@ -704,16 +851,8 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
     '/api/v1/casino/blackjack/hit',
     { preHandler: [authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const userId = request.user!.id;
-        const result = await blackjackGame.hit(userId);
-        const balances = await getUserBalances(userId);
-        // Extract newBalance from balances (use first available if currency unknown)
-        const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
-      } catch (err) {
-        errorResponse(reply, err);
-      }
+      const userId = request.user!.id;
+      return handleBlackjackAction(userId, () => blackjackGame.hit(userId), reply);
     },
   );
 
@@ -724,15 +863,8 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
     '/api/v1/casino/blackjack/stand',
     { preHandler: [authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const userId = request.user!.id;
-        const result = await blackjackGame.stand(userId);
-        const balances = await getUserBalances(userId);
-        const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
-      } catch (err) {
-        errorResponse(reply, err);
-      }
+      const userId = request.user!.id;
+      return handleBlackjackAction(userId, () => blackjackGame.stand(userId), reply);
     },
   );
 
@@ -743,15 +875,8 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
     '/api/v1/casino/blackjack/double',
     { preHandler: [authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const userId = request.user!.id;
-        const result = await blackjackGame.double(userId);
-        const balances = await getUserBalances(userId);
-        const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
-      } catch (err) {
-        errorResponse(reply, err);
-      }
+      const userId = request.user!.id;
+      return handleBlackjackAction(userId, () => blackjackGame.double(userId), reply);
     },
   );
 
@@ -762,15 +887,8 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
     '/api/v1/casino/blackjack/split',
     { preHandler: [authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const userId = request.user!.id;
-        const result = await blackjackGame.split(userId);
-        const balances = await getUserBalances(userId);
-        const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
-      } catch (err) {
-        errorResponse(reply, err);
-      }
+      const userId = request.user!.id;
+      return handleBlackjackAction(userId, () => blackjackGame.split(userId), reply);
     },
   );
 
@@ -808,39 +926,21 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
           });
         }
 
-        let result: any;
-        switch (normalizedAction) {
-          case 'hit':
-            result = await blackjackGame.hit(userId);
-            break;
-          case 'stand':
-            result = await blackjackGame.stand(userId);
-            break;
-          case 'double':
-            result = await blackjackGame.double(userId);
-            break;
-          case 'split':
-            result = await blackjackGame.split(userId);
-            break;
-          case 'insurance':
-            // Insurance is not yet implemented in the game engine — return a clear error
-            return reply.status(400).send({
-              success: false,
-              error: {
-                code: 'INSURANCE_NOT_AVAILABLE',
-                message: 'Insurance is not currently available.',
-              },
-            });
-          default:
-            return reply.status(400).send({
-              success: false,
-              error: { code: 'INVALID_ACTION', message: `Unknown action "${action}".` },
-            });
+        if (normalizedAction === 'insurance') {
+          return reply.status(400).send({
+            success: false,
+            error: { code: 'INSURANCE_NOT_AVAILABLE', message: 'Insurance is not currently available.' },
+          });
         }
 
-        const balances = await getUserBalances(userId);
-        const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
+        const actionMap: Record<string, () => Promise<any>> = {
+          hit: () => blackjackGame.hit(userId),
+          stand: () => blackjackGame.stand(userId),
+          double: () => blackjackGame.double(userId),
+          split: () => blackjackGame.split(userId),
+        };
+
+        return handleBlackjackAction(userId, actionMap[normalizedAction], reply);
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -892,7 +992,7 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         });
         const hiloNewBalance = hiloWallet ? hiloWallet.balance.toNumber() : 0;
 
-        return { success: true, data: { ...result, newBalance: hiloNewBalance } };
+        return { success: true, data: { result, newBalance: hiloNewBalance } };
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -916,7 +1016,7 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         const result = await hiLoGame.guess(userId, direction);
         const balances = await getUserBalances(userId);
         const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
+        return { success: true, data: { result, balances, newBalance } };
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -935,7 +1035,7 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         const result = await hiLoGame.cashout(userId);
         const balances = await getUserBalances(userId);
         const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
+        return { success: true, data: { result, balances, newBalance } };
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -1087,7 +1187,7 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         });
         const towerNewBalance = towerWallet ? towerWallet.balance.toNumber() : 0;
 
-        return { success: true, data: { ...result, newBalance: towerNewBalance } };
+        return { success: true, data: { result, newBalance: towerNewBalance } };
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -1111,7 +1211,7 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         const result = await towerGame.climb(userId, column);
         const balances = await getUserBalances(userId);
         const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
+        return { success: true, data: { result, balances, newBalance } };
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -1130,7 +1230,91 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         const result = await towerGame.cashout(userId);
         const balances = await getUserBalances(userId);
         const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
+        return { success: true, data: { result, balances, newBalance } };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  // =========================================================================
+  // DRAGON TOWER GAME
+  // =========================================================================
+
+  /**
+   * POST /api/v1/casino/dragontower/start - start a new dragon tower game
+   */
+  app.post(
+    '/api/v1/casino/dragontower/start',
+    { preHandler: [authenticate] },
+    async (
+      request: FastifyRequest<{
+        Body: { amount?: number; betAmount?: number; currency: string; difficulty?: string };
+      }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const userId = request.user!.id;
+        const amount = normalizeBetAmount(request.body);
+        const { currency, difficulty } = request.body;
+
+        const result = await dragonTowerGame.start(userId, {
+          amount,
+          currency,
+          options: { difficulty: difficulty ?? 'easy' },
+        });
+
+        // Include updated balance
+        const dtWallet = await prisma.wallet.findFirst({
+          where: { userId, currency: { symbol: currency } },
+          select: { balance: true },
+        });
+        const dtNewBalance = dtWallet ? dtWallet.balance.toNumber() : 0;
+
+        return { success: true, data: { result, newBalance: dtNewBalance } };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  /**
+   * POST /api/v1/casino/dragontower/pick - pick a door at current level
+   */
+  app.post(
+    '/api/v1/casino/dragontower/pick',
+    { preHandler: [authenticate] },
+    async (
+      request: FastifyRequest<{ Body: { position: number } }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const userId = request.user!.id;
+        const { position } = request.body;
+
+        const result = await dragonTowerGame.pick(userId, position);
+        const balances = await getUserBalances(userId);
+        const newBalance = balances.length > 0 ? balances[0].balance : 0;
+        return { success: true, data: { result, balances, newBalance } };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  /**
+   * POST /api/v1/casino/dragontower/cashout - cash out dragon tower game
+   */
+  app.post(
+    '/api/v1/casino/dragontower/cashout',
+    { preHandler: [authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user!.id;
+        const result = await dragonTowerGame.cashout(userId);
+        const balances = await getUserBalances(userId);
+        const newBalance = balances.length > 0 ? balances[0].balance : 0;
+        return { success: true, data: { result, balances, newBalance } };
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -1165,7 +1349,7 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         });
         const vpNewBalance = vpWallet ? vpWallet.balance.toNumber() : 0;
 
-        return { success: true, data: { ...result, newBalance: vpNewBalance } };
+        return { success: true, data: { result, newBalance: vpNewBalance } };
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -1189,7 +1373,156 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
         const result = await videoPokerGame.draw(userId, holds);
         const balances = await getUserBalances(userId);
         const newBalance = balances.length > 0 ? balances[0].balance : 0;
-        return { success: true, data: { ...result, balances, newBalance } };
+        return { success: true, data: { result, balances, newBalance } };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  // =========================================================================
+  // POKER GAME (Texas Hold'em vs House)
+  // =========================================================================
+
+  /**
+   * POST /api/v1/casino/poker/deal - deal a new poker hand
+   */
+  app.post(
+    '/api/v1/casino/poker/deal',
+    { preHandler: [authenticate] },
+    async (
+      request: FastifyRequest<{ Body: { amount?: number; betAmount?: number; currency: string } }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const userId = request.user!.id;
+        const amount = normalizeBetAmount(request.body);
+        const { currency } = request.body;
+
+        const result = await pokerGame.deal(userId, { amount, currency });
+
+        const wallet = await prisma.wallet.findFirst({
+          where: { userId, currency: { symbol: currency } },
+          select: { balance: true },
+        });
+        const newBalance = wallet ? wallet.balance.toNumber() : 0;
+
+        return { success: true, data: { result, newBalance } };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  /**
+   * POST /api/v1/casino/poker/action - perform a poker action (call, fold, check, raise)
+   */
+  app.post(
+    '/api/v1/casino/poker/action',
+    { preHandler: [authenticate] },
+    async (
+      request: FastifyRequest<{ Body: { action: string } }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const userId = request.user!.id;
+        const { action } = request.body;
+
+        if (!action || typeof action !== 'string') {
+          return reply.status(400).send({
+            success: false,
+            error: { code: 'MISSING_ACTION', message: 'Missing required field "action".' },
+          });
+        }
+
+        const validActions = ['call', 'fold', 'check', 'raise'];
+        const normalizedAction = action.toLowerCase().trim();
+
+        if (!validActions.includes(normalizedAction)) {
+          return reply.status(400).send({
+            success: false,
+            error: {
+              code: 'INVALID_ACTION',
+              message: `Invalid action "${action}". Valid actions: ${validActions.join(', ')}.`,
+            },
+          });
+        }
+
+        let result: any;
+        switch (normalizedAction) {
+          case 'call':
+            result = await pokerGame.call(userId);
+            break;
+          case 'fold':
+            result = await pokerGame.fold(userId);
+            break;
+          case 'check':
+            result = await pokerGame.check(userId);
+            break;
+          case 'raise':
+            result = await pokerGame.raise(userId);
+            break;
+          default:
+            return reply.status(400).send({
+              success: false,
+              error: { code: 'INVALID_ACTION', message: `Unknown action "${action}".` },
+            });
+        }
+
+        const balances = await getUserBalances(userId);
+        const newBalance = balances.length > 0 ? balances[0].balance : 0;
+        return { success: true, data: { result, balances, newBalance } };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  /**
+   * GET /api/v1/casino/poker/active - get active poker game
+   */
+  app.get(
+    '/api/v1/casino/poker/active',
+    { preHandler: [authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user!.id;
+        const result = await pokerGame.getActiveGame(userId);
+        return { success: true, data: result };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  // =========================================================================
+  // TRENBALL GAME (Football Crash)
+  // =========================================================================
+
+  /**
+   * POST /api/v1/casino/trenball/play - play a trenball round
+   */
+  app.post(
+    '/api/v1/casino/trenball/play',
+    { preHandler: [authenticate] },
+    async (
+      request: FastifyRequest<{
+        Body: { amount?: number; betAmount?: number; currency: string; team: string; autoCashout?: number };
+      }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const userId = request.user!.id;
+        const amount = normalizeBetAmount(request.body);
+        const { currency, team, autoCashout } = request.body;
+
+        const result = await trenballGame.play(userId, {
+          amount,
+          currency,
+          options: { team, autoCashout },
+        });
+
+        return { success: true, data: result };
       } catch (err) {
         errorResponse(reply, err);
       }
@@ -1414,4 +1747,129 @@ export default async function casinoRoutes(app: FastifyInstance): Promise<void> 
       errorResponse(reply, err);
     }
   });
+
+  // =========================================================================
+  // VIRTUAL SPORTS — Match listings
+  // =========================================================================
+
+  /**
+   * GET /api/v1/casino/virtualsports/matches - get active virtual sport matches
+   */
+  app.get(
+    '/api/v1/casino/virtualsports/matches',
+    async (
+      request: FastifyRequest<{ Querystring: { sport?: string } }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const matches = getActiveVirtualMatches();
+        const { sport } = request.query;
+        const filtered = sport
+          ? matches.filter((m) => m.sport === sport.toLowerCase())
+          : matches;
+
+        return {
+          success: true,
+          data: filtered.map((m) => ({
+            matchId: m.matchId,
+            sport: m.sport,
+            homeTeam: m.homeTeam.name,
+            awayTeam: m.awayTeam.name,
+            homeStrength: m.homeTeam.strength,
+            awayStrength: m.awayTeam.strength,
+            homeOdds: m.homeOdds,
+            drawOdds: m.drawOdds,
+            awayOdds: m.awayOdds,
+            expiresAt: new Date(m.expiresAt).toISOString(),
+          })),
+        };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  // =========================================================================
+  // TOURNAMENTS
+  // =========================================================================
+
+  /**
+   * GET /api/v1/casino/tournaments - list tournaments
+   */
+  app.get(
+    '/api/v1/casino/tournaments',
+    async (
+      request: FastifyRequest<{ Querystring: { status?: string } }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const { status } = request.query;
+        const validStatuses = ['upcoming', 'active', 'completed', 'cancelled'];
+        const statusFilter = status && validStatuses.includes(status)
+          ? (status as any)
+          : undefined;
+
+        const tournaments = await tournamentService.listTournaments(statusFilter);
+        return { success: true, data: tournaments };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  /**
+   * GET /api/v1/casino/tournaments/:id - tournament details + leaderboard
+   */
+  app.get(
+    '/api/v1/casino/tournaments/:id',
+    async (
+      request: FastifyRequest<{ Params: { id: string } }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const { id } = request.params;
+
+        // Try to get requesting user ID (optional auth)
+        let userId: string | undefined;
+        try {
+          await new Promise<void>((resolve, reject) => {
+            authenticate(request as any, reply as any, (err?: Error) => {
+              if (err) reject(err);
+              else resolve();
+            });
+          });
+          userId = request.user?.id;
+        } catch {
+          // Not authenticated - that's fine, public view
+        }
+
+        const details = await tournamentService.getTournamentDetails(id, userId);
+        return { success: true, data: details };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
+
+  /**
+   * POST /api/v1/casino/tournaments/:id/join - join a tournament
+   */
+  app.post(
+    '/api/v1/casino/tournaments/:id/join',
+    { preHandler: [authenticate] },
+    async (
+      request: FastifyRequest<{ Params: { id: string } }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const userId = request.user!.id;
+        const { id } = request.params;
+
+        const result = await tournamentService.joinTournament(userId, id);
+        return { success: true, data: result };
+      } catch (err) {
+        errorResponse(reply, err);
+      }
+    },
+  );
 }

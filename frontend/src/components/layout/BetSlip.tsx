@@ -156,8 +156,11 @@ function InPlayWidget() {
   const [activeSport, setActiveSport] = useState('tennis');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const filteredMatches = MOCK_LIVE_MATCHES.filter(
-    (c) => c.sport === activeSport || activeSport === 'all',
+  const filteredMatches = useMemo(() =>
+    MOCK_LIVE_MATCHES.filter(
+      (c) => c.sport === activeSport || activeSport === 'all',
+    ),
+    [activeSport]
   );
 
   return (
@@ -450,7 +453,7 @@ function LegCard({
           {/* Remove button */}
           <button
             onClick={onRemove}
-            className="shrink-0 w-5 h-5 flex items-center justify-center text-[#30363D] hover:text-red-500 transition-colors duration-200 opacity-0 group-hover:opacity-100"
+            className="shrink-0 w-5 h-5 flex items-center justify-center text-[#30363D] hover:text-red-500 transition-colors duration-200 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
           >
             <MinusCircle className="h-4 w-4" />
           </button>
@@ -866,6 +869,8 @@ function BetSlipContent({
   setOddsChangePolicy,
   acceptAllChanges,
   setAcceptAllChanges,
+  betBuilderEventName,
+  exitBetBuilder,
 }: {
   selections: BetSelection[];
   betType: string;
@@ -877,7 +882,7 @@ function BetSlipContent({
   potentialWin: number;
   activeTab: 'slip' | 'bets';
   setActiveTab: (v: 'slip' | 'bets') => void;
-  setBetType: (v: 'single' | 'parlay') => void;
+  setBetType: (v: 'single' | 'parlay' | 'betBuilder') => void;
   setStake: (id: string, v: number) => void;
   setCurrency: (v: string) => void;
   removeSelection: (id: string) => void;
@@ -891,6 +896,8 @@ function BetSlipContent({
   setOddsChangePolicy: (v: 'accept_any' | 'accept_higher' | 'reject') => void;
   acceptAllChanges: boolean;
   setAcceptAllChanges: (v: boolean) => void;
+  betBuilderEventName: string | null;
+  exitBetBuilder: () => void;
 }) {
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -910,7 +917,7 @@ function BetSlipContent({
     return selections.reduce((acc, sel) => acc * sel.odds, 1);
   }, [selections]);
 
-  const canPlaceBet = totalStake > 0 && !isPlacing;
+  const canPlaceBet = totalStake > 0 && !isPlacing && !(betType === 'betBuilder' && selections.length < 2);
 
   // When no selections and on slip tab, show in-play + sharpest bettors
   const showInPlayWidget = activeTab === 'slip' && selections.length === 0;
@@ -1002,57 +1009,104 @@ function BetSlipContent({
           ) : (
             <>
               {/* ============================================================ */}
-              {/* BET TYPE TABS: Singles N | Parlay */}
+              {/* BET TYPE TABS: Singles N | Parlay | Bet Builder */}
               {/* ============================================================ */}
               <div className="border-b border-[#1E2430]">
-                <div className="flex items-center">
-                  <button
-                    onClick={() => setBetType('single')}
-                    className={cn(
-                      'flex-1 py-2.5 text-[11px] font-bold text-center transition-all duration-200 border-b-2 uppercase tracking-wide',
-                      betType === 'single'
-                        ? 'text-white border-[#8B5CF6] bg-[#8B5CF6]/5'
-                        : 'text-[#6B7280] border-transparent hover:text-[#8B9AB0]',
+                {betType === 'betBuilder' ? (
+                  <>
+                    {/* Bet Builder header */}
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-[#8B5CF6]/15 to-[#6D28D9]/10">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-[#A78BFA]" />
+                        <div>
+                          <span className="text-[11px] font-bold text-[#A78BFA] uppercase tracking-wide">
+                            Bet Builder
+                          </span>
+                          {betBuilderEventName && (
+                            <p className="text-[10px] text-[#8B9AB0] truncate max-w-[180px]">
+                              {betBuilderEventName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={exitBetBuilder}
+                        className="w-6 h-6 flex items-center justify-center rounded text-[#6B7280] hover:text-red-500 hover:bg-red-500/10 transition-all duration-200"
+                        title="Exit Bet Builder"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {/* Bet Builder info bar */}
+                    {selections.length > 0 && (
+                      <div className="flex items-center justify-between px-4 py-2 bg-[#141922]">
+                        <span className="text-xs text-[#8B9AB0]">
+                          <span className="font-semibold text-white">{selections.length} Leg{selections.length !== 1 ? 's' : ''}</span>{' '}
+                          <span className="text-[#A78BFA] font-mono font-bold">
+                            @ {formatOdds(combinedOdds)}
+                          </span>
+                        </span>
+                        <button
+                          onClick={clearAll}
+                          className="text-[#30363D] hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     )}
-                  >
-                    Singles {selections.length}
-                  </button>
-                  <button
-                    onClick={() => setBetType('parlay')}
-                    className={cn(
-                      'flex-1 py-2.5 text-[11px] font-bold text-center transition-all duration-200 border-b-2 uppercase tracking-wide',
-                      betType === 'parlay'
-                        ? 'text-white border-[#8B5CF6] bg-[#8B5CF6]/5'
-                        : 'text-[#6B7280] border-transparent hover:text-[#8B9AB0]',
-                    )}
-                  >
-                    Parlay
-                  </button>
-                </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => setBetType('single')}
+                        className={cn(
+                          'flex-1 py-2.5 text-[11px] font-bold text-center transition-all duration-200 border-b-2 uppercase tracking-wide',
+                          betType === 'single'
+                            ? 'text-white border-[#8B5CF6] bg-[#8B5CF6]/5'
+                            : 'text-[#6B7280] border-transparent hover:text-[#8B9AB0]',
+                        )}
+                      >
+                        Singles {selections.length}
+                      </button>
+                      <button
+                        onClick={() => setBetType('parlay')}
+                        className={cn(
+                          'flex-1 py-2.5 text-[11px] font-bold text-center transition-all duration-200 border-b-2 uppercase tracking-wide',
+                          betType === 'parlay'
+                            ? 'text-white border-[#8B5CF6] bg-[#8B5CF6]/5'
+                            : 'text-[#6B7280] border-transparent hover:text-[#8B9AB0]',
+                        )}
+                      >
+                        Parlay
+                      </button>
+                    </div>
 
-                {/* Parlay info bar */}
-                {betType === 'parlay' && selections.length > 1 && (
-                  <div className="flex items-center justify-between px-4 py-2 bg-[#141922]">
-                    <span className="text-xs text-[#8B9AB0]">
-                      <span className="font-semibold text-white">{selections.length} Legs</span>{' '}
-                      <span className="text-[#10B981] font-mono font-bold">
-                        @ {formatOdds(combinedOdds)}
-                      </span>
-                    </span>
-                    <button
-                      onClick={clearAll}
-                      className="text-[#30363D] hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                    {/* Parlay info bar */}
+                    {betType === 'parlay' && selections.length > 1 && (
+                      <div className="flex items-center justify-between px-4 py-2 bg-[#141922]">
+                        <span className="text-xs text-[#8B9AB0]">
+                          <span className="font-semibold text-white">{selections.length} Legs</span>{' '}
+                          <span className="text-[#10B981] font-mono font-bold">
+                            @ {formatOdds(combinedOdds)}
+                          </span>
+                        </span>
+                        <button
+                          onClick={clearAll}
+                          className="text-[#30363D] hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
               {/* ============================================================ */}
               {/* PARLAY STAKE INPUT (above legs) */}
               {/* ============================================================ */}
-              {betType === 'parlay' && (
+              {(betType === 'parlay' || betType === 'betBuilder') && (
                 <div className="px-3 pt-3 pb-1 border-b border-[#1E2430]">
                   {/* Available balance */}
                   <div className="flex items-center justify-end mb-1.5">
@@ -1073,9 +1127,9 @@ function BetSlipContent({
                       type="number"
                       min={0}
                       step="any"
-                      value={stakes['parlay'] || ''}
+                      value={stakes[betType === 'betBuilder' ? 'betBuilder' : 'parlay'] || ''}
                       onChange={(e) =>
-                        setStake('parlay', parseFloat(e.target.value) || 0)
+                        setStake(betType === 'betBuilder' ? 'betBuilder' : 'parlay', parseFloat(e.target.value) || 0)
                       }
                       placeholder="0.00"
                       className="flex-1 bg-transparent text-sm font-mono text-white placeholder:text-[#30363D] focus:outline-none text-right"
@@ -1094,6 +1148,15 @@ function BetSlipContent({
                       </button>
                     ))}
                   </div>
+
+                  {/* Bet Builder warning */}
+                  {betType === 'betBuilder' && selections.length < 2 && (
+                    <div className="mt-2 mb-1 px-1 py-1.5 rounded bg-[#F59E0B]/10 border border-[#F59E0B]/20">
+                      <span className="text-[10px] text-[#F59E0B] font-medium">
+                        Add at least 2 selections to place a Bet Builder
+                      </span>
+                    </div>
+                  )}
 
                   {/* To return */}
                   <div className="flex items-center justify-between mt-2 mb-2 px-0.5">
@@ -1195,7 +1258,7 @@ function BetSlipContent({
                   ) : (
                     <>
                       <Zap className="h-4 w-4" />
-                      Place Bet
+                      {betType === 'betBuilder' ? 'Place Bet Builder' : 'Place Bet'}
                     </>
                   )}
                 </button>
@@ -1244,6 +1307,8 @@ export default function BetSlip() {
     placeBet,
     isOpen: mobileOpen,
     setOpen: setMobileOpen,
+    betBuilderEventName,
+    exitBetBuilder,
   } = useBetSlipStore();
 
   const [activeTab, setActiveTab] = useState<'slip' | 'bets'>('slip');
@@ -1257,8 +1322,9 @@ export default function BetSlip() {
   const preferredCurrency = useAuthStore(selectPreferredCurrency);
   const displayCurrency = currency || preferredCurrency || 'BTC';
 
-  // Drag-to-close state
-  const [dragY, setDragY] = useState(0);
+  // Drag-to-close state (use ref for dragY to avoid re-renders on every touchMove)
+  const dragYRef = useRef(0);
+  const [dragYDisplay, setDragYDisplay] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -1302,31 +1368,44 @@ export default function BetSlip() {
 
   useEffect(() => {
     if (mobileOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.classList.add('betslip-open');
     } else {
-      document.body.style.overflow = '';
+      document.body.classList.remove('betslip-open');
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
+    return () => document.body.classList.remove('betslip-open');
   }, [mobileOpen]);
 
   const totalStake = getTotalStake();
   const potentialWin = getPotentialWin();
 
+  const placingRef = useRef(false);
+
   const handlePlaceBet = async () => {
     if (!isAuthenticated) {
-      toastError('Please sign in to place bets');
+      toastError('Please sign in to place bets', { id: 'bet-auth' });
       return;
     }
+    // Guard against rapid taps (state update may lag behind on mobile)
+    if (placingRef.current) return;
+    placingRef.current = true;
     try {
       const result = await placeBet();
-      toastSuccess(`Bet placed successfully! Bet ID: ${result.betId}`);
+      const betId = result?.bet?.id || result?.betId || '';
+      toastSuccess(betId ? `Bet placed successfully! Bet ID: ${betId}` : 'Bet placed successfully!', { id: 'bet-success' });
       setMobileOpen(false);
     } catch (err: any) {
-      const message = err?.message || (err instanceof Error ? err.message : 'Failed to place bet');
+      const message =
+        (typeof err?.message === 'string' && err.message) ||
+        (err instanceof Error ? err.message : '') ||
+        'Failed to place bet';
       console.error('[BetSlip] Place bet error:', err);
-      toastError(message);
+      // Show field-level validation details if available
+      if (err?.errors) {
+        console.error('[BetSlip] Validation details:', JSON.stringify(err.errors, null, 2));
+      }
+      toastError(message || 'Failed to place bet', { id: 'bet-error' });
+    } finally {
+      placingRef.current = false;
     }
   };
 
@@ -1335,12 +1414,15 @@ export default function BetSlip() {
       selections.forEach((s) => setStake(s.id, amount));
     } else if (betType === 'parlay') {
       setStake('parlay', amount);
+    } else if (betType === 'betBuilder') {
+      setStake('betBuilder', amount);
     }
   };
 
   // Touch drag handlers for pull-down-to-close
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     dragStartY.current = e.touches[0].clientY;
+    dragYRef.current = 0;
     setIsDragging(true);
   }, []);
 
@@ -1350,7 +1432,11 @@ export default function BetSlip() {
       const currentY = e.touches[0].clientY;
       const diff = currentY - dragStartY.current;
       if (diff > 0) {
-        setDragY(diff);
+        dragYRef.current = diff;
+        // Update the panel transform directly via ref for smooth animation without re-renders
+        if (panelRef.current) {
+          panelRef.current.style.transform = `translateY(${diff}px)`;
+        }
       }
     },
     [isDragging],
@@ -1358,11 +1444,17 @@ export default function BetSlip() {
 
   const handleTouchEnd = useCallback(() => {
     setIsDragging(false);
-    if (dragY > 120) {
+    const finalDragY = dragYRef.current;
+    if (finalDragY > 120) {
       setMobileOpen(false);
     }
-    setDragY(0);
-  }, [dragY]);
+    dragYRef.current = 0;
+    setDragYDisplay(0);
+    // Reset transform
+    if (panelRef.current) {
+      panelRef.current.style.transform = '';
+    }
+  }, [setMobileOpen]);
 
   const sharedProps = {
     selections,
@@ -1389,6 +1481,8 @@ export default function BetSlip() {
     setOddsChangePolicy,
     acceptAllChanges,
     setAcceptAllChanges,
+    betBuilderEventName,
+    exitBetBuilder,
   };
 
   return (
@@ -1476,7 +1570,7 @@ export default function BetSlip() {
         <>
           {/* Backdrop */}
           <div
-            className="lg:hidden fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm animate-fade-in"
+            className="lg:hidden fixed inset-0 z-[60] bg-black/80 animate-fade-in"
             onClick={() => setMobileOpen(false)}
           />
 
@@ -1485,7 +1579,6 @@ export default function BetSlip() {
             ref={panelRef}
             className="lg:hidden fixed inset-0 z-[70] flex flex-col bg-[#0D1117] animate-slide-up-panel"
             style={{
-              transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
               transition: isDragging ? 'none' : 'transform 200ms ease',
             }}
           >

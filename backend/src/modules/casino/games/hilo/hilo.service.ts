@@ -45,7 +45,7 @@ export class HiLoGame extends BaseGame {
   readonly name = 'HiLo';
   readonly slug = 'hilo';
   readonly houseEdge = 0.02;
-  readonly minBet = 0.01;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   private static REDIS_PREFIX = 'hilo:session:';
@@ -131,6 +131,10 @@ export class HiLoGame extends BaseGame {
     const existing = await this.getSession(userId);
     if (existing && existing.isActive) {
       throw new GameError('GAME_IN_PROGRESS', 'You already have an active HiLo game.');
+    }
+    // Clean up any stale completed session so it doesn't block a new game
+    if (existing) {
+      await this.deleteSession(userId);
     }
 
     await this.validateBet(userId, bet.amount, bet.currency);

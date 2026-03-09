@@ -7,6 +7,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import { createServer } from 'http';
+import { gzipSync } from 'zlib';
 import { config } from './config/index.js';
 import { prisma } from './lib/prisma.js';
 import { redis } from './lib/redis.js';
@@ -173,10 +174,40 @@ async function registerPlugins(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function registerHooks(): void {
-  // Disable browser caching for API responses
-  app.addHook('onSend', async (_request, reply, payload) => {
-    reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-    reply.header('Pragma', 'no-cache');
+  // Selective caching for API responses based on endpoint
+  const longCachePaths = ['/api/v1/sports', '/api/v1/casino/games', '/api/v1/help', '/api/v1/blog', '/api/v1/academy'];
+  const shortCachePaths = ['/api/v1/events/featured', '/api/v1/sports/popular-competitions'];
+  const noCachePaths = ['/api/v1/live', '/api/v1/odds', '/api/v1/betting', '/api/v1/wallets', '/api/v1/auth'];
+
+  app.addHook('onSend', async (request, reply, payload) => {
+    const url = request.url;
+
+    // Determine cache policy based on URL
+    if (noCachePaths.some((p) => url.startsWith(p))) {
+      reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      reply.header('Pragma', 'no-cache');
+    } else if (longCachePaths.some((p) => url.startsWith(p))) {
+      reply.header('Cache-Control', 'public, max-age=3600');
+    } else if (shortCachePaths.some((p) => url.startsWith(p))) {
+      reply.header('Cache-Control', 'public, max-age=300');
+    } else {
+      reply.header('Cache-Control', 'public, max-age=60');
+    }
+
+    // Gzip compression for JSON responses when client supports it
+    if (
+      payload &&
+      typeof payload === 'string' &&
+      payload.length > 1024 &&
+      request.headers['accept-encoding']?.includes('gzip') &&
+      reply.getHeader('content-type')?.toString().includes('application/json')
+    ) {
+      const compressed = gzipSync(Buffer.from(payload, 'utf-8'));
+      reply.header('content-encoding', 'gzip');
+      reply.header('content-length', compressed.length);
+      return compressed;
+    }
+
     return payload;
   });
 

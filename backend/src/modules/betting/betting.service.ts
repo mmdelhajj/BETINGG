@@ -83,12 +83,12 @@ export async function placeBet(
   if (type === 'SINGLE' && selections.length !== 1) {
     throw new BetError('INVALID_SELECTIONS', 'Single bet must have exactly one selection.');
   }
-  if (type === 'PARLAY') {
+  if (type === 'PARLAY' || type === 'BET_BUILDER') {
     if (selections.length < MIN_PARLAY_LEGS) {
-      throw new BetError('INVALID_SELECTIONS', `Parlay requires at least ${MIN_PARLAY_LEGS} selections.`);
+      throw new BetError('INVALID_SELECTIONS', `${type === 'BET_BUILDER' ? 'Bet Builder' : 'Parlay'} requires at least ${MIN_PARLAY_LEGS} selections.`);
     }
     if (selections.length > MAX_PARLAY_LEGS) {
-      throw new BetError('INVALID_SELECTIONS', `Parlay allows a maximum of ${MAX_PARLAY_LEGS} selections.`);
+      throw new BetError('INVALID_SELECTIONS', `${type === 'BET_BUILDER' ? 'Bet Builder' : 'Parlay'} allows a maximum of ${MAX_PARLAY_LEGS} selections.`);
     }
   }
 
@@ -170,7 +170,7 @@ export async function placeBet(
       );
     }
 
-    // Check for duplicate events in parlay
+    // Check for duplicate events in parlay (not applicable for BET_BUILDER)
     if (type === 'PARLAY') {
       const eventId = dbSel.market.event.id;
       if (eventIds.has(eventId)) {
@@ -180,6 +180,32 @@ export async function placeBet(
         );
       }
       eventIds.add(eventId);
+    }
+
+    // Track event IDs for BET_BUILDER validation (done after loop)
+    if (type === 'BET_BUILDER') {
+      eventIds.add(dbSel.market.event.id);
+    }
+  }
+
+  // BET_BUILDER: all selections must be from the same event + no duplicate markets
+  if (type === 'BET_BUILDER') {
+    if (eventIds.size !== 1) {
+      throw new BetError(
+        'MULTI_EVENT_BET_BUILDER',
+        'Bet Builder selections must all be from the same event.',
+      );
+    }
+    const marketIds = new Set<string>();
+    for (const sel of selections) {
+      const dbSel = selectionMap.get(sel.selectionId)!;
+      if (marketIds.has(dbSel.marketId)) {
+        throw new BetError(
+          'DUPLICATE_MARKET',
+          `Bet Builder cannot contain multiple selections from the same market: "${dbSel.market.name}".`,
+        );
+      }
+      marketIds.add(dbSel.marketId);
     }
   }
 
@@ -611,7 +637,7 @@ async function calculateCashoutValue(
     return value.gt(0) ? value : null;
   }
 
-  // PARLAY: complex calculation based on settled/unsettled legs
+  // PARLAY / BET_BUILDER: complex calculation based on settled/unsettled legs
   let settledMultiplier = new Prisma.Decimal(1);
   let unsettledMultiplier = new Prisma.Decimal(1);
   let hasUnsettled = false;

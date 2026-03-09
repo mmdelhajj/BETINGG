@@ -249,12 +249,42 @@ function CountdownTimer({ endDate }: { endDate: string }) {
     };
 
     setTimeLeft(calcTime());
-    const interval = setInterval(() => setTimeLeft(calcTime()), 1000);
-    return () => clearInterval(interval);
+
+    let interval: NodeJS.Timeout | null = null;
+
+    const startTimer = () => {
+      if (!interval) {
+        interval = setInterval(() => setTimeLeft(calcTime()), 1000);
+      }
+    };
+
+    const stopTimer = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopTimer();
+      } else {
+        setTimeLeft(calcTime()); // Refresh on return
+        startTimer();
+      }
+    };
+
+    startTimer();
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      stopTimer();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [endDate]);
 
   return (
-    <div className="flex items-center gap-1.5 bg-[#0D1117]/70 backdrop-blur-sm px-2 py-1 rounded-button border border-[#21262D]">
+    <div className="flex items-center gap-1.5 bg-[#0D1117]/70 px-2 py-1 rounded-button border border-[#21262D]">
       <Timer className="w-3 h-3 text-[#F59E0B]" />
       <span className="font-mono text-[11px] text-[#F59E0B] font-medium">
         {timeLeft.days}d {timeLeft.hours.toString().padStart(2, '0')}:{timeLeft.minutes.toString().padStart(2, '0')}:{timeLeft.seconds.toString().padStart(2, '0')}

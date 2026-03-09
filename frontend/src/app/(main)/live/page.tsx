@@ -70,14 +70,6 @@ interface LiveEvent {
   } | null;
 }
 
-interface GoalNotification {
-  id: string;
-  eventId: string;
-  team: string;
-  score: string;
-  timestamp: number;
-}
-
 interface SportGroup {
   slug: string;
   name: string;
@@ -462,7 +454,7 @@ function CompetitionSection({
 // Event Row (Cloudbet In-Play style)
 // ---------------------------------------------------------------------------
 
-function EventRow({
+const EventRow = React.memo(function EventRow({
   event,
   isFlashing,
   isBasketball,
@@ -610,7 +602,7 @@ function EventRow({
         {/* More markets arrow */}
         <Link
           href={`/sports/${event.sportSlug}/${event.id}`}
-          className="flex items-center justify-center w-6 h-8 text-[#484F58] hover:text-[#8B949E] opacity-0 group-hover:opacity-100 transition-opacity"
+          className="flex items-center justify-center w-6 h-8 text-[#484F58] hover:text-[#8B949E] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
           <ChevronRight className="w-3.5 h-3.5" />
@@ -618,13 +610,13 @@ function EventRow({
       </div>
     </Link>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Sport Filter Icon (top horizontal bar)
 // ---------------------------------------------------------------------------
 
-function SportFilterIcon({
+const SportFilterIcon = React.memo(function SportFilterIcon({
   slug,
   name,
   count,
@@ -684,7 +676,7 @@ function SportFilterIcon({
       </span>
     </button>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Live Betting Page
@@ -696,7 +688,6 @@ export default function LiveBettingPage() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedCompetitions, setCollapsedCompetitions] = useState<Set<string>>(new Set());
-  const [goalNotifications, setGoalNotifications] = useState<GoalNotification[]>([]);
   const [socketConnected, setSocketConnected] = useState(false);
 
   // Track previous scores for flash animation
@@ -704,6 +695,7 @@ export default function LiveBettingPage() {
   const [flashingEvents, setFlashingEvents] = useState<Set<string>>(new Set());
   const socketRef = useRef<Socket | null>(null);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const hasAutoExpandedRef = useRef(false);
 
   // -------------------------------------------------------------------------
@@ -724,24 +716,6 @@ export default function LiveBettingPage() {
 
         if (homeScored || awayScored) {
           newFlashing.add(event.id);
-
-          const scoringTeam = homeScored ? event.homeTeam : event.awayTeam;
-          const notifId = `${event.id}-${newHome}-${newAway}-${Date.now()}`;
-
-          setGoalNotifications((prev) => [
-            ...prev,
-            {
-              id: notifId,
-              eventId: event.id,
-              team: scoringTeam,
-              score: `${newHome} - ${newAway}`,
-              timestamp: Date.now(),
-            },
-          ]);
-
-          setTimeout(() => {
-            setGoalNotifications((prev) => prev.filter((n) => n.id !== notifId));
-          }, 5000);
         }
       }
 
@@ -769,22 +743,36 @@ export default function LiveBettingPage() {
   // Initial API fetch
   // -------------------------------------------------------------------------
   const fetchLiveEvents = useCallback(async () => {
+    // Abort any in-flight request before starting a new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
+
     try {
-      const data = await get<{ events: LiveEvent[] }>('/events?status=LIVE&limit=200');
+      const data = await get<{ events: LiveEvent[] }>('/events?status=LIVE&limit=200', { signal });
+      if (signal.aborted) return;
       const liveEvents = (data.events || []).filter((e) => e.status === 'LIVE');
       detectScoreChanges(liveEvents);
       setEvents(liveEvents);
-    } catch {
+    } catch (err: unknown) {
+      if (signal.aborted) return;
       try {
-        const data = await get<{ events: LiveEvent[] }>('/events/live');
+        const data = await get<{ events: LiveEvent[] }>('/events/live', { signal });
+        if (signal.aborted) return;
         const liveEvents = data.events || [];
         detectScoreChanges(liveEvents);
         setEvents(liveEvents);
-      } catch {
+      } catch (innerErr: unknown) {
+        if (signal.aborted) return;
         setEvents([]);
       }
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }, [detectScoreChanges]);
 
@@ -832,90 +820,35 @@ export default function LiveBettingPage() {
       }
     });
 
-    // Full list update
+    // Full list update — merge with existing events to preserve mainMarket/odds data
     socket.on('live:update', (data: { events: LiveEvent[] }) => {
-      if (data && Array.isArray(data.events)) {
-        const liveEvents = data.events.filter((e) => e.status === 'LIVE');
-        detectScoreChanges(liveEvents);
-        setEvents(liveEvents);
+      if (data && Array.isArray(data.events) && data.events.length > 0) {
+        const liveEvents = data.events.filter((e) =>
+          e.status === 'LIVE' || (e as any).isLive === true || !e.status
+        );
+        if (liveEvents.length > 0) {
+          detectScoreChanges(liveEvents);
+          setEvents((prev) => {
+            // Build a lookup of existing events by id for market data preservation
+            const existingMap = new Map<string, LiveEvent>();
+            for (const ev of prev) {
+              existingMap.set(ev.id, ev);
+            }
+            // Merge: use new scores/metadata but keep existing mainMarket if socket didn't provide one
+            return liveEvents.map((ev) => {
+              const existing = existingMap.get(ev.id);
+              if (existing && !ev.mainMarket) {
+                return { ...ev, mainMarket: existing.mainMarket };
+              }
+              return ev;
+            });
+          });
+        }
         setIsLoading(false);
       }
     });
 
-    // Goal notification
-    socket.on(
-      'live:goal',
-      (data: {
-        eventId: string;
-        homeTeam: string;
-        awayTeam: string;
-        homeScore: number;
-        awayScore: number;
-        timer?: unknown;
-        sportSlug?: string;
-        competition?: string;
-      }) => {
-        if (!data || !data.eventId) return;
-
-        const prev = prevScoresRef.current[data.eventId];
-        let scoringTeam = data.homeTeam;
-        if (prev) {
-          if (data.awayScore > (prev.away ?? 0)) {
-            scoringTeam = data.awayTeam;
-          } else if (data.homeScore > (prev.home ?? 0)) {
-            scoringTeam = data.homeTeam;
-          }
-        }
-
-        prevScoresRef.current[data.eventId] = {
-          home: data.homeScore,
-          away: data.awayScore,
-        };
-
-        setFlashingEvents((existing) => {
-          const next = new Set(existing);
-          next.add(data.eventId);
-          return next;
-        });
-        setTimeout(() => {
-          setFlashingEvents((existing) => {
-            const next = new Set(existing);
-            next.delete(data.eventId);
-            return next;
-          });
-        }, 1500);
-
-        const notifId = `goal-${data.eventId}-${data.homeScore}-${data.awayScore}-${Date.now()}`;
-        setGoalNotifications((prev) => [
-          ...prev,
-          {
-            id: notifId,
-            eventId: data.eventId,
-            team: scoringTeam,
-            score: `${data.homeScore} - ${data.awayScore}`,
-            timestamp: Date.now(),
-          },
-        ]);
-
-        setTimeout(() => {
-          setGoalNotifications((prev) => prev.filter((n) => n.id !== notifId));
-        }, 5000);
-
-        setEvents((currentEvents) =>
-          currentEvents.map((ev) => {
-            if (ev.id === data.eventId) {
-              return {
-                ...ev,
-                scores: { home: data.homeScore, away: data.awayScore },
-              };
-            }
-            return ev;
-          })
-        );
-      }
-    );
-
-    // Single event update
+    // Single event update — merge with existing to preserve market data
     socket.on('event:update', (data: LiveEvent) => {
       if (!data || !data.id) return;
       setEvents((currentEvents) => {
@@ -940,7 +873,9 @@ export default function LiveBettingPage() {
             }, 1500);
           }
           prevScoresRef.current[data.id] = { home: newHome, away: newAway };
-          updated[idx] = data;
+          // Preserve mainMarket from existing event if socket didn't provide one
+          const merged = data.mainMarket ? data : { ...data, mainMarket: currentEvents[idx].mainMarket };
+          updated[idx] = merged;
           return updated;
         }
         if (data.status === 'LIVE') {
@@ -954,7 +889,7 @@ export default function LiveBettingPage() {
       });
     });
 
-    // Fallback polling
+    // Fallback polling when socket is not connected
     const fallbackTimeout = setTimeout(() => {
       if (!socket.connected && !pollingIntervalRef.current) {
         pollingIntervalRef.current = setInterval(() => {
@@ -969,11 +904,15 @@ export default function LiveBettingPage() {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
+      // Abort any pending fetch requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
       socket.off('connect');
       socket.off('disconnect');
       socket.off('connect_error');
       socket.off('live:update');
-      socket.off('live:goal');
       socket.off('event:update');
       socket.disconnect();
       socketRef.current = null;
@@ -981,13 +920,46 @@ export default function LiveBettingPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // -------------------------------------------------------------------------
+  // Visibility detection — pause updates when tab is hidden
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        // Tab is hidden: clear polling intervals, disconnect socket
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+      } else {
+        // Tab is visible again: reconnect socket and fetch fresh data
+        if (socketRef.current) {
+          socketRef.current.connect();
+        }
+        fetchLiveEvents();
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchLiveEvents]);
+
+  // -------------------------------------------------------------------------
   // Filter events
   // -------------------------------------------------------------------------
   const filteredEvents = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return events.filter((e) => {
       if (selectedSport && e.sportSlug !== selectedSport) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+      if (q) {
         return (
           (e.homeTeam || '').toLowerCase().includes(q) ||
           (e.awayTeam || '').toLowerCase().includes(q) ||
@@ -1003,29 +975,32 @@ export default function LiveBettingPage() {
   // -------------------------------------------------------------------------
   const { groupedBySport, sportGroups } = useMemo(() => {
     const grouped: Record<string, Record<string, LiveEvent[]>> = {};
+    // Track sport counts and a sample name in a single pass over filteredEvents
+    const sportCounts: Record<string, { count: number; name: string }> = {};
+
     for (const event of filteredEvents) {
       const sportKey = event.sportSlug || event.sport || 'other';
+
+      // Group by sport -> competition
       if (!grouped[sportKey]) grouped[sportKey] = {};
       const compKey = event.competition || 'Other';
       if (!grouped[sportKey][compKey]) grouped[sportKey][compKey] = [];
       grouped[sportKey][compKey].push(event);
+
+      // Accumulate sport counts in the same loop
+      if (!sportCounts[sportKey]) {
+        sportCounts[sportKey] = { count: 0, name: event.sport || sportKey };
+      }
+      sportCounts[sportKey].count += 1;
     }
 
-    // Sport list with counts (from unfiltered events for sidebar counts)
-    const sportCounts: Record<string, number> = {};
-    for (const e of events) {
-      const key = e.sportSlug || 'other';
-      sportCounts[key] = (sportCounts[key] || 0) + 1;
-    }
-    const groups: SportGroup[] = [];
-    for (const [slug, count] of Object.entries(sportCounts)) {
-      const sample = events.find((e) => e.sportSlug === slug);
-      groups.push({ slug, name: sample?.sport || slug, count });
-    }
+    const groups: SportGroup[] = Object.entries(sportCounts).map(
+      ([slug, { count, name }]) => ({ slug, name, count }),
+    );
     groups.sort((a, b) => b.count - a.count);
 
     return { groupedBySport: grouped, sportGroups: groups };
-  }, [filteredEvents, events]);
+  }, [filteredEvents]);
 
   // Auto-select first sport if none selected and events exist
   useEffect(() => {
@@ -1037,37 +1012,6 @@ export default function LiveBettingPage() {
 
   return (
     <div className="min-h-screen bg-[#0D1117]">
-      {/* ================================================================= */}
-      {/* Goal Notifications (fixed top-right)                              */}
-      {/* ================================================================= */}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
-        <AnimatePresence>
-          {goalNotifications.map((notif) => (
-            <motion.div
-              key={notif.id}
-              initial={{ opacity: 0, y: -20, scale: 0.95, x: 20 }}
-              animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95, x: 20 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className="bg-[#161B22] border border-[#238636]/40 rounded-lg p-3 flex items-center gap-3 backdrop-blur-sm shadow-lg shadow-[#238636]/10 pointer-events-auto"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#238636]/15 flex items-center justify-center shrink-0">
-                <span className="text-base">{'\u26BD'}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-extrabold text-[#238636] uppercase tracking-wider">GOAL!</span>
-                </div>
-                <span className="text-xs text-[#8B949E] truncate block">{notif.team} scored</span>
-              </div>
-              <span className="text-sm font-mono text-[#E6EDF3] font-bold whitespace-nowrap bg-[#0D1117] px-2.5 py-1 rounded-md">
-                {notif.score}
-              </span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
       {/* ================================================================= */}
       {/* Sticky Header                                                     */}
       {/* ================================================================= */}

@@ -142,7 +142,7 @@ function getCompactMatchTime(event: LiveEvent): string {
 
 const MAX_EVENTS = 8;
 
-export default function InPlayWidget() {
+function InPlayWidget() {
   const [groups, setGroups] = useState<LiveGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalLive, setTotalLive] = useState(0);
@@ -370,3 +370,5 @@ export default function InPlayWidget() {
     </div>
   );
 }
+
+export default React.memo(InPlayWidget);

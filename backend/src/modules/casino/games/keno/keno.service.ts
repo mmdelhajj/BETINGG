@@ -31,12 +31,12 @@ export class KenoGame extends BaseGame {
   readonly name = 'Keno';
   readonly slug = 'keno';
   readonly houseEdge = 0.03;
-  readonly minBet = 0.1;
+  readonly minBet = 0.0001;
   readonly maxBet = 5000;
 
   async play(userId: string, bet: BetRequest): Promise<GameResult> {
     const { amount, currency, options } = bet;
-    const picks = (options as { picks?: number[] })?.picks;
+    const picks = (options as any)?.picks ?? (options as any)?.selectedNumbers;
 
     // Validate picks
     if (!picks || !Array.isArray(picks)) {

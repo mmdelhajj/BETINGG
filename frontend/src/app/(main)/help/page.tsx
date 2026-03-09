@@ -132,7 +132,7 @@ function ArticleViewer({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D1117]/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D1117]/80"
       onClick={onClose}
     >
       <motion.div
@@ -444,7 +444,7 @@ export default function HelpPage() {
                                     <span className="text-sm text-[#8B949E] group-hover:text-[#E6EDF3] transition-colors duration-200">
                                       {article.title}
                                     </span>
-                                    <ExternalLink className="w-3.5 h-3.5 text-[#6E7681] opacity-0 group-hover:opacity-100 group-hover:text-[#8B5CF6] transition-all duration-200 shrink-0 ml-2" />
+                                    <ExternalLink className="w-3.5 h-3.5 text-[#6E7681] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 group-hover:text-[#8B5CF6] transition-all duration-200 shrink-0 ml-2" />
                                   </button>
                                 ))
                               ) : (

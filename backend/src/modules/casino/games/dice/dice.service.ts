@@ -17,7 +17,7 @@ export class DiceGame extends BaseGame {
   readonly name = 'Dice';
   readonly slug = 'dice';
   readonly houseEdge = 0.02; // 2%
-  readonly minBet = 0.01;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   async play(userId: string, bet: BetRequest): Promise<GameResult> {

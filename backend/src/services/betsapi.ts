@@ -8,6 +8,7 @@
 import https from 'https';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
+import { redis } from '../lib/redis.js';
 import { logger } from '../middleware/logger.js';
 import { recalculateLiveOdds } from './liveOddsEngine.js';
 import { broadcastEventStatus } from '../modules/live/live.service.js';
@@ -1825,11 +1826,16 @@ async function upsertEventToDB(
   let sportDbId: string;
   let effectiveSlug: string;
   if (isVirtualSport(cached.leagueName)) {
-    const esoccerSport = await prisma.sport.findFirst({ where: { slug: 'esoccer' } });
-    if (esoccerSport) {
-      sportDbId = esoccerSport.id;
-      effectiveSlug = 'esoccer';
+    const lower = cached.leagueName.toLowerCase();
+    const virtualSlug = lower.includes('ebasketball') || lower.includes('e-basketball')
+      ? 'ebasketball'
+      : 'esoccer';
+    const virtualSport = await prisma.sport.findFirst({ where: { slug: virtualSlug } });
+    if (virtualSport) {
+      sportDbId = virtualSport.id;
+      effectiveSlug = virtualSlug;
     } else {
+      // fallback to parent sport config
       sportDbId = await ensureSport(sportConfig);
       effectiveSlug = sportConfig.slug;
     }
@@ -1915,30 +1921,46 @@ function emitSocketUpdates(
 
   const liveNsp = io.of('/live');
 
-  // 1. Broadcast all live events
-  const livePayload = allEvents.map(ev => ({
-    id: ev.betsapiId,
-    dbEventId: ev.dbEventId,
-    sport: ev.sportSlug,
-    league: ev.leagueName,
-    leagueCountry: ev.leagueCountry,
-    homeTeam: ev.homeTeam,
-    awayTeam: ev.awayTeam,
-    homeScore: ev.homeScore,
-    awayScore: ev.awayScore,
-    ss: ev.ss,
-    timer: ev.timer,
-    elapsed: ev.elapsed,
-    statusShort: ev.statusShort,
-    periodScores: ev.periodScores,
-    homeTeamLogo: resolveTeamLogoSync(ev, 'home'),
-    awayTeamLogo: resolveTeamLogoSync(ev, 'away'),
-    homeTeamCountry: ev.homeTeamCountry,
-    awayTeamCountry: ev.awayTeamCountry,
-    isLive: ev.isLive,
-    startTime: ev.startTime,
-    bet365Id: ev.bet365Id,
-  }));
+  // Filter out stale events and events with null team names before emitting
+  const now = Date.now();
+  const freshEvents = allEvents.filter(ev => {
+    // Exclude events with null/empty team names (horse racing, greyhounds, etc.)
+    if (!ev.homeTeam || !ev.awayTeam) return false;
+    // Exclude events not updated in last 2 minutes
+    if (ev.lastUpdated && (now - ev.lastUpdated) > 2 * 60 * 1000) return false;
+    return true;
+  });
+
+  // 1. Broadcast all live events (shape must match frontend LiveEvent interface)
+  const livePayload = freshEvents.map(ev => {
+    const sportCfg = SLUG_TO_CONFIG.get(ev.sportSlug);
+    return {
+      id: ev.dbEventId || ev.betsapiId,
+      betsapiId: ev.betsapiId,
+      sport: sportCfg?.name || ev.sportSlug,
+      sportSlug: ev.sportSlug,
+      competition: ev.leagueName,
+      competitionSlug: ev.leagueName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      homeTeam: ev.homeTeam,
+      awayTeam: ev.awayTeam,
+      homeTeamLogo: resolveTeamLogoSync(ev, 'home'),
+      awayTeamLogo: resolveTeamLogoSync(ev, 'away'),
+      homeTeamCountry: ev.homeTeamCountry,
+      awayTeamCountry: ev.awayTeamCountry,
+      status: 'LIVE',
+      scores: { home: ev.homeScore, away: ev.awayScore },
+      metadata: {
+        elapsed: ev.elapsed,
+        statusShort: ev.statusShort,
+        timer: ev.timer,
+        periodScores: ev.periodScores,
+      },
+      isLive: true,
+      startTime: typeof ev.startTime === 'number'
+        ? new Date(ev.startTime * 1000).toISOString()
+        : String(ev.startTime),
+    };
+  });
 
   liveNsp.emit('live:update', { events: livePayload });
 
@@ -1956,28 +1978,41 @@ function emitSocketUpdates(
       sport: cached.sportSlug,
     });
 
-    // Per-event room update
+    // Per-event room update (matches frontend LiveEvent interface)
+    const sportCfgEvt = SLUG_TO_CONFIG.get(cached.sportSlug);
     liveNsp.to(`event:${dbEventId}`).emit('event:update', {
-      eventId: dbEventId,
+      id: dbEventId,
       betsapiId: cached.betsapiId,
+      sport: sportCfgEvt?.name || cached.sportSlug,
+      sportSlug: cached.sportSlug,
+      competition: cached.leagueName,
+      competitionSlug: cached.leagueName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       homeTeam: cached.homeTeam,
       awayTeam: cached.awayTeam,
-      homeScore: cached.homeScore,
-      awayScore: cached.awayScore,
-      ss: cached.ss,
-      timer: cached.timer,
-      elapsed: cached.elapsed,
-      statusShort: cached.statusShort,
-      periodScores: cached.periodScores,
-      isLive: cached.isLive,
+      homeTeamLogo: resolveTeamLogoSync(cached, 'home'),
+      awayTeamLogo: resolveTeamLogoSync(cached, 'away'),
+      homeTeamCountry: cached.homeTeamCountry,
+      awayTeamCountry: cached.awayTeamCountry,
+      status: 'LIVE',
+      scores: { home: cached.homeScore, away: cached.awayScore },
+      metadata: {
+        elapsed: cached.elapsed,
+        statusShort: cached.statusShort,
+        timer: cached.timer,
+        periodScores: cached.periodScores,
+      },
+      isLive: true,
+      startTime: typeof cached.startTime === 'number'
+        ? new Date(cached.startTime * 1000).toISOString()
+        : String(cached.startTime),
     });
   }
 
   // 3. Per-sport room updates
   const sportGroups = new Map<string, typeof livePayload>();
   for (const ev of livePayload) {
-    if (!sportGroups.has(ev.sport)) sportGroups.set(ev.sport, []);
-    sportGroups.get(ev.sport)!.push(ev);
+    if (!sportGroups.has(ev.sportSlug)) sportGroups.set(ev.sportSlug, []);
+    sportGroups.get(ev.sportSlug)!.push(ev);
   }
   for (const [sportSlug, events] of sportGroups) {
     liveNsp.to(`sport:${sportSlug}`).emit('sport:update', { sport: sportSlug, events });
@@ -2099,8 +2134,20 @@ export async function betsapiLiveSync(): Promise<{ updated: number; goals: numbe
         // Increment miss counter (how many consecutive polls this event was absent)
         cached.missCount = (cached.missCount || 0) + 1;
 
-        // Only mark as ended after 3+ consecutive misses (avoids false positives from API hiccups)
-        if (cached.missCount < 3) {
+        // Use sport-specific thresholds: virtual/esports end faster (1 miss = ~5s)
+        const isVirtualSport = cached.sportSlug?.includes('esoccer') ||
+                                cached.sportSlug?.includes('ebasketball') ||
+                                cached.sportSlug?.includes('virtual') ||
+                                cached.leagueName?.toLowerCase().includes('esoccer') ||
+                                cached.leagueName?.toLowerCase().includes('ebasketball') ||
+                                cached.leagueName?.toLowerCase().includes('e-basketball') ||
+                                cached.leagueName?.toLowerCase().includes('volta') ||
+                                cached.leagueName?.toLowerCase().includes('battle') ||
+                                cached.leagueName?.toLowerCase().includes('e-football');
+        const missThreshold = isVirtualSport ? 1 : 3;
+
+        // Only mark as ended after threshold consecutive misses (avoids false positives from API hiccups)
+        if (cached.missCount < missThreshold) {
           logger.debug({
             match: `${cached.homeTeam} vs ${cached.awayTeam}`,
             missCount: cached.missCount,
@@ -2118,6 +2165,9 @@ export async function betsapiLiveSync(): Promise<{ updated: number; goals: numbe
               where: { id: cached.dbEventId },
               data: { status: 'ENDED', isLive: false },
             });
+
+            // Invalidate live events cache so stale events are not served
+            await redis.del('events:live:grouped');
 
             // Broadcast status change to connected clients
             try { broadcastEventStatus(cached.dbEventId, 'ENDED', false); } catch { /* best effort */ }
@@ -2554,9 +2604,10 @@ export function startBetsAPILiveSync(): void {
       lastPollTime.set(cfg.slug, now - 60_000 + delay);
     });
 
-  // Clean up stale LIVE events on startup and every 10 minutes
+  // Clean up stale LIVE events on startup and every 1 minute
+  // (reduced from 3 min to catch short-duration eSoccer/virtual events faster)
   void cleanupStaleLiveEvents();
-  setInterval(() => void cleanupStaleLiveEvents(), 10 * 60 * 1000);
+  setInterval(() => void cleanupStaleLiveEvents(), 1 * 60 * 1000);
 
   // Start immediately
   void pollLoop();
@@ -2565,14 +2616,14 @@ export function startBetsAPILiveSync(): void {
 /**
  * Mark stale LIVE events as ENDED.
  * Two cleanup strategies:
- * 1. Any LIVE event not updated in the last 10 minutes → ENDED
- *    (the live sync touches every active event every 5 seconds, so 10 min stale = finished)
+ * 1. Any LIVE event not updated in the last 5 minutes → ENDED
+ *    (the live sync touches every active event every 5 seconds, so 5 min stale = finished)
  * 2. Any LIVE event started > 6 hours ago → ENDED (safety net)
  */
 async function cleanupStaleLiveEvents(): Promise<void> {
   try {
-    // Strategy 1: Not updated in 10 minutes = no longer reported by BetsAPI = finished
-    const staleUpdateTime = new Date(Date.now() - 10 * 60 * 1000);
+    // Strategy 1: Not updated in 5 minutes = no longer reported by BetsAPI = finished
+    const staleUpdateTime = new Date(Date.now() - 5 * 60 * 1000);
     const result1 = await prisma.event.updateMany({
       where: {
         status: 'LIVE',
@@ -2591,9 +2642,38 @@ async function cleanupStaleLiveEvents(): Promise<void> {
       data: { status: 'ENDED', isLive: false },
     });
 
-    const total = result1.count + result2.count;
+    // Strategy 3: eSoccer/virtual matches - if not updated in 2 minutes, mark ended
+    // (these are 6-12 minute matches, so 2 min without update = definitely ended)
+    const esoccerStaleTime = new Date(Date.now() - 2 * 60 * 1000);
+    const esoccerResult = await prisma.event.updateMany({
+      where: {
+        status: 'LIVE',
+        updatedAt: { lt: esoccerStaleTime },
+        OR: [
+          { competition: { name: { contains: 'soccer', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'Esoccer', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'Battle', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'Volta', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'basketball', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'Ebasketball', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'Adriatic', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'GT Nations', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'eAdriatic', mode: 'insensitive' } } },
+          { competition: { name: { contains: 'Simulated', mode: 'insensitive' } } },
+        ],
+      },
+      data: { status: 'ENDED', isLive: false },
+    });
+    if (esoccerResult.count > 0) {
+      logger.info({ count: esoccerResult.count }, '[Cleanup] Marked stale esoccer/virtual events as ENDED');
+      await redis.del('events:live:grouped');
+    }
+
+    const total = result1.count + result2.count + esoccerResult.count;
     if (total > 0) {
-      logger.info({ staleUpdate: result1.count, staleStart: result2.count }, 'BetsAPI: Cleaned up stale LIVE events -> ENDED');
+      // Invalidate live events cache so stale events are not served
+      await redis.del('events:live:grouped');
+      logger.info({ staleUpdate: result1.count, staleStart: result2.count, esoccer: esoccerResult.count }, 'BetsAPI: Cleaned up stale LIVE events -> ENDED');
     }
   } catch (err) {
     logger.error({ err }, 'BetsAPI: Failed to clean up stale LIVE events');

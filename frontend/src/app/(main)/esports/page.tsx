@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   ChevronDown,
@@ -210,7 +211,7 @@ function EventRow({ event }: { event: EsportEvent }) {
           {/* Home */}
           <div className="flex items-center gap-2 mb-1">
             {event.homeTeamLogo ? (
-              <img src={event.homeTeamLogo} alt="" className="w-5 h-5 rounded object-cover" />
+              <Image src={event.homeTeamLogo || '/placeholder.png'} alt="" width={20} height={20} className="w-5 h-5 rounded object-cover" unoptimized loading="lazy" />
             ) : (
               <div className="w-5 h-5 rounded bg-[#21262D] flex items-center justify-center text-[10px] font-bold text-[#8B949E]">
                 {(event.homeTeam || '?').charAt(0)}
@@ -228,7 +229,7 @@ function EventRow({ event }: { event: EsportEvent }) {
           {/* Away */}
           <div className="flex items-center gap-2">
             {event.awayTeamLogo ? (
-              <img src={event.awayTeamLogo} alt="" className="w-5 h-5 rounded object-cover" />
+              <Image src={event.awayTeamLogo || '/placeholder.png'} alt="" width={20} height={20} className="w-5 h-5 rounded object-cover" unoptimized loading="lazy" />
             ) : (
               <div className="w-5 h-5 rounded bg-[#21262D] flex items-center justify-center text-[10px] font-bold text-[#8B949E]">
                 {(event.awayTeam || '?').charAt(0)}

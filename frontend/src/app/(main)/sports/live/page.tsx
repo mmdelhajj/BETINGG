@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Trophy,
   CircleDot,
@@ -416,7 +417,7 @@ export default function LiveBettingPage() {
                         <div className="w-[40%] min-w-[140px] flex flex-col gap-1">
                           <div className="flex items-center gap-2">
                             {event.homeTeamLogo && (
-                              <img src={event.homeTeamLogo} alt="" className="w-4 h-4 object-contain shrink-0" />
+                              <Image src={event.homeTeamLogo || '/placeholder.png'} alt="" width={16} height={16} className="w-4 h-4 object-contain shrink-0" unoptimized loading="lazy" />
                             )}
                             <span className="text-sm font-medium text-[#E6EDF3] truncate leading-tight">
                               {event.homeTeam}
@@ -424,7 +425,7 @@ export default function LiveBettingPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             {event.awayTeamLogo && (
-                              <img src={event.awayTeamLogo} alt="" className="w-4 h-4 object-contain shrink-0" />
+                              <Image src={event.awayTeamLogo || '/placeholder.png'} alt="" width={16} height={16} className="w-4 h-4 object-contain shrink-0" unoptimized loading="lazy" />
                             )}
                             <span className="text-sm font-medium text-[#E6EDF3] truncate leading-tight">
                               {event.awayTeam}
@@ -475,7 +476,7 @@ export default function LiveBettingPage() {
                               odds={typeof sel.odds === 'string' ? parseFloat(sel.odds) : (sel.odds as unknown as number)}
                             />
                           ))}
-                          <ChevronRight className="w-4 h-4 text-[#8B949E] opacity-0 group-hover:opacity-100 transition-opacity ml-1 shrink-0" />
+                          <ChevronRight className="w-4 h-4 text-[#8B949E] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ml-1 shrink-0" />
                         </div>
                       </Link>
                     );

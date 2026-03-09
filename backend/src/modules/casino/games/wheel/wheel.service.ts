@@ -67,7 +67,7 @@ export class WheelGame extends BaseGame {
   readonly name = 'Wheel of Fortune';
   readonly slug = 'wheel';
   readonly houseEdge = 0.03;
-  readonly minBet = 0.1;
+  readonly minBet = 0.0001;
   readonly maxBet = 5000;
 
   async play(userId: string, bet: BetRequest): Promise<GameResult> {

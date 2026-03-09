@@ -41,13 +41,14 @@ export class CrashGameService extends BaseGame {
   readonly name = 'Crash';
   readonly slug = 'crash';
   readonly houseEdge = 0.03;
-  readonly minBet = 0.1;
+  readonly minBet = 0.0001;
   readonly maxBet = 10000;
 
   private state: CrashState | null = null;
-  private tickInterval: ReturnType<typeof setInterval> | null = null;
+  private tickTimeout: ReturnType<typeof setTimeout> | null = null;
   private countdownTimeout: ReturnType<typeof setTimeout> | null = null;
   private broadcastFn: ((event: string, data: any) => void) | null = null;
+  private isTickRunning = false;
 
   private fairService2 = new ProvablyFairService();
 
@@ -89,11 +90,12 @@ export class CrashGameService extends BaseGame {
    * Start a new crash round.
    */
   private async startNewRound(): Promise<void> {
-    // Clean up previous interval
-    if (this.tickInterval) {
-      clearInterval(this.tickInterval);
-      this.tickInterval = null;
+    // Clean up previous tick timeout
+    if (this.tickTimeout) {
+      clearTimeout(this.tickTimeout);
+      this.tickTimeout = null;
     }
+    this.isTickRunning = false;
 
     // Generate crash point
     const { seed: serverSeed, hash: serverSeedHash } =
@@ -160,8 +162,17 @@ export class CrashGameService extends BaseGame {
 
     this.emit('crash:start', { roundId: this.state.roundId });
 
-    // Tick every 50ms
-    this.tickInterval = setInterval(() => {
+    // Start the tick loop using recursive setTimeout (prevents overlapping ticks)
+    this.scheduleTick();
+  }
+
+  /**
+   * Schedule the next tick using setTimeout. This avoids the overlapping
+   * execution problem inherent to setInterval when async work takes longer
+   * than the interval period.
+   */
+  private scheduleTick(): void {
+    this.tickTimeout = setTimeout(() => {
       void this.tick();
     }, 50);
   }
@@ -171,38 +182,55 @@ export class CrashGameService extends BaseGame {
    * an exponential curve: 1.0 * e^(0.00006 * elapsed_ms).
    */
   private async tick(): Promise<void> {
+    // Guard against overlapping ticks
+    if (this.isTickRunning) {
+      return;
+    }
+
     if (!this.state || this.state.phase !== 'RUNNING' || !this.state.startedAt) {
       return;
     }
 
-    const elapsed = Date.now() - this.state.startedAt;
-    const multiplier = Math.floor(Math.pow(Math.E, 0.00006 * elapsed) * 100) / 100;
+    this.isTickRunning = true;
+    try {
+      const elapsed = Date.now() - this.state.startedAt;
+      const multiplier = Math.floor(Math.pow(Math.E, 0.00006 * elapsed) * 100) / 100;
 
-    this.state.currentMultiplier = multiplier;
-    this.state.elapsed = elapsed;
+      this.state.currentMultiplier = multiplier;
+      this.state.elapsed = elapsed;
 
-    // Process auto-cashouts
-    for (const bet of this.state.bets) {
-      if (
-        bet.isActive &&
-        bet.autoCashout !== null &&
-        multiplier >= bet.autoCashout
-      ) {
-        await this.executeCashout(bet.userId, bet.autoCashout);
+      // Process auto-cashouts
+      for (const bet of this.state.bets) {
+        if (
+          bet.isActive &&
+          bet.autoCashout !== null &&
+          multiplier >= bet.autoCashout
+        ) {
+          await this.executeCashout(bet.userId, bet.autoCashout);
+        }
       }
-    }
 
-    // Check crash
-    if (multiplier >= this.state.crashPoint) {
-      await this.crash();
-      return;
-    }
+      // Check crash
+      if (multiplier >= this.state.crashPoint) {
+        await this.crash();
+        return; // crash() handles the next round; do not schedule another tick
+      }
 
-    this.emit('crash:tick', {
-      roundId: this.state.roundId,
-      multiplier,
-      elapsed,
-    });
+      this.emit('crash:tick', {
+        roundId: this.state.roundId,
+        multiplier,
+        elapsed,
+      });
+
+      // Schedule the next tick (recursive setTimeout)
+      this.scheduleTick();
+    } catch (err) {
+      // On error, still try to schedule next tick to keep game alive
+      console.error('[Crash] Tick error:', err);
+      this.scheduleTick();
+    } finally {
+      this.isTickRunning = false;
+    }
   }
 
   /**
@@ -211,10 +239,11 @@ export class CrashGameService extends BaseGame {
   private async crash(): Promise<void> {
     if (!this.state) return;
 
-    if (this.tickInterval) {
-      clearInterval(this.tickInterval);
-      this.tickInterval = null;
+    if (this.tickTimeout) {
+      clearTimeout(this.tickTimeout);
+      this.tickTimeout = null;
     }
+    this.isTickRunning = false;
 
     this.state.phase = 'CRASHED';
 
@@ -491,8 +520,9 @@ export class CrashGameService extends BaseGame {
    * Graceful shutdown — stop intervals.
    */
   shutdown(): void {
-    if (this.tickInterval) clearInterval(this.tickInterval);
+    if (this.tickTimeout) clearTimeout(this.tickTimeout);
     if (this.countdownTimeout) clearTimeout(this.countdownTimeout);
+    this.isTickRunning = false;
   }
 }
 

@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "GameType" ADD VALUE 'INSTANT';
+ALTER TYPE "GameType" ADD VALUE 'CUSTOM';

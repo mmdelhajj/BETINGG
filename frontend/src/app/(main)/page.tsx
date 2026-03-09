@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Trophy,
   Zap,
@@ -34,6 +35,7 @@ interface MarketSelection {
   name: string;
   outcome: string;
   odds: string | number;
+  previousOdds?: string | number;
   handicap: string | null;
   params: string | null;
   status: string;
@@ -134,6 +136,7 @@ interface SportCompetition {
 // ---------------------------------------------------------------------------
 
 const SPORT_ICON_CONFIG: Record<string, { icon: React.ReactNode; emoji: string; color: string }> = {
+  // Traditional sports
   football: { icon: <Trophy className="w-5 h-5" />, emoji: '\u26BD', color: '#22C55E' },
   soccer: { icon: <Trophy className="w-5 h-5" />, emoji: '\u26BD', color: '#22C55E' },
   basketball: { icon: <CircleDot className="w-5 h-5" />, emoji: '\uD83C\uDFC0', color: '#F97316' },
@@ -151,6 +154,59 @@ const SPORT_ICON_CONFIG: Record<string, { icon: React.ReactNode; emoji: string; 
   'table-tennis': { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFD3', color: '#10B981' },
   'american-football': { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83C\uDFC8', color: '#8B5CF6' },
   darts: { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFAF', color: '#F59E0B' },
+
+  // Esport variants
+  'esport-fifa': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#8B5CF6' },
+  fifa: { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#8B5CF6' },
+  'esport-lol': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#C084FC' },
+  lol: { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#C084FC' },
+  'league-of-legends': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#C084FC' },
+  'esport-csgo': { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFAF', color: '#F97316' },
+  csgo: { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFAF', color: '#F97316' },
+  'counter-strike': { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFAF', color: '#F97316' },
+  cs2: { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFAF', color: '#F97316' },
+  'esport-dota2': { icon: <Swords className="w-5 h-5" />, emoji: '\u2694\uFE0F', color: '#EF4444' },
+  dota2: { icon: <Swords className="w-5 h-5" />, emoji: '\u2694\uFE0F', color: '#EF4444' },
+  dota: { icon: <Swords className="w-5 h-5" />, emoji: '\u2694\uFE0F', color: '#EF4444' },
+  'dota-2': { icon: <Swords className="w-5 h-5" />, emoji: '\u2694\uFE0F', color: '#EF4444' },
+  'esport-valorant': { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFAF', color: '#FF4655' },
+  valorant: { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFAF', color: '#FF4655' },
+  'esport-overwatch': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#F97316' },
+  overwatch: { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#F97316' },
+  'esport-starcraft': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#3B82F6' },
+  starcraft: { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#3B82F6' },
+  'esport-cod': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#4ADE80' },
+  'call-of-duty': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#4ADE80' },
+  'esport-pubg': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#F59E0B' },
+  pubg: { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#F59E0B' },
+  'esport-rocket-league': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83D\uDE97', color: '#0EA5E9' },
+  'rocket-league': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83D\uDE97', color: '#0EA5E9' },
+  'esport-rainbow-six': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#F59E0B' },
+  'rainbow-six': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#F59E0B' },
+  'esport-apex': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#EF4444' },
+  'apex-legends': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#EF4444' },
+  'esport-fortnite': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#8B5CF6' },
+  fortnite: { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#8B5CF6' },
+  'esport-hearthstone': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDCCF', color: '#F59E0B' },
+  hearthstone: { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDCCF', color: '#F59E0B' },
+  'esport-king-of-glory': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#F97316' },
+  'king-of-glory': { icon: <Gamepad2 className="w-5 h-5" />, emoji: '\uD83C\uDFAE', color: '#F97316' },
+
+  // BetsAPI sports (all 24 supported sports)
+  golf: { icon: <Target className="w-5 h-5" />, emoji: '\u26F3', color: '#22C55E' },
+  badminton: { icon: <Target className="w-5 h-5" />, emoji: '\uD83C\uDFF8', color: '#3B82F6' },
+  futsal: { icon: <Trophy className="w-5 h-5" />, emoji: '\u26BD', color: '#22C55E' },
+  'field-hockey': { icon: <Swords className="w-5 h-5" />, emoji: '\uD83C\uDFD1', color: '#10B981' },
+  'water-polo': { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83E\uDD3D', color: '#0EA5E9' },
+  waterpolo: { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83E\uDD3D', color: '#0EA5E9' },
+  floorball: { icon: <Swords className="w-5 h-5" />, emoji: '\uD83C\uDFD1', color: '#F97316' },
+  bandy: { icon: <Swords className="w-5 h-5" />, emoji: '\uD83C\uDFD2', color: '#60A5FA' },
+  curling: { icon: <CircleDot className="w-5 h-5" />, emoji: '\uD83E\uDD4C', color: '#3B82F6' },
+  lacrosse: { icon: <Swords className="w-5 h-5" />, emoji: '\uD83E\uDD4D', color: '#22C55E' },
+  'horse-racing': { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83C\uDFC7', color: '#A855F7' },
+  greyhounds: { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83D\uDC15', color: '#8B5CF6' },
+  'greyhound-racing': { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83D\uDC15', color: '#8B5CF6' },
+  'rugby-league': { icon: <Dumbbell className="w-5 h-5" />, emoji: '\uD83C\uDFC9', color: '#D946EF' },
 };
 
 const INDIVIDUAL_SPORTS = new Set([
@@ -228,20 +284,55 @@ const MOCK_LIVE: LiveEventRaw[] = [
   },
 ];
 
+// Only sports available from BetsAPI (24 sports), sorted by priority
 const DEFAULT_SPORTS: SportNav[] = [
-  { id: '1', name: 'Soccer', slug: 'football', icon: '\u26BD', eventCount: 120, liveEventCount: 8 },
+  { id: '1', name: 'Football', slug: 'football', icon: '\u26BD', eventCount: 120, liveEventCount: 8 },
   { id: '2', name: 'Basketball', slug: 'basketball', icon: '\uD83C\uDFC0', eventCount: 64, liveEventCount: 4 },
-  { id: '3', name: 'Esports', slug: 'esports', icon: '\uD83C\uDFAE', eventCount: 40, liveEventCount: 5 },
-  { id: '4', name: 'Tennis', slug: 'tennis', icon: '\uD83C\uDFBE', eventCount: 48, liveEventCount: 6 },
-  { id: '5', name: 'Cricket', slug: 'cricket', icon: '\uD83C\uDFCF', eventCount: 22, liveEventCount: 2 },
-  { id: '6', name: 'Baseball', slug: 'baseball', icon: '\u26BE', eventCount: 28, liveEventCount: 3 },
-  { id: '7', name: 'MMA', slug: 'mma', icon: '\uD83E\uDD4A', eventCount: 16, liveEventCount: 1 },
-  { id: '8', name: 'Ice Hockey', slug: 'ice-hockey', icon: '\uD83C\uDFD2', eventCount: 32, liveEventCount: 2 },
-  { id: '9', name: 'Rugby', slug: 'rugby', icon: '\uD83C\uDFC9', eventCount: 14, liveEventCount: 0 },
-  { id: '10', name: 'Boxing', slug: 'boxing', icon: '\uD83E\uDD4B', eventCount: 8, liveEventCount: 0 },
+  { id: '3', name: 'Tennis', slug: 'tennis', icon: '\uD83C\uDFBE', eventCount: 48, liveEventCount: 6 },
+  { id: '4', name: 'Ice Hockey', slug: 'ice-hockey', icon: '\uD83C\uDFD2', eventCount: 32, liveEventCount: 2 },
+  { id: '5', name: 'Baseball', slug: 'baseball', icon: '\u26BE', eventCount: 28, liveEventCount: 3 },
+  { id: '6', name: 'Cricket', slug: 'cricket', icon: '\uD83C\uDFCF', eventCount: 22, liveEventCount: 2 },
+  { id: '7', name: 'Esports', slug: 'esports', icon: '\uD83C\uDFAE', eventCount: 40, liveEventCount: 5 },
+  { id: '8', name: 'Rugby Union', slug: 'rugby', icon: '\uD83C\uDFC9', eventCount: 14, liveEventCount: 1 },
+  { id: '9', name: 'Rugby League', slug: 'rugby-league', icon: '\uD83C\uDFC9', eventCount: 12, liveEventCount: 0 },
+  { id: '10', name: 'Handball', slug: 'handball', icon: '\uD83E\uDD3E', eventCount: 18, liveEventCount: 1 },
   { id: '11', name: 'Volleyball', slug: 'volleyball', icon: '\uD83C\uDFD0', eventCount: 18, liveEventCount: 1 },
-  { id: '12', name: 'Darts', slug: 'darts', icon: '\uD83C\uDFAF', eventCount: 6, liveEventCount: 0 },
+  { id: '12', name: 'Boxing', slug: 'boxing', icon: '\uD83E\uDD4B', eventCount: 8, liveEventCount: 0 },
+  { id: '13', name: 'Table Tennis', slug: 'table-tennis', icon: '\uD83C\uDFD3', eventCount: 16, liveEventCount: 2 },
+  { id: '14', name: 'Badminton', slug: 'badminton', icon: '\uD83C\uDFF8', eventCount: 10, liveEventCount: 1 },
+  { id: '15', name: 'Futsal', slug: 'futsal', icon: '\u26BD', eventCount: 8, liveEventCount: 0 },
+  { id: '16', name: 'Field Hockey', slug: 'field-hockey', icon: '\uD83C\uDFD1', eventCount: 6, liveEventCount: 0 },
+  { id: '17', name: 'Golf', slug: 'golf', icon: '\u26F3', eventCount: 6, liveEventCount: 0 },
+  { id: '18', name: 'Water Polo', slug: 'water-polo', icon: '\uD83E\uDD3D', eventCount: 4, liveEventCount: 0 },
+  { id: '19', name: 'Floorball', slug: 'floorball', icon: '\uD83C\uDFD1', eventCount: 4, liveEventCount: 0 },
+  { id: '20', name: 'Bandy', slug: 'bandy', icon: '\uD83C\uDFD2', eventCount: 3, liveEventCount: 0 },
+  { id: '21', name: 'Curling', slug: 'curling', icon: '\uD83E\uDD4C', eventCount: 2, liveEventCount: 0 },
+  { id: '22', name: 'Lacrosse', slug: 'lacrosse', icon: '\uD83E\uDD4D', eventCount: 2, liveEventCount: 0 },
+  { id: '23', name: 'Horse Racing', slug: 'horse-racing', icon: '\uD83C\uDFC7', eventCount: 10, liveEventCount: 1 },
+  { id: '24', name: 'Greyhounds', slug: 'greyhounds', icon: '\uD83D\uDC15', eventCount: 6, liveEventCount: 0 },
 ];
+
+// Slugs of the 24 sports available in BetsAPI — used to filter the API response
+const BETSAPI_SLUGS = new Set(DEFAULT_SPORTS.map(s => s.slug));
+// Also allow common esport sub-slugs since BetsAPI groups them all under esports
+const BETSAPI_ALLOWED = new Set([
+  ...BETSAPI_SLUGS,
+  'esport-fifa', 'fifa', 'esport-lol', 'lol', 'league-of-legends',
+  'esport-csgo', 'csgo', 'cs2', 'counter-strike',
+  'esport-dota2', 'dota2', 'dota',
+  'esport-valorant', 'valorant',
+  'esport-overwatch', 'overwatch',
+  'esport-cod', 'call-of-duty',
+  'esport-pubg', 'pubg',
+  'esport-rocket-league', 'rocket-league',
+  'esport-rainbow-six', 'rainbow-six',
+  'esport-apex', 'apex-legends',
+  'esport-fortnite', 'fortnite',
+  'esport-starcraft', 'starcraft',
+  'esport-hearthstone', 'hearthstone',
+  'esport-king-of-glory', 'king-of-glory',
+  'soccer', 'rugby-union', 'greyhound-racing', 'waterpolo', 'dota-2',
+]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -253,6 +344,55 @@ function getAvatarColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+const SPORT_DISPLAY_NAMES: Record<string, string> = {
+  'esport-fifa': 'FIFA',
+  'esport-csgo': 'CS2',
+  'counter-strike': 'CS2',
+  cs2: 'CS2',
+  csgo: 'CS2',
+  'esport-lol': 'LoL',
+  lol: 'LoL',
+  'league-of-legends': 'LoL',
+  'esport-dota2': 'Dota 2',
+  dota: 'Dota 2',
+  dota2: 'Dota 2',
+  'dota-2': 'Dota 2',
+  'esport-valorant': 'Valorant',
+  valorant: 'Valorant',
+  'esport-overwatch': 'Overwatch',
+  overwatch: 'Overwatch',
+  'esport-cod': 'CoD',
+  'call-of-duty': 'CoD',
+  'esport-pubg': 'PUBG',
+  pubg: 'PUBG',
+  'esport-rocket-league': 'Rocket L.',
+  'rocket-league': 'Rocket L.',
+  'esport-rainbow-six': 'R6',
+  'rainbow-six': 'R6',
+  'esport-apex': 'Apex',
+  'apex-legends': 'Apex',
+  'esport-fortnite': 'Fortnite',
+  fortnite: 'Fortnite',
+  'esport-king-of-glory': 'KoG',
+  'king-of-glory': 'KoG',
+  'esport-hearthstone': 'Hearthstone',
+  hearthstone: 'Hearthstone',
+  'esport-starcraft': 'StarCraft',
+  starcraft: 'StarCraft',
+  'ice-hockey': 'Hockey',
+  'table-tennis': 'Table T.',
+  'field-hockey': 'Field H.',
+  'water-polo': 'Water Polo',
+  'horse-racing': 'Horses',
+  greyhounds: 'Greyhounds',
+  'greyhound-racing': 'Greyhounds',
+  'rugby-league': 'Rugby L.',
+};
+
+function getSportDisplayName(slug: string, name: string): string {
+  return SPORT_DISPLAY_NAMES[slug] || name;
 }
 
 function countryToFlag(code?: string | null): string {
@@ -319,7 +459,7 @@ function isBasketballStyleSport(sportSlug: string): boolean {
 // TeamCrest Component (small 16px circle with logo or letter)
 // ---------------------------------------------------------------------------
 
-function TeamCrest({
+const TeamCrest = React.memo(function TeamCrest({
   name,
   logo,
   country,
@@ -334,11 +474,14 @@ function TeamCrest({
 
   if (logo && !imgError) {
     return (
-      <img
-        src={logo}
+      <Image
+        src={logo || '/placeholder.png'}
         alt=""
+        width={16}
+        height={16}
         className="w-4 h-4 object-contain flex-shrink-0 rounded-full"
         onError={() => setImgError(true)}
+        unoptimized
       />
     );
   }
@@ -358,7 +501,7 @@ function TeamCrest({
       <span className="text-[8px] font-bold text-white leading-none">{letter}</span>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Skeletons
@@ -406,7 +549,7 @@ function EventGroupSkeleton() {
 // OddsButton (Cloudbet style: yellow-green text on dark bg)
 // ---------------------------------------------------------------------------
 
-function OddsButton({
+const OddsButton = React.memo(function OddsButton({
   selectionId,
   eventId,
   eventName,
@@ -416,6 +559,7 @@ function OddsButton({
   marketName,
   outcomeName,
   odds,
+  previousOdds,
   status,
   startTime,
   isLive,
@@ -431,6 +575,7 @@ function OddsButton({
   marketName: string;
   outcomeName: string;
   odds: number;
+  previousOdds?: number;
   status?: string;
   startTime: string;
   isLive: boolean;
@@ -440,6 +585,18 @@ function OddsButton({
   const { addSelection, hasSelection } = useBetSlipStore();
   const isSelected = hasSelection(eventId, marketId, outcomeName);
   const isSuspended = status === 'suspended' || status === 'closed';
+  const [flash, setFlash] = useState<'up' | 'down' | null>(null);
+  const prevOddsRef = useRef(odds);
+
+  useEffect(() => {
+    if (prevOddsRef.current !== odds && prevOddsRef.current > 0) {
+      setFlash(odds > prevOddsRef.current ? 'up' : 'down');
+      const timer = setTimeout(() => setFlash(null), 1500);
+      prevOddsRef.current = odds;
+      return () => clearTimeout(timer);
+    }
+    prevOddsRef.current = odds;
+  }, [odds]);
 
   if (isSuspended) {
     return (
@@ -472,24 +629,39 @@ function OddsButton({
         });
       }}
       className={cn(
-        'flex flex-col items-center justify-center rounded transition-all duration-150 font-mono',
+        'flex flex-col items-center justify-center rounded transition-all duration-150 font-mono relative overflow-hidden',
         compact ? 'w-[56px] h-8' : 'w-[56px] sm:w-[62px] h-9',
         isSelected
           ? 'bg-[#BFFF00]/15 text-[#BFFF00] ring-1 ring-[#BFFF00]/50'
-          : 'bg-[#0D0D1A]/80 text-[#BFFF00] hover:bg-[#BFFF00]/10 active:scale-95'
+          : 'bg-[#0D0D1A]/80 text-[#BFFF00] hover:bg-[#BFFF00]/10 active:scale-95',
+        flash === 'up' && 'odds-flash-up',
+        flash === 'down' && 'odds-flash-down',
       )}
     >
+      {flash && (
+        <span className={cn(
+          'absolute top-0.5 right-0.5 text-[8px] font-bold animate-fade-out',
+          flash === 'up' ? 'text-[#10B981]' : 'text-[#EF4444]',
+        )}>
+          {flash === 'up' ? '▲' : '▼'}
+        </span>
+      )}
       {label && <span className="text-[9px] text-[#8B949E] leading-none mb-0.5">{label}</span>}
-      <span className="text-[13px] font-semibold leading-none">{formatOdds(odds)}</span>
+      <span className={cn(
+        'text-[13px] font-semibold leading-none',
+        flash === 'up' ? 'text-[#10B981]' : flash === 'down' ? 'text-[#EF4444]' : '',
+      )}>
+        {formatOdds(odds)}
+      </span>
     </button>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Soccer-style MatchRow (Cloudbet mobile: teams left, 3 odds right)
 // ---------------------------------------------------------------------------
 
-function SoccerMatchRow({
+const SoccerMatchRow = React.memo(function SoccerMatchRow({
   event,
   sportSlug,
   sportName,
@@ -564,7 +736,16 @@ function SoccerMatchRow({
               <span className="text-[11px] text-[#6B7280]">
                 {timeInfo.label}{timeInfo.sublabel && ` \u2022 ${timeInfo.sublabel}`}
               </span>
-              <span className="text-[9px] font-bold text-[#6B7280] bg-[#1A1A2E] px-1 py-0.5 rounded ml-1">
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.href = `/sports/${sportSlug}/${event.id}?mode=betbuilder`;
+                }}
+                className="text-[9px] font-bold text-[#A78BFA] bg-[#8B5CF6]/15 px-1.5 py-0.5 rounded ml-1 hover:bg-[#8B5CF6]/25 transition-colors cursor-pointer"
+              >
                 BB
               </span>
             </>
@@ -598,13 +779,13 @@ function SoccerMatchRow({
       </div>
     </Link>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Basketball-style MatchRow (Spread | Total | Money Line)
 // ---------------------------------------------------------------------------
 
-function BasketballMatchRow({
+const BasketballMatchRow = React.memo(function BasketballMatchRow({
   event,
   sportSlug,
   sportName,
@@ -808,19 +989,25 @@ function BasketballMatchRow({
             <span className="text-[11px] text-[#6B7280]">
               {timeInfo.label}{timeInfo.sublabel && ` \u2022 ${timeInfo.sublabel}`}
             </span>
-            <span className="text-[9px] font-bold text-[#6B7280] bg-[#1A1A2E] px-1 py-0.5 rounded ml-1">BB</span>
+            <Link
+              href={`/sports/${sportSlug}/${event.id}?mode=betbuilder`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[9px] font-bold text-[#A78BFA] bg-[#8B5CF6]/15 px-1.5 py-0.5 rounded ml-1 hover:bg-[#8B5CF6]/25 transition-colors"
+            >
+              BB
+            </Link>
           </>
         )}
       </div>
     </Link>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // CompetitionGroup (Cloudbet-style: header + market labels + event rows)
 // ---------------------------------------------------------------------------
 
-function CompetitionGroup({
+const CompetitionGroup = React.memo(function CompetitionGroup({
   name,
   country,
   logo,
@@ -861,7 +1048,7 @@ function CompetitionGroup({
         className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#1A1A2E]/40 transition-colors"
       >
         {logo ? (
-          <img src={logo} alt="" className="w-5 h-5 object-contain flex-shrink-0 rounded-full" />
+          <Image src={logo || '/placeholder.png'} alt="" width={20} height={20} className="w-5 h-5 object-contain flex-shrink-0 rounded-full" unoptimized />
         ) : flag ? (
           <span className="text-sm flex-shrink-0">{flag}</span>
         ) : (
@@ -911,13 +1098,13 @@ function CompetitionGroup({
       )}
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Bet Builder Promo Banner (inline between competition groups)
 // ---------------------------------------------------------------------------
 
-function BetBuilderBanner() {
+const BetBuilderBanner = React.memo(function BetBuilderBanner() {
   return (
     <Link
       href="/sports"
@@ -943,7 +1130,7 @@ function BetBuilderBanner() {
       </div>
     </Link>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Homepage Component
@@ -979,7 +1166,16 @@ export default function HomePage() {
         ]);
 
         if (sportsRes.status === 'fulfilled' && Array.isArray(sportsRes.value?.sports)) {
-          setSports(sportsRes.value.sports);
+          // Only keep sports that exist in BetsAPI, deduplicate by display name
+          const filtered = sportsRes.value.sports.filter(s => BETSAPI_ALLOWED.has(s.slug));
+          const seen = new Set<string>();
+          const deduped = filtered.filter(s => {
+            const displayName = getSportDisplayName(s.slug, s.name);
+            if (seen.has(displayName)) return false;
+            seen.add(displayName);
+            return true;
+          });
+          setSports(deduped.length > 0 ? deduped : DEFAULT_SPORTS);
         } else {
           setSports(DEFAULT_SPORTS);
         }
@@ -1058,6 +1254,49 @@ export default function HomePage() {
       )
     );
   });
+
+  // --- Real-time odds updates ---
+  useSocketEvent('odds:update', useCallback((data: { eventId: string; marketId: string; odds: Record<string, number> }) => {
+    const parseOddsVal = (v: string | number): number => typeof v === 'string' ? parseFloat(v) : v;
+
+    const updateSelections = (sels: MarketSelection[]) =>
+      sels.map((s) => {
+        const newOdds = data.odds?.[s.name] ?? data.odds?.[s.outcome];
+        if (newOdds && newOdds !== parseOddsVal(s.odds)) {
+          return { ...s, previousOdds: s.odds, odds: newOdds.toString() };
+        }
+        return s;
+      });
+
+    const updateMarket = (mkt: MainMarket | undefined): MainMarket | undefined => {
+      if (!mkt || mkt.id !== data.marketId) return mkt;
+      return { ...mkt, selections: updateSelections(mkt.selections) };
+    };
+
+    setFeaturedEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id !== data.eventId) return ev;
+        return {
+          ...ev,
+          mainMarket: updateMarket(ev.mainMarket) as MainMarket | undefined,
+          spreadMarket: updateMarket(ev.spreadMarket) as MainMarket | undefined,
+          totalMarket: updateMarket(ev.totalMarket) as MainMarket | undefined,
+        };
+      })
+    );
+
+    setLiveEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id !== data.eventId) return ev;
+        return {
+          ...ev,
+          mainMarket: updateMarket(ev.mainMarket) as MainMarket | undefined,
+          spreadMarket: updateMarket(ev.spreadMarket) as MainMarket | undefined,
+          totalMarket: updateMarket(ev.totalMarket) as MainMarket | undefined,
+        };
+      })
+    );
+  }, []));
 
   // --- Derived data ---
   const totalLive = sports.reduce((sum, s) => sum + s.liveEventCount, 0);
@@ -1223,7 +1462,11 @@ export default function HomePage() {
               {(sports.length > 0 ? sports : DEFAULT_SPORTS).map((sport) => {
                 const config = SPORT_ICON_CONFIG[sport.slug];
                 const isActive = selectedSportSlug === sport.slug;
-                const emoji = config?.emoji || sport.icon || '\u26BD';
+                // Smart fallback: esport slugs get gamepad emoji, others use sport icon or trophy
+                const isEsport = sport.slug.startsWith('esport') || sport.slug.includes('esport');
+                const emoji = config?.emoji || (isEsport ? '\uD83C\uDFAE' : (sport.icon || '\uD83C\uDFC6'));
+                const fallbackColor = isEsport ? '#8B5CF6' : '#8B5CF6';
+                const displayName = getSportDisplayName(sport.slug, sport.name);
 
                 return (
                   <button
@@ -1239,16 +1482,16 @@ export default function HomePage() {
                           : 'border-transparent group-hover:scale-105'
                       )}
                       style={{
-                        backgroundColor: isActive ? `${config?.color || '#8B5CF6'}25` : '#1A1A2E',
+                        backgroundColor: isActive ? `${(config?.color || fallbackColor)}25` : '#1A1A2E',
                       }}
                     >
                       <span className="text-2xl leading-none">{emoji}</span>
                     </div>
                     <span className={cn(
-                      'text-[10px] font-medium truncate max-w-full leading-tight text-center',
+                      'text-[9px] font-medium max-w-full leading-tight text-center line-clamp-1',
                       isActive ? 'text-[#BFFF00]' : 'text-[#8B949E] group-hover:text-[#C9D1D9]'
                     )}>
-                      {sport.name}
+                      {displayName}
                     </span>
                   </button>
                 );
@@ -1302,7 +1545,7 @@ export default function HomePage() {
                     )}
                   >
                     {comp.logo ? (
-                      <img src={comp.logo} alt="" className="w-4 h-4 object-contain rounded-full" />
+                      <Image src={comp.logo || '/placeholder.png'} alt="" width={16} height={16} className="w-4 h-4 object-contain rounded-full" unoptimized loading="lazy" />
                     ) : null}
                     <span className="truncate max-w-[140px]">{comp.name}</span>
                     {isActive && (

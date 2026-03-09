@@ -4,6 +4,9 @@ import { config } from '../config/index.js';
 
 let io: SocketIOServer | null = null;
 
+/** Only log socket events in non-production environments */
+const DEBUG = process.env.NODE_ENV !== 'production';
+
 /**
  * Initializes the Socket.IO server, attaches it to the given HTTP server,
  * and sets up the four application namespaces:
@@ -28,37 +31,29 @@ export function setupSocketIO(httpServer: HttpServer): SocketIOServer {
 
   // ─── Default namespace (/) ─────────────────────────────────────────────
   io.on('connection', (socket: Socket) => {
-    console.log(`[Socket.IO /] Client connected: ${socket.id}`);
-
     socket.on('join:room', (room: string) => {
       void socket.join(room);
-      console.log(`[Socket.IO /] ${socket.id} joined room: ${room}`);
     });
 
     socket.on('leave:room', (room: string) => {
       void socket.leave(room);
-      console.log(`[Socket.IO /] ${socket.id} left room: ${room}`);
     });
 
-    socket.on('disconnect', (reason: string) => {
-      console.log(`[Socket.IO /] Client disconnected: ${socket.id} - ${reason}`);
+    socket.on('error', (err: Error) => {
+      console.error(`[Socket.IO /] Error on ${socket.id}:`, err.message);
     });
   });
 
   // ─── /live namespace ───────────────────────────────────────────────────
   const liveNsp = io.of('/live');
   liveNsp.on('connection', (socket: Socket) => {
-    console.log(`[Socket.IO /live] Client connected: ${socket.id}`);
-
     // Subscribe to a specific event's live updates
     socket.on('subscribe:event', (eventId: string) => {
       void socket.join(`event:${eventId}`);
-      console.log(`[Socket.IO /live] ${socket.id} subscribed to event:${eventId}`);
     });
 
     socket.on('unsubscribe:event', (eventId: string) => {
       void socket.leave(`event:${eventId}`);
-      console.log(`[Socket.IO /live] ${socket.id} unsubscribed from event:${eventId}`);
     });
 
     // Subscribe to a sport's live feed
@@ -70,62 +65,51 @@ export function setupSocketIO(httpServer: HttpServer): SocketIOServer {
       void socket.leave(`sport:${sportSlug}`);
     });
 
-    socket.on('disconnect', (reason: string) => {
-      console.log(`[Socket.IO /live] Client disconnected: ${socket.id} - ${reason}`);
+    socket.on('error', (err: Error) => {
+      console.error(`[Socket.IO /live] Error on ${socket.id}:`, err.message);
     });
   });
 
   // ─── /casino namespace ─────────────────────────────────────────────────
   const casinoNsp = io.of('/casino');
   casinoNsp.on('connection', (socket: Socket) => {
-    console.log(`[Socket.IO /casino] Client connected: ${socket.id}`);
-
     // Join a specific game room (e.g., crash, dice, roulette)
     socket.on('join:game', (gameSlug: string) => {
       void socket.join(`game:${gameSlug}`);
-      console.log(`[Socket.IO /casino] ${socket.id} joined game:${gameSlug}`);
     });
 
     socket.on('leave:game', (gameSlug: string) => {
       void socket.leave(`game:${gameSlug}`);
-      console.log(`[Socket.IO /casino] ${socket.id} left game:${gameSlug}`);
     });
 
-    socket.on('disconnect', (reason: string) => {
-      console.log(`[Socket.IO /casino] Client disconnected: ${socket.id} - ${reason}`);
+    socket.on('error', (err: Error) => {
+      console.error(`[Socket.IO /casino] Error on ${socket.id}:`, err.message);
     });
   });
 
   // ─── /notifications namespace ──────────────────────────────────────────
   const notificationsNsp = io.of('/notifications');
   notificationsNsp.on('connection', (socket: Socket) => {
-    console.log(`[Socket.IO /notifications] Client connected: ${socket.id}`);
-
     // Authenticate and join user-specific room for private notifications
     socket.on('authenticate', (userId: string) => {
       void socket.join(`user:${userId}`);
-      console.log(`[Socket.IO /notifications] ${socket.id} authenticated as user:${userId}`);
     });
 
-    socket.on('disconnect', (reason: string) => {
-      console.log(`[Socket.IO /notifications] Client disconnected: ${socket.id} - ${reason}`);
+    socket.on('error', (err: Error) => {
+      console.error(`[Socket.IO /notifications] Error on ${socket.id}:`, err.message);
     });
   });
 
   // ─── /chat namespace ───────────────────────────────────────────────────
   const chatNsp = io.of('/chat');
   chatNsp.on('connection', (socket: Socket) => {
-    console.log(`[Socket.IO /chat] Client connected: ${socket.id}`);
-
     // Join a chat room (global lobby, support ticket, etc.)
     socket.on('join:channel', (channelId: string) => {
       void socket.join(`channel:${channelId}`);
-      console.log(`[Socket.IO /chat] ${socket.id} joined channel:${channelId}`);
     });
 
     socket.on('leave:channel', (channelId: string) => {
       void socket.leave(`channel:${channelId}`);
-      console.log(`[Socket.IO /chat] ${socket.id} left channel:${channelId}`);
     });
 
     // Relay a chat message to the channel
@@ -150,12 +134,14 @@ export function setupSocketIO(httpServer: HttpServer): SocketIOServer {
       });
     });
 
-    socket.on('disconnect', (reason: string) => {
-      console.log(`[Socket.IO /chat] Client disconnected: ${socket.id} - ${reason}`);
+    socket.on('error', (err: Error) => {
+      console.error(`[Socket.IO /chat] Error on ${socket.id}:`, err.message);
     });
   });
 
-  console.log('[Socket.IO] Server initialized with namespaces: /, /live, /casino, /notifications, /chat');
+  if (DEBUG) {
+    console.log('[Socket.IO] Server initialized with namespaces: /, /live, /casino, /notifications, /chat');
+  }
   return io;
 }
 

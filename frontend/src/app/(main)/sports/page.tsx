@@ -345,7 +345,7 @@ export default function SportsLobbyPage() {
 
   // --- Derived: sorted sports alphabetically ---
   const sortedSports = useMemo(() => {
-    return [...sports].sort((a, b) => a.name.localeCompare(b.name));
+    return [...sports].sort((a, b) => (b.eventCount - a.eventCount) || a.name.localeCompare(b.name));
   }, [sports]);
 
   // --- Filtered sports by search ---

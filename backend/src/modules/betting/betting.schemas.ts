@@ -22,7 +22,7 @@ const paginationSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const placeBetSchema = z.object({
-  type: z.enum(['SINGLE', 'PARLAY']),
+  type: z.enum(['SINGLE', 'PARLAY', 'BET_BUILDER']),
   selections: z
     .array(
       z.object({
@@ -51,7 +51,7 @@ export const betHistoryQuerySchema = paginationSchema.extend({
   status: z
     .enum(['PENDING', 'ACCEPTED', 'WON', 'LOST', 'VOID', 'CASHOUT', 'PARTIALLY_SETTLED'])
     .optional(),
-  type: z.enum(['SINGLE', 'PARLAY', 'SYSTEM']).optional(),
+  type: z.enum(['SINGLE', 'PARLAY', 'SYSTEM', 'BET_BUILDER']).optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
 });

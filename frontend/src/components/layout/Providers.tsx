@@ -9,11 +9,10 @@ import { useAuthStore } from '@/stores/authStore';
 // ---------------------------------------------------------------------------
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const initialize = useAuthStore((s) => s.initialize);
-
   useEffect(() => {
-    initialize();
-  }, [initialize]);
+    const init = useAuthStore.getState().initialize;
+    init();
+  }, []); // Empty deps, runs once
 
   return (
     <>

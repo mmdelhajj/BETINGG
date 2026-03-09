@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowLeft,
   ChevronDown,
@@ -41,6 +42,7 @@ interface MarketSelection {
   name: string;
   outcome: string;
   odds: string | number;
+  previousOdds?: string | number;
   handicap?: string | null;
   params?: string | null;
   status: string;
@@ -531,6 +533,7 @@ function OddsButton({
   marketName,
   outcomeName,
   odds,
+  previousOdds,
   startTime,
   isLive,
   disabled,
@@ -546,6 +549,7 @@ function OddsButton({
   marketName: string;
   outcomeName: string;
   odds: number;
+  previousOdds?: number;
   startTime: string;
   isLive: boolean;
   label?: string;
@@ -555,6 +559,19 @@ function OddsButton({
 }) {
   const { addSelection, hasSelection } = useBetSlipStore();
   const isSelected = hasSelection(eventId, marketId, outcomeName);
+  const [flash, setFlash] = useState<'up' | 'down' | null>(null);
+  const prevOddsRef = useRef(odds);
+
+  // Detect odds change and trigger flash animation
+  useEffect(() => {
+    if (prevOddsRef.current !== odds && prevOddsRef.current > 0) {
+      setFlash(odds > prevOddsRef.current ? 'up' : 'down');
+      const timer = setTimeout(() => setFlash(null), 1500);
+      prevOddsRef.current = odds;
+      return () => clearTimeout(timer);
+    }
+    prevOddsRef.current = odds;
+  }, [odds]);
 
   const widthClass = wide ? 'w-[80px]' : 'w-[56px]';
 
@@ -590,13 +607,24 @@ function OddsButton({
         });
       }}
       className={cn(
-        'flex flex-col items-center justify-center h-9 rounded font-mono transition-all duration-150',
+        'flex flex-col items-center justify-center h-9 rounded font-mono transition-all duration-150 relative overflow-hidden',
         widthClass,
         isSelected
           ? 'bg-[#BFFF00]/20 ring-1 ring-[#BFFF00] shadow-[0_0_6px_rgba(191,255,0,0.2)]'
-          : 'bg-[#1C2128] hover:bg-[#262D37] active:scale-[0.97]'
+          : 'bg-[#1C2128] hover:bg-[#262D37] active:scale-[0.97]',
+        flash === 'up' && 'odds-flash-up',
+        flash === 'down' && 'odds-flash-down',
       )}
     >
+      {/* Directional arrow indicator */}
+      {flash && (
+        <span className={cn(
+          'absolute top-0.5 right-0.5 text-[8px] font-bold animate-fade-out',
+          flash === 'up' ? 'text-[#10B981]' : 'text-[#EF4444]',
+        )}>
+          {flash === 'up' ? '▲' : '▼'}
+        </span>
+      )}
       {lineLabel ? (
         <>
           <span className={cn(
@@ -607,7 +635,7 @@ function OddsButton({
           </span>
           <span className={cn(
             'text-[13px] leading-tight font-semibold',
-            isSelected ? 'text-[#BFFF00]' : 'text-[#BFFF00]'
+            flash === 'up' ? 'text-[#10B981]' : flash === 'down' ? 'text-[#EF4444]' : 'text-[#BFFF00]'
           )}>
             {formatOdds(odds)}
           </span>
@@ -615,7 +643,7 @@ function OddsButton({
       ) : (
         <span className={cn(
           'text-[13px] font-semibold',
-          isSelected ? 'text-[#BFFF00]' : 'text-[#BFFF00]'
+          flash === 'up' ? 'text-[#10B981]' : flash === 'down' ? 'text-[#EF4444]' : 'text-[#BFFF00]'
         )}>
           {formatOdds(odds)}
         </span>
@@ -833,9 +861,13 @@ function MultiMarketEventRow({
       <div className="mt-1.5 ml-7 flex items-center gap-2">
         {renderTimeLabel()}
         {!isLive && !isFinished && (
-          <span className="text-[9px] font-medium text-[#6E7681] bg-[#1C2128] rounded px-1.5 py-0.5">
+          <Link
+            href={`/sports/${slug}/${event.id}?mode=betbuilder`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-[9px] font-bold text-[#A78BFA] bg-[#8B5CF6]/15 px-1.5 py-0.5 rounded hover:bg-[#8B5CF6]/25 transition-colors"
+          >
             BB
-          </span>
+          </Link>
         )}
       </div>
     </Link>
@@ -1006,9 +1038,13 @@ function EventRow({
       <div className="mt-1.5 ml-7 flex items-center gap-2">
         {renderTimeLabel()}
         {!isLive && !isFinished && (
-          <span className="text-[9px] font-medium text-[#6E7681] bg-[#1C2128] rounded px-1.5 py-0.5">
+          <Link
+            href={`/sports/${slug}/${event.id}?mode=betbuilder`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-[9px] font-bold text-[#A78BFA] bg-[#8B5CF6]/15 px-1.5 py-0.5 rounded hover:bg-[#8B5CF6]/25 transition-colors"
+          >
             BB
-          </span>
+          </Link>
         )}
       </div>
     </Link>
@@ -1469,7 +1505,7 @@ function OutrightsView({ slug }: { slug: string }) {
               <span className="text-base">{countryToFlag(competition.country)}</span>
             )}
             {competition.logo && (
-              <img src={competition.logo} alt="" className="w-5 h-5 object-contain rounded-full" />
+              <Image src={competition.logo || '/placeholder.png'} alt="" width={20} height={20} className="w-5 h-5 object-contain rounded-full" unoptimized loading="lazy" />
             )}
             <span className="text-[13px] font-bold text-[#E6EDF3]">
               {competition.name}
@@ -1931,6 +1967,41 @@ export default function SportDetailPage() {
     );
   }, []));
 
+  // Real-time odds updates — flash green/red on odds change
+  useSocketEvent('odds:update', useCallback((data: { eventId: string; marketId: string; odds: Record<string, number>; selections?: Array<{ outcome: string; odds: number }> }) => {
+    setCompetitions((prev) =>
+      prev.map((comp) => ({
+        ...comp,
+        events: comp.events.map((ev) => {
+          if (ev.id !== data.eventId) return ev;
+
+          // Update mainMarket selections with new odds
+          const updateSelections = (sels: MarketSelection[]) =>
+            sels.map((s) => {
+              const newOdds = data.odds?.[s.name] ?? data.odds?.[s.outcome];
+              if (newOdds && newOdds !== parseOdds(s.odds)) {
+                return { ...s, previousOdds: s.odds, odds: newOdds.toString() } as MarketSelection & { previousOdds: string | number };
+              }
+              return s;
+            });
+
+          return {
+            ...ev,
+            mainMarket: ev.mainMarket && ev.mainMarket.id === data.marketId
+              ? { ...ev.mainMarket, selections: updateSelections(ev.mainMarket.selections) }
+              : ev.mainMarket,
+            spreadMarket: ev.spreadMarket && ev.spreadMarket.id === data.marketId
+              ? { ...ev.spreadMarket, selections: updateSelections(ev.spreadMarket.selections) }
+              : ev.spreadMarket,
+            totalMarket: ev.totalMarket && ev.totalMarket.id === data.marketId
+              ? { ...ev.totalMarket, selections: updateSelections(ev.totalMarket.selections) }
+              : ev.totalMarket,
+          };
+        }),
+      })),
+    );
+  }, []));
+
   // ---- Derived data ----
 
   const sortedCompetitions = useMemo(() => {
@@ -2075,7 +2146,7 @@ export default function SportDetailPage() {
       {/* ================================================================== */}
       {/* Page Header                                                        */}
       {/* ================================================================== */}
-      <div className="sticky top-0 z-30 bg-[#0D1117]/95 backdrop-blur-md border-b border-[#1C2128]">
+      <div className="sticky top-0 z-30 bg-[#0D1117]/95 border-b border-[#1C2128]">
         {/* Sport name bar */}
         <div className="flex items-center gap-3 px-4 py-2.5">
           <button
@@ -2237,7 +2308,7 @@ export default function SportDetailPage() {
                 <ArrowLeft className="w-3.5 h-3.5 text-[#C9D1D9]" />
               </button>
               {comp.logo ? (
-                <img src={comp.logo} alt="" className="w-5 h-5 object-contain shrink-0 rounded-full" />
+                <Image src={comp.logo || '/placeholder.png'} alt="" width={20} height={20} className="w-5 h-5 object-contain shrink-0 rounded-full" unoptimized loading="lazy" />
               ) : comp.country ? (
                 <span className="text-sm shrink-0">{countryToFlag(comp.country)}</span>
               ) : null}

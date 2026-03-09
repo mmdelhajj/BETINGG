@@ -17,6 +17,41 @@ declare module 'fastify' {
   }
 }
 
+// ---------------------------------------------------------------------------
+// In-memory JWT token cache
+// ---------------------------------------------------------------------------
+
+interface CachedToken {
+  payload: JwtPayload;
+  expiresAt: number; // epoch ms when this cache entry expires
+}
+
+const tokenCache = new Map<string, CachedToken>();
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Periodically remove expired entries from the token cache.
+ * Runs every 5 minutes.
+ */
+const cacheCleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of tokenCache) {
+    if (entry.expiresAt <= now) {
+      tokenCache.delete(key);
+    }
+  }
+}, CACHE_TTL_MS);
+
+// Allow the process to exit cleanly without this interval keeping it alive
+if (cacheCleanupInterval.unref) {
+  cacheCleanupInterval.unref();
+}
+
+// ---------------------------------------------------------------------------
+// Token helpers
+// ---------------------------------------------------------------------------
+
 function extractToken(request: FastifyRequest): string | null {
   const authHeader = request.headers.authorization;
   if (!authHeader) {
@@ -32,13 +67,32 @@ function extractToken(request: FastifyRequest): string | null {
 }
 
 function verifyToken(token: string): JwtPayload {
+  // Check cache first
+  const cached = tokenCache.get(token);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.payload;
+  }
+
+  // Cache miss or expired — verify with jsonwebtoken
   const decoded = jwt.verify(token, config.JWT_SECRET) as JwtPayload;
-  return {
+  const payload: JwtPayload = {
     id: decoded.id,
     email: decoded.email,
     role: decoded.role,
     vipTier: decoded.vipTier,
   };
+
+  // Cache for the shorter of 5 minutes or time until token expiry
+  const now = Date.now();
+  const tokenExpiryMs = decoded.exp ? decoded.exp * 1000 : now + CACHE_TTL_MS;
+  const cacheExpiresAt = Math.min(now + CACHE_TTL_MS, tokenExpiryMs);
+
+  // Only cache if it would last at least 10 seconds
+  if (cacheExpiresAt - now > 10_000) {
+    tokenCache.set(token, { payload, expiresAt: cacheExpiresAt });
+  }
+
+  return payload;
 }
 
 /**

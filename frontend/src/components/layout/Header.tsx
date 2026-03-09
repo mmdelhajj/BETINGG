@@ -182,6 +182,8 @@ export default function Header() {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [hasLiveEvents, setHasLiveEvents] = useState(true); // Assume live events exist by default
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileNotificationsRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const mobileCurrencyDropdownRef = useRef<HTMLDivElement>(null);
@@ -191,27 +193,32 @@ export default function Header() {
   // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      // User dropdown: check BOTH desktop and mobile refs
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(target) &&
+        (!mobileDropdownRef.current || !mobileDropdownRef.current.contains(target))
       ) {
         setUserDropdownOpen(false);
       }
       if (
         currencyDropdownRef.current &&
-        !currencyDropdownRef.current.contains(event.target as Node)
+        !currencyDropdownRef.current.contains(target)
       ) {
         setCurrencyDropdownOpen(false);
       }
       if (
         mobileCurrencyDropdownRef.current &&
-        !mobileCurrencyDropdownRef.current.contains(event.target as Node)
+        !mobileCurrencyDropdownRef.current.contains(target)
       ) {
         setMobileCurrencyDropdownOpen(false);
       }
+      // Notifications: check BOTH desktop and mobile refs
       if (
         notificationRef.current &&
-        !notificationRef.current.contains(event.target as Node)
+        !notificationRef.current.contains(target) &&
+        (!mobileNotificationsRef.current || !mobileNotificationsRef.current.contains(target))
       ) {
         setNotificationsOpen(false);
       }
@@ -1008,257 +1015,257 @@ export default function Header() {
             );
           })}
         </div>
+      </header>
 
-        {/* ============================================================== */}
-        {/* Mobile User Dropdown (profile menu overlay)                      */}
-        {/* ============================================================== */}
-        {userDropdownOpen && isAuthenticated && user && (
-          <div className="fixed inset-0 z-[100] lg:hidden">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setUserDropdownOpen(false)}
-            />
+      {/* ============================================================== */}
+      {/* Mobile User Dropdown — OUTSIDE header for proper z-index       */}
+      {/* ============================================================== */}
+      {userDropdownOpen && isAuthenticated && user && (
+        <div ref={mobileDropdownRef} className="fixed inset-0 z-[100] lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setUserDropdownOpen(false)}
+          />
 
-            {/* Panel */}
-            <div
-              className="absolute right-0 top-0 bottom-0 w-72 flex flex-col shadow-2xl"
-              style={{
-                background: 'linear-gradient(180deg, #0D0D1A 0%, #0A0A16 100%)',
-                borderLeft: '1px solid rgba(255,255,255,0.06)',
-                animation: 'slideInRight 0.25s ease-out',
-              }}
-            >
-              {/* Panel Header */}
-              <div className="h-[56px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <span className="text-sm font-semibold text-white">Account</span>
-                <button
-                  onClick={() => setUserDropdownOpen(false)}
-                  className="h-8 w-8 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+          {/* Panel */}
+          <div
+            className="absolute right-0 top-0 bottom-0 w-72 flex flex-col shadow-2xl"
+            style={{
+              background: 'linear-gradient(180deg, #0D0D1A 0%, #0A0A16 100%)',
+              borderLeft: '1px solid rgba(255,255,255,0.06)',
+              animation: 'slideInRight 0.25s ease-out',
+            }}
+          >
+            {/* Panel Header */}
+            <div className="h-[56px] flex items-center justify-between px-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="text-sm font-semibold text-white">Account</span>
+              <button
+                onClick={() => setUserDropdownOpen(false)}
+                className="h-8 w-8 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* User Info */}
+            <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] flex items-center justify-center overflow-hidden shrink-0 ring-2 ring-white/10">
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.username}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-5 w-5 text-white" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">
+                    {user.username}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">
+                    {user.email}
+                  </p>
+                </div>
               </div>
 
-              {/* User Info */}
-              <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] flex items-center justify-center overflow-hidden shrink-0 ring-2 ring-white/10">
-                    {user.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.username}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-5 w-5 text-white" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">
-                      {user.username}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {user.email}
+              {/* Balance in menu */}
+              {primaryBalance && (
+                <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-xl" style={{ background: '#1E1E2E' }}>
+                  <CurrencyIcon
+                    currency={primaryBalance.currency}
+                    size={22}
+                  />
+                  <div className="flex-1">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance</p>
+                    <p className="font-mono text-sm font-bold text-white">
+                      {formatCurrency(primaryBalance.available, primaryBalance.currency, {
+                        showSymbol: false,
+                      })}{' '}
+                      <span className="text-gray-400 text-xs font-sans font-normal">
+                        {primaryBalance.currency}
+                      </span>
                     </p>
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Balance in menu */}
-                {primaryBalance && (
-                  <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-xl" style={{ background: '#1E1E2E' }}>
-                    <CurrencyIcon
-                      currency={primaryBalance.currency}
-                      size={22}
-                    />
-                    <div className="flex-1">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Balance</p>
-                      <p className="font-mono text-sm font-bold text-white">
-                        {formatCurrency(primaryBalance.available, primaryBalance.currency, {
-                          showSymbol: false,
-                        })}{' '}
-                        <span className="text-gray-400 text-xs font-sans font-normal">
-                          {primaryBalance.currency}
-                        </span>
+            {/* Menu Items */}
+            <div className="flex-1 overflow-y-auto py-2 scrollbar-hide">
+              <MobileMenuItem
+                icon={<User className="h-4 w-4" />}
+                label="Profile"
+                href="/account"
+                onClick={() => setUserDropdownOpen(false)}
+              />
+              <button
+                onClick={() => { setWalletModalOpen(true); setTimeout(() => setUserDropdownOpen(false), 50); }}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors duration-200 w-full text-left"
+              >
+                <span className="shrink-0 text-gray-500"><Wallet className="h-4 w-4" /></span>
+                Wallet
+              </button>
+              <MobileMenuItem
+                icon={<Ticket className="h-4 w-4" />}
+                label="My Bets"
+                href="/bets"
+                onClick={() => setUserDropdownOpen(false)}
+              />
+              <MobileMenuItem
+                icon={<Gift className="h-4 w-4" />}
+                label="Rewards"
+                href="/rewards"
+                onClick={() => setUserDropdownOpen(false)}
+                accent
+              />
+              <MobileMenuItem
+                icon={<Crown className="h-4 w-4" />}
+                label="VIP"
+                href="/rewards"
+                onClick={() => setUserDropdownOpen(false)}
+                accent
+              />
+              <MobileMenuItem
+                icon={<Bell className="h-4 w-4" />}
+                label="Notifications"
+                href="#"
+                onClick={() => { setUserDropdownOpen(false); handleToggleNotifications(); }}
+                badge={notificationCount > 0 ? notificationCount : undefined}
+              />
+              <MobileMenuItem
+                icon={<Settings className="h-4 w-4" />}
+                label="Settings"
+                href="/settings"
+                onClick={() => setUserDropdownOpen(false)}
+              />
+
+              <div className="mx-4 my-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setTimeout(() => setUserDropdownOpen(false), 50);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 transition-colors duration-200"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* Mobile Notifications Panel — OUTSIDE header for proper z-index */}
+      {/* ============================================================== */}
+      {notificationsOpen && (
+        <div ref={mobileNotificationsRef} className="fixed inset-0 z-[100] lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setNotificationsOpen(false)}
+          />
+
+          {/* Panel */}
+          <div
+            className="absolute left-0 right-0 top-0 max-h-[80vh] flex flex-col shadow-2xl overflow-hidden"
+            style={{
+              background: '#0D0D1A',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              animation: 'slideInDown 0.25s ease-out',
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h3 className="text-sm font-semibold text-white">Notifications</h3>
+              <div className="flex items-center gap-2">
+                {notifications.some((n) => !n.isRead) && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="flex items-center gap-1 text-[11px] text-[#8B5CF6] hover:text-[#A78BFA] transition-colors"
+                  >
+                    <CheckCheck className="h-3 w-3" />
+                    Mark all read
+                  </button>
+                )}
+                <button
+                  onClick={() => setNotificationsOpen(false)}
+                  className="h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Notification List */}
+            <div className="flex-1 overflow-y-auto scrollbar-hide">
+              {notificationsLoading ? (
+                <div className="py-8 text-center">
+                  <div className="h-5 w-5 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-xs text-[#484F58] mt-2">Loading...</p>
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="py-10 text-center">
+                  <Bell className="h-8 w-8 text-[#30363D] mx-auto mb-2" />
+                  <p className="text-sm text-[#484F58]">No notifications yet</p>
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => { if (!n.isRead) handleMarkRead(n.id); }}
+                    className={cn(
+                      'w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors',
+                      !n.isRead && 'bg-[#8B5CF6]/[0.04]',
+                    )}
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  >
+                    <div className={cn(
+                      'shrink-0 mt-0.5 h-8 w-8 rounded-full flex items-center justify-center',
+                      n.type === 'BET_WON' && 'bg-[#10B981]/10',
+                      n.type === 'BET_LOST' && 'bg-[#EF4444]/10',
+                      n.type === 'DEPOSIT_CONFIRMED' && 'bg-[#3B82F6]/10',
+                      n.type === 'WITHDRAWAL_APPROVED' && 'bg-[#8B5CF6]/10',
+                      n.type === 'VIP_LEVEL_UP' && 'bg-[#F59E0B]/10',
+                      n.type === 'PROMO_AVAILABLE' && 'bg-[#EC4899]/10',
+                      !['BET_WON','BET_LOST','DEPOSIT_CONFIRMED','WITHDRAWAL_APPROVED','VIP_LEVEL_UP','PROMO_AVAILABLE'].includes(n.type) && 'bg-white/5',
+                    )}>
+                      {n.type === 'BET_WON' && <TrendingUp className="h-4 w-4 text-[#10B981]" />}
+                      {n.type === 'BET_LOST' && <AlertCircle className="h-4 w-4 text-[#EF4444]" />}
+                      {n.type === 'DEPOSIT_CONFIRMED' && <ArrowDownCircle className="h-4 w-4 text-[#3B82F6]" />}
+                      {n.type === 'WITHDRAWAL_APPROVED' && <ArrowUpCircle className="h-4 w-4 text-[#8B5CF6]" />}
+                      {n.type === 'VIP_LEVEL_UP' && <Star className="h-4 w-4 text-[#F59E0B]" />}
+                      {n.type === 'PROMO_AVAILABLE' && <Zap className="h-4 w-4 text-[#EC4899]" />}
+                      {!['BET_WON','BET_LOST','DEPOSIT_CONFIRMED','WITHDRAWAL_APPROVED','VIP_LEVEL_UP','PROMO_AVAILABLE'].includes(n.type) && <Bell className="h-4 w-4 text-[#8B949E]" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn('text-[13px] leading-snug', n.isRead ? 'text-[#8B949E]' : 'text-[#E6EDF3] font-medium')}>
+                        {n.title}
+                      </p>
+                      <p className="text-[11px] text-[#484F58] mt-0.5 line-clamp-2">{n.message}</p>
+                      <p className="text-[10px] text-[#30363D] mt-1">
+                        {new Date(n.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        {' '}
+                        {new Date(n.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Menu Items */}
-              <div className="flex-1 overflow-y-auto py-2 scrollbar-hide">
-                <MobileMenuItem
-                  icon={<User className="h-4 w-4" />}
-                  label="Profile"
-                  href="/account"
-                  onClick={() => setUserDropdownOpen(false)}
-                />
-                <button
-                  onClick={() => { setUserDropdownOpen(false); setWalletModalOpen(true); }}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors duration-200 w-full text-left"
-                >
-                  <span className="shrink-0 text-gray-500"><Wallet className="h-4 w-4" /></span>
-                  Wallet
-                </button>
-                <MobileMenuItem
-                  icon={<Ticket className="h-4 w-4" />}
-                  label="My Bets"
-                  href="/bets"
-                  onClick={() => setUserDropdownOpen(false)}
-                />
-                <MobileMenuItem
-                  icon={<Gift className="h-4 w-4" />}
-                  label="Rewards"
-                  href="/rewards"
-                  onClick={() => setUserDropdownOpen(false)}
-                  accent
-                />
-                <MobileMenuItem
-                  icon={<Crown className="h-4 w-4" />}
-                  label="VIP"
-                  href="/rewards"
-                  onClick={() => setUserDropdownOpen(false)}
-                  accent
-                />
-                <MobileMenuItem
-                  icon={<Bell className="h-4 w-4" />}
-                  label="Notifications"
-                  href="#"
-                  onClick={() => { setUserDropdownOpen(false); handleToggleNotifications(); }}
-                  badge={notificationCount > 0 ? notificationCount : undefined}
-                />
-                <MobileMenuItem
-                  icon={<Settings className="h-4 w-4" />}
-                  label="Settings"
-                  href="/settings"
-                  onClick={() => setUserDropdownOpen(false)}
-                />
-
-                <div className="mx-4 my-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
-
-                <button
-                  onClick={() => {
-                    setUserDropdownOpen(false);
-                    handleLogout();
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 transition-colors duration-200"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* Mobile Notifications Panel (overlay)                            */}
-        {/* ============================================================== */}
-        {notificationsOpen && (
-          <div className="fixed inset-0 z-[100] lg:hidden">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setNotificationsOpen(false)}
-            />
-
-            {/* Panel */}
-            <div
-              className="absolute left-0 right-0 top-0 max-h-[80vh] flex flex-col shadow-2xl overflow-hidden"
-              style={{
-                background: '#0D0D1A',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                animation: 'slideInDown 0.25s ease-out',
-              }}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <h3 className="text-sm font-semibold text-white">Notifications</h3>
-                <div className="flex items-center gap-2">
-                  {notifications.some((n) => !n.isRead) && (
-                    <button
-                      onClick={handleMarkAllRead}
-                      className="flex items-center gap-1 text-[11px] text-[#8B5CF6] hover:text-[#A78BFA] transition-colors"
-                    >
-                      <CheckCheck className="h-3 w-3" />
-                      Mark all read
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setNotificationsOpen(false)}
-                    className="h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
+                    {!n.isRead && (
+                      <div className="shrink-0 mt-2">
+                        <div className="h-2 w-2 rounded-full bg-[#8B5CF6]" />
+                      </div>
+                    )}
                   </button>
-                </div>
-              </div>
-
-              {/* Notification List */}
-              <div className="flex-1 overflow-y-auto scrollbar-hide">
-                {notificationsLoading ? (
-                  <div className="py-8 text-center">
-                    <div className="h-5 w-5 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-xs text-[#484F58] mt-2">Loading...</p>
-                  </div>
-                ) : notifications.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <Bell className="h-8 w-8 text-[#30363D] mx-auto mb-2" />
-                    <p className="text-sm text-[#484F58]">No notifications yet</p>
-                  </div>
-                ) : (
-                  notifications.map((n) => (
-                    <button
-                      key={n.id}
-                      onClick={() => { if (!n.isRead) handleMarkRead(n.id); }}
-                      className={cn(
-                        'w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors',
-                        !n.isRead && 'bg-[#8B5CF6]/[0.04]',
-                      )}
-                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                    >
-                      <div className={cn(
-                        'shrink-0 mt-0.5 h-8 w-8 rounded-full flex items-center justify-center',
-                        n.type === 'BET_WON' && 'bg-[#10B981]/10',
-                        n.type === 'BET_LOST' && 'bg-[#EF4444]/10',
-                        n.type === 'DEPOSIT_CONFIRMED' && 'bg-[#3B82F6]/10',
-                        n.type === 'WITHDRAWAL_APPROVED' && 'bg-[#8B5CF6]/10',
-                        n.type === 'VIP_LEVEL_UP' && 'bg-[#F59E0B]/10',
-                        n.type === 'PROMO_AVAILABLE' && 'bg-[#EC4899]/10',
-                        !['BET_WON','BET_LOST','DEPOSIT_CONFIRMED','WITHDRAWAL_APPROVED','VIP_LEVEL_UP','PROMO_AVAILABLE'].includes(n.type) && 'bg-white/5',
-                      )}>
-                        {n.type === 'BET_WON' && <TrendingUp className="h-4 w-4 text-[#10B981]" />}
-                        {n.type === 'BET_LOST' && <AlertCircle className="h-4 w-4 text-[#EF4444]" />}
-                        {n.type === 'DEPOSIT_CONFIRMED' && <ArrowDownCircle className="h-4 w-4 text-[#3B82F6]" />}
-                        {n.type === 'WITHDRAWAL_APPROVED' && <ArrowUpCircle className="h-4 w-4 text-[#8B5CF6]" />}
-                        {n.type === 'VIP_LEVEL_UP' && <Star className="h-4 w-4 text-[#F59E0B]" />}
-                        {n.type === 'PROMO_AVAILABLE' && <Zap className="h-4 w-4 text-[#EC4899]" />}
-                        {!['BET_WON','BET_LOST','DEPOSIT_CONFIRMED','WITHDRAWAL_APPROVED','VIP_LEVEL_UP','PROMO_AVAILABLE'].includes(n.type) && <Bell className="h-4 w-4 text-[#8B949E]" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn('text-[13px] leading-snug', n.isRead ? 'text-[#8B949E]' : 'text-[#E6EDF3] font-medium')}>
-                          {n.title}
-                        </p>
-                        <p className="text-[11px] text-[#484F58] mt-0.5 line-clamp-2">{n.message}</p>
-                        <p className="text-[10px] text-[#30363D] mt-1">
-                          {new Date(n.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                          {' '}
-                          {new Date(n.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      {!n.isRead && (
-                        <div className="shrink-0 mt-2">
-                          <div className="h-2 w-2 rounded-full bg-[#8B5CF6]" />
-                        </div>
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
+                ))
+              )}
             </div>
           </div>
-        )}
-      </header>
+        </div>
+      )}
 
       {/* ================================================================== */}
       {/* GLOBAL: Inline keyframes for animations                            */}
@@ -1304,12 +1311,21 @@ function MobileMenuItem({
   accent?: boolean;
   badge?: number;
 }) {
+  const router = useRouter();
   return (
-    <Link
-      href={href}
-      onClick={onClick}
+    <button
+      onClick={() => {
+        // Navigate first, then close the panel after a tick so the
+        // component isn't unmounted before navigation fires.
+        if (href && href !== '#') {
+          router.push(href);
+        }
+        if (onClick) {
+          setTimeout(onClick, 50);
+        }
+      }}
       className={cn(
-        'flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-200',
+        'flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors duration-200 w-full text-left',
         accent
           ? 'text-yellow-400 hover:bg-white/5'
           : 'text-gray-300 hover:text-white hover:bg-white/5',
@@ -1324,7 +1340,7 @@ function MobileMenuItem({
           {badge > 9 ? '9+' : badge}
         </span>
       )}
-    </Link>
+    </button>
   );
 }
 
