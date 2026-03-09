@@ -1026,19 +1026,20 @@ const CompetitionGroup = React.memo(function CompetitionGroup({
   const flag = countryCodeToFlag(country);
   const isBball = isBasketballStyleSport(sportSlug);
 
-  if (events.length === 0) return null;
-
   const firstMarket = events[0]?.mainMarket;
   const marketHeaders = useMemo(() => {
+    if (events.length === 0) return [];
     if (isBball) return ['Spread', 'Total', 'Money Line'];
     if (!firstMarket?.selections) return [];
     const len = firstMarket.selections.length;
     if (len === 3) return ['1', 'X', '2'];
     if (len === 2) return ['1', '2'];
     return firstMarket.selections.map((s) => s.name?.length <= 4 ? s.name : s.name?.charAt(0) || '');
-  }, [firstMarket, isBball]);
+  }, [firstMarket, isBball, events.length]);
 
   const marketName = isBball ? '' : (firstMarket?.name || 'Full Time Result');
+
+  if (events.length === 0) return null;
 
   return (
     <div className="bg-[#111127] overflow-hidden">
